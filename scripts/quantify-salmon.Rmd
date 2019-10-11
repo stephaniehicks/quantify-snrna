@@ -1,0 +1,51 @@
+---
+title: "Untitled"
+author: "Stephanie Hicks"
+date: "10/10/2019"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+List cells and tumor names 
+
+```{r}
+path_dir <- "/fastscratch/myscratch/shicks1/alsf-filbin"
+tumor_names <- list.files(path_dir)
+tumor_names <- tumor_names[!(tumor_names %in% c("Human_medians.tsv", "Kriegstein_Human_cortex"))]
+
+unique_cell_names <- NULL
+for(tum in tumor_names){
+  ids <- list.files(paste(path_dir, tum, sep="/"))
+  ids <- unique(stringr::str_sub(ids, end=-11))
+  unique_cell_names <- c(unique_cell_names, ids)
+}
+readr::write_lines(unique_cell_names, path = paste(path_dir, "unique_cell_names.txt", sep="/"))
+
+unique_cell_paths <- NULL
+for(tum in tumor_names){
+  ids <- list.files(paste(path_dir, tum, sep="/"))
+  ids <- paste(path_dir, tum, ids, sep="/")
+  ids <- unique(stringr::str_sub(ids, end=-11))
+  unique_cell_paths <- c(unique_cell_paths, ids)
+}
+readr::write_lines(unique_cell_paths, path = paste(path_dir, "unique_cell_paths.txt", sep="/"))
+```
+
+# Quantification 
+
+## Build salmon index 
+
+```{bash}
+cd /users/shicks1/data/reference/genomes/hsapiens/ENSEMBL/GRCh38/salmon
+
+# download ensemble fastq cdna file 
+wget ftp://ftp.ensembl.org/pub/release-98/fasta/homo_sapiens/cdna/Homo_sapiens.GRCh38.cdna.all.fa.gz
+
+# create salmon index (3-5 mins)
+salmon index -t Homo_sapiens.GRCh38.cdna.all.fa.gz -i ensemble.grch38_salmon-index-v0.14.1
+```
+
+
