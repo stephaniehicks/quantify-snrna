@@ -1,7 +1,6 @@
 ---
-title: "Untitled"
-author: "Stephanie Hicks"
-date: "10/10/2019"
+title: quantification of single nuc-seq data (alsf-filbin) with salmon 
+author: Stephanie Hicks
 output: html_document
 ---
 
@@ -12,31 +11,33 @@ knitr::opts_chunk$set(echo = TRUE)
 List cells and tumor names 
 
 ```{r}
-path_dir <- "/fastscratch/myscratch/shicks1/alsf-filbin"
-tumor_names <- list.files(path_dir)
+path_dir_fast <- "/fastscratch/myscratch/shicks1/alsf-filbin"
+if(!dir.exists(file.path(path_dir_fast, "salmon_quants"))){
+  dir.create(file.path(path_dir_fast, "salmon_quants"))
+}
+
+path_dir_home <- "/users/shicks1/data/alsf_filbin/sample"
+tumor_names <- list.files(path_dir_home)
 tumor_names <- tumor_names[!(tumor_names %in% c("Human_medians.tsv", "Kriegstein_Human_cortex"))]
 
 unique_cell_names <- NULL
 for(tum in tumor_names){
-  ids <- list.files(paste(path_dir, tum, sep="/"))
+  ids <- list.files(paste(path_dir_home, tum, sep="/"))
   ids <- unique(stringr::str_sub(ids, end=-11))
   unique_cell_names <- c(unique_cell_names, ids)
 }
-readr::write_lines(unique_cell_names, path = paste(path_dir, "unique_cell_names.txt", sep="/"))
-
-unique_cell_paths <- NULL
-for(tum in tumor_names){
-  ids <- list.files(paste(path_dir, tum, sep="/"))
-  ids <- paste(path_dir, tum, ids, sep="/")
-  ids <- unique(stringr::str_sub(ids, end=-11))
-  unique_cell_paths <- c(unique_cell_paths, ids)
-}
-readr::write_lines(unique_cell_paths, path = paste(path_dir, "unique_cell_paths.txt", sep="/"))
+readr::write_lines(unique_cell_names,
+                   path = paste(path_dir_home, "unique_cell_names.txt", sep="/"))
 ```
 
 # Quantification 
 
-## Build salmon index 
+## Download files needed for Salmon
+
+e.g. gene transfer format (GTF) is a file format used to hold information 
+about gene structure. It is a tab-delimited text format based on
+the general feature format (GFF), but contains some additional 
+conventions specific to gene information.
 
 ```{bash}
 cd /users/shicks1/data/reference/genomes/hsapiens/ENSEMBL/GRCh38/salmon
@@ -44,8 +45,46 @@ cd /users/shicks1/data/reference/genomes/hsapiens/ENSEMBL/GRCh38/salmon
 # download ensemble fastq cdna file 
 wget ftp://ftp.ensembl.org/pub/release-98/fasta/homo_sapiens/cdna/Homo_sapiens.GRCh38.cdna.all.fa.gz
 
-# create salmon index (3-5 mins)
-salmon index -t Homo_sapiens.GRCh38.cdna.all.fa.gz -i ensemble.grch38_salmon-index-v0.14.1
+# download gtf file
+wget ftp://ftp.ensembl.org/pub/release-98/gtf/homo_sapiens/Homo_sapiens.GRCh38.98.gtf.gz
 ```
 
+Next, we need to create a set of pre-mRNA sequences to 
+save to a FASTA file. This is needed because we have 
+single nucleus RNA-seq data so we need to take into account 
+the pre-mRNA and mRNA transcripts. This code kindly comes from 
+[Charlotte Soneson](https://csoneson.github.io).
+
+```{r}
+suppressPackageStartupMessages({
+  library(Biostrings)
+  library(rtracklayer)
+  library(GenomicFeatures)
+  library(BSgenome)
+})
+
+## Get genomic sequence
+genomefasta <- file.path("/users/shicks1/data/reference/genomes/hsapiens/ENSEMBL/GRCh38/salmon", 
+                         "Homo_sapiens.GRCh38.cdna.all.fa.gz")
+
+## Import FASTA file with Biostrings::readDNAStringSet
+genome <- Biostrings::readDNAStringSet(genomefasta)
+names(genome) <- sapply(strsplit(names(genome), " "), .subset, 1)
+
+ingtf <- file.path("/users/shicks1/data/reference/genomes/hsapiens/ENSEMBL/GRCh38/salmon", 
+                   "Homo_sapiens.GRCh38.98.gtf.gz")
+
+## Read gtf file and group exons by transcript
+txdb <- GenomicFeatures::makeTxDbFromGFF(ingtf)
+grl <- GenomicFeatures::exonsBy(txdb, by = "tx", use.names = TRUE)
+
+## Create the pre-mRNA coordinates by adding all introns to each transcript
+grrange <- unlist(range(grl))
+
+## Get the sequence of each pre-mRNA molecule
+premrnaseq <- BSgenome::getSeq(x = genome, names = grrange)
+
+## Save pre-mRNA sequences to fasta file
+Biostrings::writeXStringSet(premrnaseq, filepath = outfasta)
+```
 
