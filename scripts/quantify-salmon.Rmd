@@ -8,6 +8,10 @@ output: html_document
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
+```{r}
+library(here)
+```
+
 List cells and tumor names 
 
 ```{r}
@@ -18,16 +22,24 @@ if(!dir.exists(file.path(path_dir_fast, "salmon_quants"))){
 
 path_dir_home <- "/users/shicks1/data/alsf_filbin/sample"
 tumor_names <- list.files(path_dir_home)
-tumor_names <- tumor_names[!(tumor_names %in% c("Human_medians.tsv", "Kriegstein_Human_cortex"))]
 
 unique_cell_names <- NULL
-for(tum in tumor_names){
-  ids <- list.files(paste(path_dir_home, tum, sep="/"))
-  ids <- unique(stringr::str_sub(ids, end=-11))
-  unique_cell_names <- c(unique_cell_names, ids)
+if(!file.exists(file.path(path_dir_home, "unique_cell_names.txt"))){
+  tumor_names <- tumor_names[!(tumor_names %in% c("Human_medians.tsv", 
+                                                "Kriegstein_Human_cortex"))]
+  for(tum in tumor_names){
+    ids <- list.files(paste(path_dir_home, tum, sep="/"))
+    ids <- unique(stringr::str_sub(ids, end=-11))
+    unique_cell_names <- c(unique_cell_names, ids)
+  }
+  readr::write_lines(unique_cell_names,
+                     path = file.path(path_dir_home, "unique_cell_names.txt"))
 }
-readr::write_lines(unique_cell_names,
-                   path = paste(path_dir_home, "unique_cell_names.txt", sep="/"))
+
+tumor_names <- tumor_names[!(tumor_names %in% c("Human_medians.tsv", 
+                                                "Kriegstein_Human_cortex", 
+                                                "unique_cell_names.txt"))]
+
 ```
 
 # Quantification 
@@ -88,3 +100,73 @@ premrnaseq <- BSgenome::getSeq(x = genome, names = grrange)
 Biostrings::writeXStringSet(premrnaseq, filepath = outfasta)
 ```
 
+Now we will put the pre-mRNA (`outfasta`) and 
+mRNA (`Homo_sapiens.GRCh38.cdna.all.fa.gz`) FASTA files together. 
+
+```{bash}
+
+```
+
+
+## Build salmon index 
+
+```{bash}
+cd /users/shicks1/data/reference/genomes/hsapiens/ENSEMBL/GRCh38/salmon
+
+# create salmon index (3-5 mins)
+salmon index -t Homo_sapiens.GRCh38.cdna.all.fa.gz -i ensemble.grch38_salmon-index-v0.14.1
+```
+
+## Running salmon 
+
+See the `scripts/run-salmon.sh` file 
+
+## Creating SummarizedExperiment object
+
+```{r}
+path_dir <- "/fastscratch/myscratch/shicks1/alsf-filbin"
+tumor_names <- list.files(path_dir)
+tumor_names <- tumor_names[!(tumor_names %in% 
+                          c("Human_medians.tsv", "Kriegstein_Human_cortex", 
+                            "unique_cell_names.txt", "salmon_quants"))]
+
+unique_sf_paths <- NULL
+for(tum in tumor_names){
+  ids <- list.files(paste(path_dir, tum, sep="/"))
+  ids <- unique(stringr::str_sub(ids, end=-13))
+  ids <- paste(path_dir, "salmon_quants", paste0(ids, "_quant/quant.sf"), sep="/")
+  unique_sf_paths <- c(unique_sf_paths, ids)
+}
+
+unique_sf_ids <- NULL
+for(tum in tumor_names){
+  ids <- list.files(paste(path_dir, tum, sep="/"))
+  ids <- unique(stringr::str_sub(ids, end=-13))
+  unique_sf_ids <- c(unique_sf_ids, ids)
+}
+
+coldata <- data.frame(files = unique_sf_paths, names = unique_sf_ids)
+
+```
+
+```{r}
+library(tximeta)
+se <- tximeta(coldata[1:96,])
+```
+
+
+# Quality control 
+
+## Explore SummarizedExperiment object
+
+```{r}
+suppressPackageStartupMessages(library(SummarizedExperiment))
+colData(se)
+assayNames(se)
+rowRanges(se)
+```
+
+```{r}
+dat <- assay(se, "counts")
+hist(colSums(dat))
+```
