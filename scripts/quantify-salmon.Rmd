@@ -30,10 +30,11 @@ if(!file.exists(file.path(path_dir_home, "unique_cell_names.txt"))){
   for(tum in tumor_names){
     ids <- list.files(paste(path_dir_home, tum, sep="/"))
     ids <- unique(stringr::str_sub(ids, end=-11))
+    ids <- file.path(tum, ids)
     unique_cell_names <- c(unique_cell_names, ids)
   }
   readr::write_lines(unique_cell_names,
-                     path = file.path(path_dir_home, "unique_cell_names.txt"))
+                     path = file.path(path_dir_home, "unique_cell_filenames.txt"))
 }
 
 tumor_names <- tumor_names[!(tumor_names %in% c("Human_medians.tsv", 
@@ -46,7 +47,7 @@ tumor_names <- tumor_names[!(tumor_names %in% c("Human_medians.tsv",
 
 ## Download files needed for Salmon
 
-e.g. gene transfer format (GTF) is a file format used to hold information 
+Gene transfer format (GTF) is a file format used to hold information 
 about gene structure. It is a tab-delimited text format based on
 the general feature format (GFF), but contains some additional 
 conventions specific to gene information.
@@ -59,6 +60,19 @@ wget ftp://ftp.ensembl.org/pub/release-98/fasta/homo_sapiens/cdna/Homo_sapiens.G
 
 # download gtf file
 wget ftp://ftp.ensembl.org/pub/release-98/gtf/homo_sapiens/Homo_sapiens.GRCh38.98.gtf.gz
+```
+
+```{bash}
+cd /users/shicks1/data/reference/genomes/hsapiens/GENCODE/release_32
+
+# download GENCODE fastq DNA file 
+wget ftp://ftp.ebi.ac.uk/pub/databases/gencode/Gencode_human/release_32/GRCh38.primary_assembly.genome.fa.gz
+
+# download GENCODE fastq cdna file 
+wget ftp://ftp.ebi.ac.uk/pub/databases/gencode/Gencode_human/release_32/gencode.v32.transcripts.fa.gz
+
+# download GENCODE gtf file 
+wget ftp://ftp.ebi.ac.uk/pub/databases/gencode/Gencode_human/release_32/gencode.v32.annotation.gtf.gz
 ```
 
 Next, we need to create a set of pre-mRNA sequences to 
@@ -75,16 +89,15 @@ suppressPackageStartupMessages({
   library(BSgenome)
 })
 
-## Get genomic sequence
-genomefasta <- file.path("/users/shicks1/data/reference/genomes/hsapiens/ENSEMBL/GRCh38/salmon", 
-                         "Homo_sapiens.GRCh38.cdna.all.fa.gz")
+gencode_path <- "/users/shicks1/data/reference/genomes/hsapiens/GENCODE/release_32"
+## Get genomic (DNA) sequence
+genomefasta <- file.path(gencode_path, "GRCh38.primary_assembly.genome.fa.gz")
 
 ## Import FASTA file with Biostrings::readDNAStringSet
 genome <- Biostrings::readDNAStringSet(genomefasta)
-names(genome) <- sapply(strsplit(names(genome), " "), .subset, 1)
+names(genome) <- sapply(strsplit(names(genome), " "), .subset, 1) # creates chr1, etc
 
-ingtf <- file.path("/users/shicks1/data/reference/genomes/hsapiens/ENSEMBL/GRCh38/salmon", 
-                   "Homo_sapiens.GRCh38.98.gtf.gz")
+ingtf <- file.path(gencode_path, "gencode.v32.annotation.gtf.gz")
 
 ## Read gtf file and group exons by transcript
 txdb <- GenomicFeatures::makeTxDbFromGFF(ingtf)
@@ -92,34 +105,75 @@ grl <- GenomicFeatures::exonsBy(txdb, by = "tx", use.names = TRUE)
 
 ## Create the pre-mRNA coordinates by adding all introns to each transcript
 grrange <- unlist(range(grl))
+```
 
+Now, for each entry in `grrange`, we extract the sequence from the 
+corresponding `seqnames` entry in the `genome`. 
+
+**Note**: If you use Ensembl, there will be a discrepancy between the 
+transcripts (e.g. ENST00000456328 vs ENST00000456328.1). Technically, it doesn't 
+matter this point, but it will when we merge with the spliced (mRNA) 
+transcripts. So, if you do this, you will likely need to remove the version
+numbers before merging the pre-mRNA and mRNA fasta files. Or just use the 
+Gencode annotation where the naming is consistent between the 
+transcriptome fasta and the gtf.
+
+```{r}
 ## Get the sequence of each pre-mRNA molecule
 premrnaseq <- BSgenome::getSeq(x = genome, names = grrange)
 
-## Save pre-mRNA sequences to fasta file
-Biostrings::writeXStringSet(premrnaseq, filepath = outfasta)
+premrna_fasta <- file.path(gencode_path, "GRCh38.premRNA.fa")
+
+## Save pre-mRNA sequences to fasta file 
+Biostrings::writeXStringSet(premrnaseq, filepath = premrna_fasta)
 ```
 
-Now we will put the pre-mRNA (`outfasta`) and 
-mRNA (`Homo_sapiens.GRCh38.cdna.all.fa.gz`) FASTA files together. 
+Let's first check to make sure they have the same number of transcripts 
+(pre-mRNA and mRNA). 
+```{bash}
+zcat gencode.v32.transcripts.fa.gz | grep ">"  | wc -l
+grep ">" GRCh38.premRNA.fa | wc -l
+```
+
+Both have the same number of rows (or transcripts): 227462. I think 
+it's also interesting that one is almost 6GB and the other is 70M. 
+
+Now we will put the pre-mRNA (`GRCh38.premRNA.fa`) and 
+mRNA (`gencode.v32.transcripts.fa.gz`) fasta GENCODE files together. 
 
 ```{bash}
-
+zcat gencode.v32.transcripts.fa.gz > gencode.v32.transcripts.fa
+cat gencode.v32.transcripts.fa GRCh38.premRNA.fa > gencode.v32.preandmrna.fa
+grep ">" gencode.v32.preandmrna.fa | wc -l
 ```
 
+
+Ok there are 454924 (227462 / 2) transcripts, as we expect. Now let's 
+zip this file up. This takes a while. 
+
+```{bash}
+gzip gencode.v32.preandmrna.fa
+```
+
+And clean up our space 
+```{bash}
+rm gencode.v32.transcripts.fa
+rm gencode.v32.transcripts.fa.gz
+rm gencode.v32.preandmrna.fa
+```
 
 ## Build salmon index 
 
 ```{bash}
-cd /users/shicks1/data/reference/genomes/hsapiens/ENSEMBL/GRCh38/salmon
+cd /users/shicks1/data/reference/genomes/hsapiens/GENCODE/release_32
 
 # create salmon index (3-5 mins)
-salmon index -t Homo_sapiens.GRCh38.cdna.all.fa.gz -i ensemble.grch38_salmon-index-v0.14.1
+salmon index -t gencode.v32.preandmrna.fa.gz -i gencode.v32_salmon-index-v0.10.2
 ```
 
 ## Running salmon 
 
-See the `scripts/run-salmon.sh` file 
+See the `scripts/run-salmon.sh` file in the terminal. 
 
 ## Creating SummarizedExperiment object
 
