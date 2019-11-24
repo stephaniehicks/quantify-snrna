@@ -159,16 +159,37 @@ And clean up our space
 ```{bash}
 rm gencode.v32.transcripts.fa
 rm gencode.v32.transcripts.fa.gz
-rm gencode.v32.preandmrna.fa
 ```
 
-## Build salmon index 
+## Install and build salmon index 
+
+To upgrade to v1.0.0 salmon
+```{bash}
+wget https://github.com/COMBINE-lab/salmon/releases/download/v1.0.0/salmon-1.0.0_linux_x86_64.tar.gz
+tar xzvf salmon-1.0.0_linux_x86_64.tar.gz
+rm salmon-1.0.0_linux_x86_64.tar.gz
+```
+
+Also, make sure this is in the `.bash_profile` file
+```{bash}
+PATH=$PATH:/users/shicks1/src/salmon-latest_linux_x86_64/bin
+```
+
+You can check to make sure salmon has been upgraded correctly 
+using `salmon -h` inside terminal (or help with specific parts of using 
+salmong using e.g. `salmon index -h` for help with the index step). 
+
+OK, we are ready to use salmon. The `-t` argument is the input transcripts file, 
+the `-i` argument is the index file to create, the `--keepDuplicates` argument
+forces  all duplicate transcripts that appear in the input will 
+be retained and quantified separately, and the `--threads` argument says how 
+many threads to use when building the index. 
 
 ```{bash}
 cd /users/shicks1/data/reference/genomes/hsapiens/GENCODE/release_32
 
 # create salmon index (3-5 mins)
-salmon index -t gencode.v32.preandmrna.fa.gz -i gencode.v32_salmon-index-v0.10.2
+salmon index --gencode -t gencode.v32.preandmrna.fa.gz -i gencode.v32_salmon-index-v1.0.0 --keepDuplicates --threads 1
 ```
 
 ## Running salmon 
