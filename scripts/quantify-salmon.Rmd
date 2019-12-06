@@ -64,6 +64,7 @@ the general feature format (GFF), but contains some additional
 conventions specific to gene information.
 
 ```{bash}
+# hi!
 cd /users/shicks1/data/reference/genomes/hsapiens/ENSEMBL/GRCh38/salmon
 
 # download ensemble fastq cdna file 
