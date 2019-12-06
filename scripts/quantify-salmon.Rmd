@@ -248,6 +248,26 @@ coldata <- data.frame(files = unique_sf_paths, names = unique_sf_ids)
 
 ```
 
+tximeta couldn't automatically detect the transcriptome, so we might have to create our own. The code chunk below was my failed attempt to create one.
+
+Source: https://bioconductor.org/packages/release/bioc/vignettes/tximeta/inst/doc/tximeta.html#linked_transcriptomes
+
+```{r}
+library(tximeta)
+dir = "/users/akuo/pre_mRNA/data/reference/genomes/hsapiens/GENCODE/release_32"
+fasta_path = file.path(dir, "gencode.v32.preandmrna.fa.gz")
+gtf_path = file.path(dir, "gencode.v32.annotation.gtf.gz") # May need to generate another gtf file
+index_dir = file.path(dir, "gencode.v32_salmon-index-v1.0.0")
+
+tmp <- tempdir()
+#jsonFile <- file.path(tmp, "tmp.json")
+makeLinkedTxome(indexDir=index_dir,
+                source="GENCODE", organism="Homo sapiens",
+                release="32", genome="GRCh38",
+                fasta=fasta_path, gtf=gtf_path,
+                write=FALSE)
+```
+
 ```{r}
 library(tximeta)
 se <- tximeta(coldata[1:96,])
