@@ -31,8 +31,12 @@ tumor_names <- list.files(here("sample_data"))[
                   !grepl("*.txt", list.files(here("sample_data")))]
 ```
 
-Next, we create the folder to store quantification files from salmon.  
+Next, we create the folder to store reference files (e.g. genome and cDNA) and quantification files (quantified counts) from salmon.  
 ```{r}
+if(!dir.exists(here("salmon_files"))){
+  dir.create(here("salmon_files"))
+}
+
 if(!dir.exists(here("salmon_quants"))){
   dir.create(here("salmon_quants"))
 }
@@ -50,7 +54,7 @@ if(!file.exists(here("sample_data", "unique_cell_names.txt"))){
     unique_cell_names <- c(unique_cell_names, ids)
   }
   readr::write_lines(unique_cell_names,
-                     path = file.path(path_dir_home, "unique_cell_filenames.txt"))
+                     path = here("sample_data","unique_cell_filenames.txt"))
 }
 ```
 
@@ -63,8 +67,16 @@ about gene structure. It is a tab-delimited text format based on
 the general feature format (GFF), but contains some additional 
 conventions specific to gene information.
 
+```{r}
+if(!file.exists(here("data", "Homo_sapiens.GRCh38.cdna.all.fa.gz"))){
+  tar_gz_file <- "ftp://ftp.ensembl.org/pub/release-98/fasta/homo_sapiens/cdna/Homo_sapiens.GRCh38.cdna.all.fa.gz"
+  download.file(tar_gz_file, 
+                destfile = here("data", "Homo_sapiens.GRCh38.cdna.all.fa.gz"), 
+                method = "wget")
+}
+
+```
 ```{bash}
-# hi!
 cd /users/shicks1/data/reference/genomes/hsapiens/ENSEMBL/GRCh38/salmon
 
 # download ensemble fastq cdna file 
