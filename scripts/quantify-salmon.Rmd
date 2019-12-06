@@ -12,23 +12,39 @@ knitr::opts_chunk$set(echo = TRUE)
 library(here)
 ```
 
+This code chunk copies the data from where it is stored into the github repo so we can all work with relative paths. 
+I copy it so I can keep the backed up copy where I originally have it. 
+However, the person using this script needs to adjust which paths to use. 
+```{r}
+stephanie_data_path <- "/users/shicks1/data/alsf_filbin/sample"
+# albert_data_dath <- "/users/akuo/data/alsf_filbin/sample"
+
+if(!dir.exists(here("sample_data"))){
+  dir.create(here("sample_data"))
+  
+  file.copy(stephanie_data_path, here("sample_data"), recursive=FALSE)
+  # file.copy(albert_data_path, here("sample_data"), recursive=FALSE)
+}
+
+# verify the tumor files has been transferred. 
+tumor_names <- list.files(here("sample_data"))[
+                  !grepl("*.txt", list.files(here("sample_data")))]
+```
+
+Next, we create the folder to store quantification files from salmon.  
+```{r}
+if(!dir.exists(here("salmon_quants"))){
+  dir.create(here("salmon_quants"))
+}
+```
+
 List cells and tumor names 
 
 ```{r}
-path_dir_fast <- "/fastscratch/myscratch/shicks1/alsf-filbin"
-if(!dir.exists(file.path(path_dir_fast, "salmon_quants"))){
-  dir.create(file.path(path_dir_fast, "salmon_quants"))
-}
-
-path_dir_home <- "/users/shicks1/data/alsf_filbin/sample"
-tumor_names <- list.files(path_dir_home)
-
-unique_cell_names <- NULL
-if(!file.exists(file.path(path_dir_home, "unique_cell_names.txt"))){
-  tumor_names <- tumor_names[!(tumor_names %in% c("Human_medians.tsv", 
-                                                "Kriegstein_Human_cortex"))]
+if(!file.exists(here("sample_data", "unique_cell_names.txt"))){
+  unique_cell_names <- NULL
   for(tum in tumor_names){
-    ids <- list.files(paste(path_dir_home, tum, sep="/"))
+    ids <- list.files(here("sample_data", tum))
     ids <- unique(stringr::str_sub(ids, end=-11))
     ids <- file.path(tum, ids)
     unique_cell_names <- c(unique_cell_names, ids)
@@ -36,11 +52,6 @@ if(!file.exists(file.path(path_dir_home, "unique_cell_names.txt"))){
   readr::write_lines(unique_cell_names,
                      path = file.path(path_dir_home, "unique_cell_filenames.txt"))
 }
-
-tumor_names <- tumor_names[!(tumor_names %in% c("Human_medians.tsv", 
-                                                "Kriegstein_Human_cortex", 
-                                                "unique_cell_names.txt"))]
-
 ```
 
 # Quantification 
@@ -189,7 +200,7 @@ many threads to use when building the index.
 cd /users/shicks1/data/reference/genomes/hsapiens/GENCODE/release_32
 
 # create salmon index (3-5 mins)
-salmon index --gencode -t gencode.v32.preandmrna.fa.gz -i gencode.v32_salmon-index-v1.0.0 --keepDuplicates --threads 1
+salmon index -t gencode.v32.preandmrna.fa.gz -i gencode.v32_salmon-index-v1.0.0 --threads 4
 ```
 
 ## Running salmon 
