@@ -1,6 +1,6 @@
 #$ -pe local 6
 #$ -cwd
-#$ -l mem_free=40G,h_vmem=45G
+#$ -l mem_free=5G,h_vmem=10G
 
 for fn in `cat /fastscratch/myscratch/shicks1/alsf-filbin/sample_data/unique_cell_paths.txt`; 
 do 

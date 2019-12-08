@@ -118,15 +118,18 @@ grl <- GenomicFeatures::exonsBy(txdb, by = "tx", use.names = TRUE)
 
 ## Create the pre-mRNA coordinates by adding all introns to each transcript
 grrange <- unlist(range(grl)) # 227462 rows
+names(grrange) <- paste(names(grrange), "premrna", sep= ".")
 
 ## Save pre-mRNA gtf file
 premrna_gtf <- here("salmon_files","gencode.v32.premrnaannotation.gtf")
 rtracklayer::export(grrange, premrna_gtf)
 
 ## Combine two gtf files (pre-mRNA and mRNA) to be used in tximeta a bit later
-mrna_gtf <- rtracklayer::import(ingtf)
 unlist(grl) # 1372308 rows
-c(unlist(grl), grrange) # 1599770 rows
+tmp <- c(unlist(grl), grrange) # 1599770 rows
+
+## example of a transcript with three exons (mRNA) or entire pre-mRNA region
+tmp[grep("ENST00000456328.2", names(tmp)),]
 
 ## Save pre-mRNA gtf file
 preandmrna_gtf <- here("salmon_files","gencode.v32.preandmrnaaannotation.gtf")
@@ -169,17 +172,22 @@ grep ">" gencode.v32.preandmrna.fa | wc -l
 ```
 
 Ok there are 454924 (or = 227462/2) transcripts, as we expect. Now let's zip this file up. 
-This takes a while. 
+This takes a while (~15 mins). 
 
 ```{bash}
+cd /fastscratch/myscratch/shicks1/alsf-filbin/salmon_files
 gzip gencode.v32.preandmrna.fa
 ```
 
 And clean up our space 
 ```{bash}
+cd /fastscratch/myscratch/shicks1/alsf-filbin/salmon_files
 rm gencode.v32.transcripts.fa
 rm gencode.v32.transcripts.fa.gz
+rm gencode.v32.annotation.gtf.gz
 rm GRCh38.premRNA.fa
+rm gencode.v32.premrnaannotation.gtf
+rm GRCh38.primary_assembly.genome.fa.gz
 ```
 
 ## Install and build salmon index 
@@ -210,18 +218,10 @@ The `--keepDuplicates` argument forces all duplicate transcripts (for example, m
 If you keep the duplicates they will be assigned identical expression levels since salmon can’t tell them apart. 
 When you aggregate on the gene level, this will not make a difference any more. 
 Therefore, I do not keep the duplicates as we are interested in gene level aggregation. 
+The `--gencode` flag will handle the composite fasta headers in GENCODE transcript fasta files and split the transcript name at the first '|' character. 
 The `--threads` argument says how many threads to use when building the index. 
 
 There is a script `build-index-salmon.sh` in the `/scripts` folder that was used to run this code with 4 cores.
-But I put it here too. 
-
-```{bash}
-cd /fastscratch/myscratch/shicks1/alsf-filbin/salmon_files/
-# cd /fastscratch/myscratch/akuo/alsf-filbin/salmon_files/
-
-# create salmon index (this process takes ~3 hours)
-salmon index -t gencode.v32.preandmrna.fa.gz -i gencode.v32_salmon-index-v1.0.0 --threads 4
-```
 
 ## Running salmon 
 
