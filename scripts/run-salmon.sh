@@ -1,8 +1,8 @@
 #$ -pe local 6
 #$ -cwd
-#$ -l mem_free=50G,h_vmem=55G
+#$ -l mem_free=40G,h_vmem=45G
 
-for fn in `cat /users/shicks1/data/alsf_filbin/sample/unique_cell_filenames.txt`; 
+for fn in `cat /fastscratch/myscratch/shicks1/alsf-filbin/sample_data/unique_cell_filenames.txt`; 
 do 
 samp=`basename ${fn}`
 samp=${samp::-2}
