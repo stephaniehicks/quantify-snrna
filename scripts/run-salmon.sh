@@ -2,7 +2,7 @@
 #$ -cwd
 #$ -l mem_free=40G,h_vmem=45G
 
-for fn in `cat /fastscratch/myscratch/shicks1/alsf-filbin/sample_data/unique_cell_filenames.txt`; 
+for fn in `cat /fastscratch/myscratch/shicks1/alsf-filbin/sample_data/unique_cell_paths.txt`; 
 do 
 samp=`basename ${fn}`
 samp=${samp::-2}

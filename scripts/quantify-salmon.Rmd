@@ -42,19 +42,19 @@ if(!dir.exists(here("salmon_quants"))){
 }
 ```
 
-List cells and tumor names 
+Create a list of paths for each cell which will be used when we quantify with salmon. 
 
 ```{r}
-if(!file.exists(here("sample_data", "unique_cell_names.txt"))){
-  unique_cell_names <- NULL
+if(!file.exists(here("sample_data", "unique_cell_paths.txt"))){
+  unique_cell_paths <- NULL
   for(tum in tumor_names){
     ids <- list.files(here("sample_data", tum))
     ids <- unique(stringr::str_sub(ids, end=-11))
-    ids <- file.path(tum, ids)
-    unique_cell_names <- c(unique_cell_names, ids)
+    ids <- here("sample_data", tum, ids)
+    unique_cell_paths <- c(unique_cell_paths, ids)
   }
-  readr::write_lines(unique_cell_names,
-                     path = here("sample_data","unique_cell_filenames.txt"))
+  readr::write_lines(unique_cell_paths,
+                     path = here("sample_data","unique_cell_paths.txt"))
 }
 ```
 
@@ -117,10 +117,23 @@ txdb <- GenomicFeatures::makeTxDbFromGFF(ingtf)
 grl <- GenomicFeatures::exonsBy(txdb, by = "tx", use.names = TRUE)
 
 ## Create the pre-mRNA coordinates by adding all introns to each transcript
-grrange <- unlist(range(grl))
+grrange <- unlist(range(grl)) # 227462 rows
+
+## Save pre-mRNA gtf file
+premrna_gtf <- here("salmon_files","gencode.v32.premrnaannotation.gtf")
+rtracklayer::export(grrange, premrna_gtf)
+
+## Combine two gtf files (pre-mRNA and mRNA) to be used in tximeta a bit later
+mrna_gtf <- rtracklayer::import(ingtf)
+unlist(grl) # 1372308 rows
+c(unlist(grl), grrange) # 1599770 rows
+
+## Save pre-mRNA gtf file
+preandmrna_gtf <- here("salmon_files","gencode.v32.preandmrnaaannotation.gtf")
+rtracklayer::export(c(unlist(grl), grrange), preandmrna_gtf)
 ```
 
-Now, for each entry in `grrange`, we extract the sequence from the corresponding `seqnames` entry in the `genome`. 
+Now, for each entry in `grrange`, we extract the sequence from the corresponding `seqnames` entry in the `genome`.
 
 **Note**: If you use Ensembl, there will be a discrepancy between the transcripts (e.g. ENST00000456328 vs ENST00000456328.1). 
 Technically, it doesn't matter this point, but it will when we merge with the spliced (mRNA) transcripts.
@@ -131,9 +144,8 @@ Or just use the Gencode annotation where the naming is consistent between the tr
 ## Get the sequence of each pre-mRNA molecule
 premrnaseq <- BSgenome::getSeq(x = genome, names = grrange)
 
-premrna_fasta <- here("salmon_files", "GRCh38.premRNA.fa")
-
 ## Save pre-mRNA sequences to fasta file 
+premrna_fasta <- here("salmon_files", "GRCh38.premRNA.fa")
 Biostrings::writeXStringSet(premrnaseq, filepath = premrna_fasta)
 ```
 
@@ -217,6 +229,8 @@ See the `scripts/run-salmon.sh` file in the terminal.
 
 ## Creating SummarizedExperiment object
 
+First, we create a table with information about where each file (quantified counts from salmon) is. 
+This will be used to 
 ```{r}
 # list tumor names
 tumor_names <- list.files(here("sample_data"))[
@@ -224,46 +238,46 @@ tumor_names <- list.files(here("sample_data"))[
 
 unique_sf_paths <- NULL
 for(tum in tumor_names){
-  ids <- list.files(paste(path_dir, tum, sep="/"))
+  ids <- list.files(here("sample_data", tum))
   ids <- unique(stringr::str_sub(ids, end=-13))
-  ids <- paste(path_dir, "salmon_quants", paste0(ids, "_quant/quant.sf"), sep="/")
+  ids <- here("salmon_quants", paste0(ids, "_quant"), "quant.sf")
   unique_sf_paths <- c(unique_sf_paths, ids)
 }
 
 unique_sf_ids <- NULL
 for(tum in tumor_names){
-  ids <- list.files(paste(path_dir, tum, sep="/"))
+  ids <- list.files(here("sample_data", tum))
   ids <- unique(stringr::str_sub(ids, end=-13))
   unique_sf_ids <- c(unique_sf_ids, ids)
 }
 
 coldata <- data.frame(files = unique_sf_paths, names = unique_sf_ids)
-
 ```
 
-tximeta couldn't automatically detect the transcriptome, so we might have to create our own. The code chunk below was my failed attempt to create one.
+Next, we use the `tximeta` package to create a SummarizedExperiment object.
+If we try to run `tximeta(coldata)` that will fail because `tximeta` won't be able to detect automatically what the reference transcriptome is. 
+So, here we create our own [linked transcriptome](https://bioconductor.org/packages/release/bioc/vignettes/tximeta/inst/doc/tximeta.html#linked_transcriptomes).
 
-Source: https://bioconductor.org/packages/release/bioc/vignettes/tximeta/inst/doc/tximeta.html#linked_transcriptomes
+A `linkedTxome` records key information about the sources of the transcript FASTA files, and the location of the relevant GTF file. 
+It also records the checksum of the transcriptome that was computed by Salmon during the index step.
+
 
 ```{r}
 library(tximeta)
-dir = "/users/akuo/pre_mRNA/data/reference/genomes/hsapiens/GENCODE/release_32"
-fasta_path = file.path(dir, "gencode.v32.preandmrna.fa.gz")
-gtf_path = file.path(dir, "gencode.v32.annotation.gtf.gz") # May need to generate another gtf file
-index_dir = file.path(dir, "gencode.v32_salmon-index-v1.0.0")
 
-tmp <- tempdir()
-#jsonFile <- file.path(tmp, "tmp.json")
+# created linkedTranscriptome 
+index_dir <- here("salmon_files", "gencode.v32_salmon-index-v1.0.0")
+fasta_path =  here("salmon_files", "gencode.v32.preandmrna.fa.gz")
+gtf_path =  here("salmon_files", "gencode.v32.preandmrnaaannotation.gtf") 
+
+json_file <- here("salmon_files", paste0(basename(index_dir), ".json"))
 makeLinkedTxome(indexDir=index_dir,
                 source="GENCODE", organism="Homo sapiens",
                 release="32", genome="GRCh38",
                 fasta=fasta_path, gtf=gtf_path,
-                write=FALSE)
-```
+                jsonFile=json_file)
 
-```{r}
-library(tximeta)
-se <- tximeta(coldata[1:96,])
+se <- tximeta(coldata[1:5,])
 ```
 
 

@@ -6,6 +6,7 @@
 
     - build the salmon index with pre-mRNA and mRNA (`/scripts/build-index-salmon.sh`)
     - run salmon for quantification of counts for all tumors (`/scripts/run-salmon.sh`)
+    - create `SummarizedExperiment` object
 
 2. 
 
