@@ -8,6 +8,14 @@ output: html_document
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
+```{bash}
+# Commands to start an interactive session on the JHPCE cluster
+qrsh -l mem_free=5G,h_vmem=5G
+module load conda_R
+cd alsf-filbin
+R
+```
+
 ```{r}
 library(here)
 ```
