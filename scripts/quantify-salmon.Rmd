@@ -10,9 +10,9 @@ knitr::opts_chunk$set(echo = TRUE)
 
 ```{bash}
 # Commands to start an interactive session on the JHPCE cluster
-qrsh -l mem_free=5G,h_vmem=5G
+qrsh -l mem_free=10G,h_vmem=10G
 module load conda_R
-cd alsf-filbin
+cd /fastscratch/myscratch/akuo/alsf-filbin
 R
 ```
 
@@ -166,7 +166,7 @@ Biostrings::writeXStringSet(premrnaseq, filepath = premrna_fasta)
 Let's first check to make sure they have the same number of transcripts (pre-mRNA and mRNA). 
 ```{bash}
 cd /fastscratch/myscratch/shicks1/alsf-filbin/salmon_files
-# cd /users/akuo/alsf-filbin/salmon_files
+# cd /fastscratch/myscratch/akuo/alsf-filbin/salmon_files
 zcat gencode.v32.transcripts.fa.gz | grep ">"  | wc -l
 grep ">" GRCh38.premRNA.fa | wc -l
 ```
@@ -178,25 +178,25 @@ Now we will put the pre-mRNA (`GRCh38.premRNA.fa`) and mRNA (`gencode.v32.transc
 
 ```{bash}
 cd /fastscratch/myscratch/shicks1/alsf-filbin/salmon_files
-# cd /users/akuo/alsf-filbin/salmon_files
+# cd /fastscratch/myscratch/akuo/alsf-filbin/salmon_files
 zcat gencode.v32.transcripts.fa.gz > gencode.v32.transcripts.fa
 cat gencode.v32.transcripts.fa GRCh38.premRNA.fa > gencode.v32.preandmrna.fa
 grep ">" gencode.v32.preandmrna.fa | wc -l
 ```
 
-Ok there are 454924 (or = 227462/2) transcripts, as we expect. Now let's zip this file up. 
+Ok there are 454924 (or = 227462*2) transcripts, as we expect. Now let's zip this file up. 
 This takes a while (~30-40 mins). 
 
 ```{bash}
 cd /fastscratch/myscratch/shicks1/alsf-filbin/salmon_files
-# cd /users/akuo/alsf-filbin/salmon_files
+# cd /fastscratch/myscratch/akuo/alsf-filbin/salmon_files
 gzip gencode.v32.preandmrna.fa
 ```
 
 And clean up our space 
 ```{bash}
 cd /fastscratch/myscratch/shicks1/alsf-filbin/salmon_files
-# cd /users/akuo/alsf-filbin/salmon_files
+# cd /fastscratch/myscratch/akuo/alsf-filbin/salmon_files
 rm gencode.v32.transcripts.fa
 rm gencode.v32.transcripts.fa.gz
 rm gencode.v32.annotation.gtf.gz
