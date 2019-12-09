@@ -1,0 +1,83 @@
+---
+title: qc and analysis of single nuc-seq data (alsf-filbin)
+author: Stephanie Hicks and Albert Kuo
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+library(here)
+```
+
+# Creating SummarizedExperiment object
+
+First, we create a table with information about where each file (quantified counts from salmon) is. 
+This will be used to create a `SummarizedExperiment` object. 
+```{r}
+# list tumor names
+tumor_names <- list.files(here("sample_data"))[
+                  !grepl("*.txt", list.files(here("sample_data")))]
+
+unique_sf_paths <- NULL
+for(tum in tumor_names){
+  ids <- list.files(here("sample_data", tum))
+  ids <- unique(stringr::str_sub(ids, end=-13))
+  ids <- here("salmon_quants", paste0(ids, "_quant"), "quant.sf")
+  unique_sf_paths <- c(unique_sf_paths, ids)
+}
+
+unique_sf_ids <- NULL
+for(tum in tumor_names){
+  ids <- list.files(here("sample_data", tum))
+  ids <- unique(stringr::str_sub(ids, end=-13))
+  unique_sf_ids <- c(unique_sf_ids, ids)
+}
+
+coldata <- data.frame(files = unique_sf_paths, names = unique_sf_ids)
+```
+
+The only way I've figured out how to make this work is with `skipMeta = TRUE`. 
+
+```{r}
+se <- tximeta(coldata, skipMeta = TRUE)
+```
+
+
+## Explore SummarizedExperiment object
+
+```{r}
+suppressPackageStartupMessages({
+  library(tximeta)
+  library(SummarizedExperiment)
+  library(DESeq2)
+})
+
+colData(se)
+assayNames(se)
+rowRanges(se)
+```
+
+```{r}
+dat <- assay(se, "counts")
+dat <- dat[!(rowSums(dat) == 0),]
+dat[grep("ENST00000355537.4", rownames(dat)),]
+summary(colSums(dat))
+hist(colSums(dat))
+```
+
+```{r}
+colSums(dat[grepl(".premrna", rownames(dat)),]) / colSums(dat) # pre-mRNA
+colSums(dat[!grepl(".premrna", rownames(dat)),]) / colSums(dat) # mRNA
+```
+
+```{r}
+## qqplot for a poisson
+plot(quantile(rpois(1000, lambda = mean(dat[,1])),probs = seq(0.01,0.99,0.01)), 
+     quantile(dat[,1],probs = seq(0.01,0.99,0.01)))
+```
+
+## quality control
+

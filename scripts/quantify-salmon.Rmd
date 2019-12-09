@@ -1,6 +1,6 @@
 ---
 title: quantification of single nuc-seq data (alsf-filbin) with salmon 
-author: Stephanie Hicks
+author: Stephanie Hicks and Albert Kuo
 output: html_document
 ---
 
@@ -172,7 +172,7 @@ grep ">" gencode.v32.preandmrna.fa | wc -l
 ```
 
 Ok there are 454924 (or = 227462/2) transcripts, as we expect. Now let's zip this file up. 
-This takes a while (~15 mins). 
+This takes a while (~30-40 mins). 
 
 ```{bash}
 cd /fastscratch/myscratch/shicks1/alsf-filbin/salmon_files
@@ -227,32 +227,7 @@ There is a script `build-index-salmon.sh` in the `/scripts` folder that was used
 
 See the `scripts/run-salmon.sh` file in the terminal. 
 
-## Creating SummarizedExperiment object
-
-First, we create a table with information about where each file (quantified counts from salmon) is. 
-This will be used to 
-```{r}
-# list tumor names
-tumor_names <- list.files(here("sample_data"))[
-                  !grepl("*.txt", list.files(here("sample_data")))]
-
-unique_sf_paths <- NULL
-for(tum in tumor_names){
-  ids <- list.files(here("sample_data", tum))
-  ids <- unique(stringr::str_sub(ids, end=-13))
-  ids <- here("salmon_quants", paste0(ids, "_quant"), "quant.sf")
-  unique_sf_paths <- c(unique_sf_paths, ids)
-}
-
-unique_sf_ids <- NULL
-for(tum in tumor_names){
-  ids <- list.files(here("sample_data", tum))
-  ids <- unique(stringr::str_sub(ids, end=-13))
-  unique_sf_ids <- c(unique_sf_ids, ids)
-}
-
-coldata <- data.frame(files = unique_sf_paths, names = unique_sf_ids)
-```
+## Setting up the tximeta package 
 
 Next, we use the `tximeta` package to create a SummarizedExperiment object.
 If we try to run `tximeta(coldata)` that will fail because `tximeta` won't be able to detect automatically what the reference transcriptome is. 
@@ -261,38 +236,22 @@ So, here we create our own [linked transcriptome](https://bioconductor.org/packa
 A `linkedTxome` records key information about the sources of the transcript FASTA files, and the location of the relevant GTF file. 
 It also records the checksum of the transcriptome that was computed by Salmon during the index step.
 
-
 ```{r}
-library(tximeta)
+suppressPackageStartupMessages({
+  library(tximeta)
+})
 
 # created linkedTranscriptome 
 index_dir <- here("salmon_files", "gencode.v32_salmon-index-v1.0.0")
-fasta_path =  here("salmon_files", "gencode.v32.preandmrna.fa.gz")
-gtf_path =  here("salmon_files", "gencode.v32.preandmrnaaannotation.gtf") 
+fasta_path <-  here("salmon_files", "gencode.v32.preandmrna.fa.gz")
+gtf_path <-  here("salmon_files", "gencode.v32.preandmrnaaannotation.gtf") 
 
 json_file <- here("salmon_files", paste0(basename(index_dir), ".json"))
 makeLinkedTxome(indexDir=index_dir,
-                source="GENCODE", organism="Homo sapiens",
-                release="32", genome="GRCh38",
+                source="other", organism="Homo sapiens",
+                release="other", genome="GRCh38",
                 fasta=fasta_path, gtf=gtf_path,
                 jsonFile=json_file)
-
-se <- tximeta(coldata[1:5,])
 ```
 
 
-# Quality control 
-
-## Explore SummarizedExperiment object
-
-```{r}
-suppressPackageStartupMessages(library(SummarizedExperiment))
-colData(se)
-assayNames(se)
-rowRanges(se)
-```
-
-```{r}
-dat <- assay(se, "counts")
-hist(colSums(dat))
-```

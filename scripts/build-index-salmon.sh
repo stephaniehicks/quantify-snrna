@@ -1,7 +1,7 @@
 #$ -pe local 4
 #$ -cwd
-#$ -l mem_free=5G,h_vmem=10G
+#$ -l mem_free=15G,h_vmem=20G
 
-# create salmon index (this process takes ~3 hours)
+# create salmon index (this process takes ~2-3 hours)
 # salmon index -t /fastscratch/myscratch/akuo/alsf-filbin/salmon_files/gencode.v32.preandmrna.fa.gz -i /fastscratch/myscratch/akuo/alsf-filbin/salmon_files/gencode.v32_salmon-index-v1.0.0 --gencode --threads 4
 salmon index -t /fastscratch/myscratch/shicks1/alsf-filbin/salmon_files/gencode.v32.preandmrna.fa.gz -i /fastscratch/myscratch/shicks1/alsf-filbin/salmon_files/gencode.v32_salmon-index-v1.0.0 --gencode --threads 4
