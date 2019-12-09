@@ -15,23 +15,26 @@ library(here)
 This code chunk copies the data from where it is stored into the github repo so we can all work with relative paths. 
 I copy it so I can keep the backed up copy where I originally have it. 
 However, the person using this script needs to adjust which paths to use. 
+
 ```{r}
-stephanie_data_path <- "/users/shicks1/data/alsf_filbin/sample"
-# albert_data_dath <- "/users/akuo/data/alsf_filbin/sample"
+# stephanie_data_path <- "/users/shicks1/data/alsf_filbin/sample"
+albert_data_path <- "/users/akuo/alsf_filbin/data/sample_data"
 
 if(!dir.exists(here("sample_data"))){
   dir.create(here("sample_data"))
   
-  file.copy(stephanie_data_path, here("sample_data"), recursive=FALSE)
-  # file.copy(albert_data_path, here("sample_data"), recursive=FALSE)
+  # file.copy(stephanie_data_path, here("sample_data"), recursive=FALSE)
+  file.copy(list.files(albert_data_path, full.names = TRUE), here("sample_data"), recursive=TRUE)
 }
 
 # verify the tumor files has been transferred. 
 tumor_names <- list.files(here("sample_data"))[
                   !grepl("*.txt", list.files(here("sample_data")))]
+print(tumor_names)
 ```
 
 Next, we create the folder to store reference files (e.g. genome and cDNA) and quantification files (quantified counts) from salmon.  
+
 ```{r}
 if(!dir.exists(here("salmon_files"))){
   dir.create(here("salmon_files"))
