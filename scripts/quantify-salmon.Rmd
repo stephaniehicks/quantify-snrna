@@ -136,7 +136,7 @@ tmp[grep("ENST00000456328.2", names(tmp)),]
 
 ## Save pre-mRNA gtf file
 preandmrna_gtf <- here("salmon_files","gencode.v32.preandmrnaaannotation.gtf")
-rtracklayer::export(c(unlist(grl), grrange), preandmrna_gtf)
+rtracklayer::export(tmp, preandmrna_gtf)
 ```
 
 Now, for each entry in `grrange`, we extract the sequence from the corresponding `seqnames` entry in the `genome`.
@@ -158,6 +158,7 @@ Biostrings::writeXStringSet(premrnaseq, filepath = premrna_fasta)
 Let's first check to make sure they have the same number of transcripts (pre-mRNA and mRNA). 
 ```{bash}
 cd /fastscratch/myscratch/shicks1/alsf-filbin/salmon_files
+# cd /users/akuo/alsf-filbin/salmon_files
 zcat gencode.v32.transcripts.fa.gz | grep ">"  | wc -l
 grep ">" GRCh38.premRNA.fa | wc -l
 ```
@@ -169,6 +170,7 @@ Now we will put the pre-mRNA (`GRCh38.premRNA.fa`) and mRNA (`gencode.v32.transc
 
 ```{bash}
 cd /fastscratch/myscratch/shicks1/alsf-filbin/salmon_files
+# cd /users/akuo/alsf-filbin/salmon_files
 zcat gencode.v32.transcripts.fa.gz > gencode.v32.transcripts.fa
 cat gencode.v32.transcripts.fa GRCh38.premRNA.fa > gencode.v32.preandmrna.fa
 grep ">" gencode.v32.preandmrna.fa | wc -l
@@ -179,12 +181,14 @@ This takes a while (~30-40 mins).
 
 ```{bash}
 cd /fastscratch/myscratch/shicks1/alsf-filbin/salmon_files
+# cd /users/akuo/alsf-filbin/salmon_files
 gzip gencode.v32.preandmrna.fa
 ```
 
 And clean up our space 
 ```{bash}
 cd /fastscratch/myscratch/shicks1/alsf-filbin/salmon_files
+# cd /users/akuo/alsf-filbin/salmon_files
 rm gencode.v32.transcripts.fa
 rm gencode.v32.transcripts.fa.gz
 rm gencode.v32.annotation.gtf.gz
