@@ -1,10 +1,11 @@
 #$ -pe local 6
+#$ -R y
 #$ -cwd
 #$ -o log/
 #$ -e log/
-#$ -l mem_free=10G,h_vmem=15G
+#$ -l mem_free=20G,h_vmem=20G
 #$ -t 1-576
-#$ -tc 30
+#$ -tc 10
 
 # set project directory path
 # d=/fastscratch/myscratch/shicks1/alsf-filbin
