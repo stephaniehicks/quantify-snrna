@@ -1,5 +1,7 @@
 #$ -pe local 6
 #$ -cwd
+#$ -o log/
+#$ -e log/
 #$ -l mem_free=10G,h_vmem=15G
 #$ -t 1-576
 #$ -tc 30
@@ -7,6 +9,9 @@
 # set project directory path
 # d=/fastscratch/myscratch/shicks1/alsf-filbin
 d=/fastscratch/myscratch/akuo/alsf-filbin
+
+# make log directory for error and output files
+mkdir -p $d/scripts/log
 
 # run salmon
 samplefile=$d/sample_data/unique_cell_paths.txt;
@@ -18,4 +23,3 @@ salmon quant -i $d/salmon_files/gencode.v32_salmon-index-v1.0.0 -l A \
          -1 ${fn}1.fastq.gz \
          -2 ${fn}2.fastq.gz \
          -p 6 --validateMappings -o $d/salmon_quants/${samp}_quant
-done
