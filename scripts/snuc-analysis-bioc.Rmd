@@ -66,6 +66,7 @@ rowRanges(se)
 ```{r}
 dat <- assay(se, "counts")
 dat <- dat[!(rowSums(dat) == 0),]
+dim(dat)
 dat[grep("ENST00000355537.4", rownames(dat)),]
 summary(colSums(dat))
 hist(colSums(dat))
@@ -82,5 +83,20 @@ plot(quantile(rpois(1000, lambda = mean(dat[,1])),probs = seq(0.01,0.99,0.01)),
      quantile(dat[,1],probs = seq(0.01,0.99,0.01)))
 ```
 
+## Create SingleCellExperiment object
+
+```{r}
+# BiocManager::install('SingleCellExperiment')
+library(SingleCellExperiment)
+```
+
+```{r}
+sce = SingleCellExperiment(assays = list(counts = dat))
+
+# you can access counts by assay(sce, "counts") or counts(sce)
+# you can add a new entry to assays slot by assay(sce, "counts_new") = dat_new
+```
+
 ## quality control
+
 
