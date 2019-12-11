@@ -39,9 +39,12 @@ for(tum in tumor_names){
 coldata <- data.frame(files = unique_sf_paths, names = unique_sf_ids)
 ```
 
-The only way I've figured out how to make this work is with `skipMeta = TRUE`. 
+The only way I've figured out how to make this work is with `skipMeta = TRUE`. This will take a few minutes. 
 
 ```{r}
+suppressPackageStartupMessages({
+  library(tximeta)
+})
 se <- tximeta(coldata, skipMeta = TRUE)
 ```
 
