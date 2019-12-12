@@ -85,6 +85,8 @@ plot(quantile(rpois(1000, lambda = mean(dat[,1])),probs = seq(0.01,0.99,0.01)),
 
 ## Create SingleCellExperiment object
 
+A SingleCellExperiment class is derived from the SummarizedExperiment class. The most important change is the addition of a new slot called `reducedDims`. Read more [here](https://osca.bioconductor.org/data-infrastructure.html#a-brief-recap-from-se-to-sce).
+
 ```{r}
 # BiocManager::install('SingleCellExperiment')
 library(SingleCellExperiment)
@@ -97,6 +99,36 @@ sce = SingleCellExperiment(assays = list(counts = dat))
 # you can add a new entry to assays slot by assay(sce, "counts_new") = dat_new
 ```
 
-## quality control
+## Quality Control
 
+There are a couple of [QC metrics](https://osca.bioconductor.org/quality-control.html#choice-of-qc-metrics) to identify low-quality cells:
 
+1. Using counts, i.e. cells with (a) a small library size (total sum of counts) or (b) few expressed endogeneous genes (nonzero counts for those genes)
+2. Using "spike-in transcripts", i.e. any enrichment of spike-in transcripts (higher proportion) 
+3. Using the mitochondrial genome, i.e. any enrichment of reads in the mitochondrial genome is indicative of loss of cytoplasmic RNA
+
+I will only do (1) for now.
+
+```{r}
+library(scater)
+
+# Compute quality control metrics:
+# sum is the total count for each cell
+# detected contains the number of detected genes
+df = perCellQCMetrics(sce)
+df
+```
+
+```{r}
+# Find outliers with low library sizes (LibSize) and few detected features (n_features)
+reasons = quickPerCellQC(df) # DataFrame of logical values
+colSums(as.matrix(reasons))
+```
+
+```{r}
+# Discard outliers
+filtered = sce[, !reasons$discard] # 42 out of 576 cells were discarded
+filtered
+```
+
+Diagnostic plots: https://osca.bioconductor.org/quality-control.html#quality-control-plots 
