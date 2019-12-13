@@ -8,6 +8,14 @@ output: html_document
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
+```{bash}
+# Commands to start an interactive session on the JHPCE cluster
+qrsh -l mem_free=10G,h_vmem=10G
+module load conda_R
+cd /fastscratch/myscratch/akuo/alsf-filbin
+R
+```
+
 ```{r}
 library(here)
 ```
@@ -15,7 +23,8 @@ library(here)
 # Creating SummarizedExperiment object
 
 First, we create a table with information about where each file (quantified counts from salmon) is. 
-This will be used to create a `SummarizedExperiment` object. 
+This will be used to create a `SummarizedExperiment` object.
+
 ```{r}
 # list tumor names
 tumor_names <- list.files(here("sample_data"))[
@@ -39,21 +48,28 @@ for(tum in tumor_names){
 coldata <- data.frame(files = unique_sf_paths, names = unique_sf_ids)
 ```
 
-The only way I've figured out how to make this work is with `skipMeta = TRUE`. This will take a few minutes. 
+The only way I've figured out how to make this work is with `skipMeta = TRUE`. We need to figure out how to use the linkedTxome correctly so that `rowRanges(se)` isn't `NULL`. Then `tximeta` would be able to match the transcripts to genes for us.
 
 ```{r}
 suppressPackageStartupMessages({
   library(tximeta)
 })
-se <- tximeta(coldata, skipMeta = TRUE)
-```
 
+se_file_name = here("salmon_quants", "se.rds")
+
+if(!file.exists(se_file_name)){
+  # Create SummarizedExperiment object
+  se <- tximeta(coldata, skipMeta = TRUE) # Takes a few minutes, file size = 597 MB
+  saveRDS(se, se_file_name)
+} else {
+  se = readRDS(se_file_name) # Takes a couple of seconds
+}
+```
 
 ## Explore SummarizedExperiment object
 
 ```{r}
 suppressPackageStartupMessages({
-  library(tximeta)
   library(SummarizedExperiment)
   library(DESeq2)
 })
@@ -74,8 +90,9 @@ hist(colSums(dat))
 
 ```{r}
 # percentages
-colSums(dat[grepl(".premrna", rownames(dat)),]) / colSums(dat) # pre-mRNA
-colSums(dat[!grepl(".premrna", rownames(dat)),]) / colSums(dat) # mRNA
+premrna_prop = colSums(dat[grepl(".premrna", rownames(dat)),]) / colSums(dat)
+mrna_prop = colSums(dat[!grepl(".premrna", rownames(dat)),]) / colSums(dat) # same as 1 - premrna_prop
+summary(premrna_prop)
 ```
 
 ```{r}
