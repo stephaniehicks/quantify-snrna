@@ -73,6 +73,7 @@ hist(colSums(dat))
 ```
 
 ```{r}
+# percentages
 colSums(dat[grepl(".premrna", rownames(dat)),]) / colSums(dat) # pre-mRNA
 colSums(dat[!grepl(".premrna", rownames(dat)),]) / colSums(dat) # mRNA
 ```
@@ -103,7 +104,7 @@ sce = SingleCellExperiment(assays = list(counts = dat))
 
 There are a couple of [QC metrics](https://osca.bioconductor.org/quality-control.html#choice-of-qc-metrics) to identify low-quality cells:
 
-1. Using counts, i.e. cells with (a) a small library size (total sum of counts) or (b) few expressed endogeneous genes (nonzero counts for those genes)
+1. Using counts, i.e. cells with (a) a small library size (total sum of counts) `low_lib_size` or (b) few expressed endogeneous genes (nonzero counts for those genes) `low_n_features`
 2. Using "spike-in transcripts", i.e. any enrichment of spike-in transcripts (higher proportion) 
 3. Using the mitochondrial genome, i.e. any enrichment of reads in the mitochondrial genome is indicative of loss of cytoplasmic RNA
 
@@ -114,7 +115,7 @@ library(scater)
 
 # Compute quality control metrics:
 # sum is the total count for each cell
-# detected contains the number of detected genes
+# detected contains the number of detected genes (actually transcripts for our data)
 df = perCellQCMetrics(sce)
 df
 ```
