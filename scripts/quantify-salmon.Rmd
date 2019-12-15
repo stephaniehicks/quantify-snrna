@@ -83,7 +83,7 @@ We need to download 3 files:
 Source: https://www.gencodegenes.org/human/
 
 ```{r}
-# download GENCODE primary assembly fasta 
+# download GENCODE primary assembly fasta file
 if(!file.exists(here("salmon_files", "GRCh38.primary_assembly.genome.fa.gz"))){
   tar_gz_file <- "ftp://ftp.ebi.ac.uk/pub/databases/gencode/Gencode_human/release_32/GRCh38.primary_assembly.genome.fa.gz"
   download.file(tar_gz_file, 
@@ -91,7 +91,7 @@ if(!file.exists(here("salmon_files", "GRCh38.primary_assembly.genome.fa.gz"))){
                 method = "wget")
 }
 
-# download GENCODE fasta file
+# download GENCODE transcripts fasta file
 if(!file.exists(here("salmon_files", "gencode.v32.transcripts.fa.gz"))){
   tar_gz_file <- "ftp://ftp.ebi.ac.uk/pub/databases/gencode/Gencode_human/release_32/gencode.v32.transcripts.fa.gz"
   download.file(tar_gz_file, 
