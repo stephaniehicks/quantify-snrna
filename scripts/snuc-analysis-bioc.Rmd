@@ -10,7 +10,7 @@ knitr::opts_chunk$set(echo = TRUE)
 
 ```{bash}
 # Commands to start an interactive session on the JHPCE cluster
-qrsh -l mem_free=10G,h_vmem=10G
+qrsh -l mem_free=20G,h_vmem=20G
 module load conda_R
 cd /fastscratch/myscratch/akuo/alsf-filbin
 R
@@ -71,15 +71,17 @@ The only way I've figured out how to make this work for now is with `skipMeta = 
 ```{r}
 se_file_name = here("salmon_quants", "se.rds")
 
-coldata = coldata[1:2, ] # for testing
+# coldata = coldata[1:2, ] # for testing
 if(!file.exists(se_file_name)){
   # Create SummarizedExperiment object
   se <- tximeta(coldata, skipMeta = TRUE) # Takes a few minutes, file size = 597 MB
-  se <- tximeta(coldata, ignoreAfterBar = TRUE)
+  # se <- tximeta(coldata, ignoreAfterBar = TRUE)
   saveRDS(se, se_file_name)
 } else {
   se = readRDS(se_file_name) # Takes a couple of seconds
 }
+
+# Copy se file from fastscratch to local folder?
 ```
 
 ## Explore SummarizedExperiment object
@@ -102,19 +104,6 @@ dim(dat)
 dat[grep("ENST00000355537.4", rownames(dat)),]
 summary(colSums(dat))
 hist(colSums(dat))
-```
-
-```{r}
-# percentages
-premrna_prop = colSums(dat[grepl(".premrna", rownames(dat)),]) / colSums(dat)
-mrna_prop = colSums(dat[!grepl(".premrna", rownames(dat)),]) / colSums(dat) # same as 1 - premrna_prop
-summary(premrna_prop)
-```
-
-```{r}
-## qqplot for a poisson
-plot(quantile(rpois(1000, lambda = mean(dat[,1])),probs = seq(0.01,0.99,0.01)), 
-     quantile(dat[,1],probs = seq(0.01,0.99,0.01)))
 ```
 
 ## Create SingleCellExperiment object
@@ -162,7 +151,91 @@ colSums(as.matrix(reasons))
 ```{r}
 # Discard outliers
 filtered = sce[, !reasons$discard] # 42 out of 576 cells were discarded
-filtered
+
+filtered_file_name = here("salmon_quants", "dat_filtered.rds")
+saveRDS(filtered, filtered_file_name)
 ```
 
 Diagnostic plots: https://osca.bioconductor.org/quality-control.html#quality-control-plots 
+
+# Exploratory Plots of Counts
+
+```{r}
+library(here)
+library(SingleCellExperiment)
+library(ggplot2)
+library(dplyr)
+```
+
+## Proportion of counts that are pre-mRNA
+
+```{r}
+filtered_file_name = here("salmon_quants", "dat_filtered.rds")
+if(file.exists(filtered_file_name)){
+  filtered = readRDS(filtered_file_name)
+}
+
+dat_filtered = counts(filtered)
+
+# Split data into pre-mRNA and mRNA
+dat_prem = dat_filtered[grepl(".premrna", rownames(dat_filtered)),]
+dat_mrna = dat_filtered[!grepl(".premrna", rownames(dat)),]
+
+# Proportion of counts that are pre_mRNA
+premrna_prop = colSums(dat_prem)/colSums(dat_filtered)
+summary(premrna_prop) # Min = 0.17, Median/Mean = 0.66, Max = 0.91
+```
+
+## Distribution of pre-mRNA
+
+```{r}
+# estimate lambdas and variances
+lambdas = colMeans(dat_prem)
+vars = apply(dat_prem, MARGIN = 2, var)
+
+# variance = mean under Poisson distribution
+# variance >> mean in data
+tibble(lambdas, vars) %>%
+  ggplot(aes(x = log(lambdas), y = log(vars))) +
+  geom_point() +
+  geom_abline(intercept = 0, slope = 1) +
+  labs(title = "pre-mRNA")
+```
+
+```{r}
+# qqplot for first column
+qprobs = seq(0.01, 0.99, by = 0.01)
+plot(quantile(rpois(1000, lambda = lambdas[1]), qprobs),
+     quantile(dat_prem[,1], probs = qprobs))
+```
+
+```{r}
+# plot P(X=0) against the average expression level?
+probs_0 = sapply(lambdas, function(lambda) dpois(0, lambda)) # P(X = 0)
+vars = apply(dat_prem, MARGIN = 2, var)
+```
+
+## Distribution of mRNA
+
+```{r}
+# estimate lambdas and variances
+lambdas_m = colMeans(dat_mrna)
+vars_m = apply(dat_mrna, MARGIN = 2, var)
+
+# variance = mean under Poisson distribution
+# variance >> mean in data
+tibble(lambdas_m, vars_m) %>%
+  ggplot(aes(x = log(lambdas_m), y = log(vars_m))) + 
+  geom_point() +
+  geom_abline(intercept = 0, slope = 1) +
+  labs(title = "mRNA")
+```
+
+```{r}
+# qqplot for first column
+qprobs = seq(0.01, 0.99, by = 0.01)
+plot(quantile(rpois(1000, lambda = lambdas_m[1]), qprobs),
+     quantile(dat_mrna[,1], probs = qprobs))
+```
+
+
