@@ -71,13 +71,19 @@ if(!file.exists(here("sample_data", "unique_cell_paths.txt"))){
 
 # Quantification 
 
-## Download files needed for Salmon
+## Download files needed for salmon
 
-Gene transfer format (GTF) is a file format used to hold information about gene structure. 
-It is a tab-delimited text format based on the general feature format (GFF), but contains some additional conventions specific to gene information.
+We need to download 3 files:
+
+1. `GRCh38.primary_assembly.genome.fa.gz` - nucleotide (DNA) sequences of the **GRCH38 primary genome assembly** (chromosomes and scaffolds -- i.e. unplaced scaffolds?)
+2. `gencode.v32.transcripts.fa.gz` - nucleotide (DNA) sequences of **all transcripts** on reference chromosomes
+3. `gencode.v32.annotation.gtf.gz` - gene annotation on the reference chromosomes (i.e. for humans, these are chromosomes 1 to 22, X, and Y), i.e. locations of genes and other information about the genes, gene structure
+  * Gene transfer format (GTF) is a file format used to hold information about gene structure. It is a tab-delimited text format based on the general feature format (GFF), but contains some additional conventions specific to gene information.
+
+Source: https://www.gencodegenes.org/human/
 
 ```{r}
-# download GENCODE fastq DNA file 
+# download GENCODE primary assembly fasta 
 if(!file.exists(here("salmon_files", "GRCh38.primary_assembly.genome.fa.gz"))){
   tar_gz_file <- "ftp://ftp.ebi.ac.uk/pub/databases/gencode/Gencode_human/release_32/GRCh38.primary_assembly.genome.fa.gz"
   download.file(tar_gz_file, 
@@ -85,7 +91,7 @@ if(!file.exists(here("salmon_files", "GRCh38.primary_assembly.genome.fa.gz"))){
                 method = "wget")
 }
 
-# download ensemble fastq cdna file 
+# download GENCODE fasta file
 if(!file.exists(here("salmon_files", "gencode.v32.transcripts.fa.gz"))){
   tar_gz_file <- "ftp://ftp.ebi.ac.uk/pub/databases/gencode/Gencode_human/release_32/gencode.v32.transcripts.fa.gz"
   download.file(tar_gz_file, 
@@ -93,7 +99,7 @@ if(!file.exists(here("salmon_files", "gencode.v32.transcripts.fa.gz"))){
                 method = "wget")
 }
 
-# download GENCODE gtf file 
+# download GENCODE gtf file
 if(!file.exists(here("salmon_files", "gencode.v32.annotation.gtf.gz"))){
   tar_gz_file <- "ftp://ftp.ebi.ac.uk/pub/databases/gencode/Gencode_human/release_32/gencode.v32.annotation.gtf.gz"
   download.file(tar_gz_file, 
@@ -102,7 +108,10 @@ if(!file.exists(here("salmon_files", "gencode.v32.annotation.gtf.gz"))){
 }
 ```
 
-Next, we need to create a set of pre-mRNA sequences to save to a FASTA file. 
+
+## Make pre-mRNA files for salmon
+
+We need to create a set of pre-mRNA sequences to save to a FASTA file. 
 This is needed because we have single nucleus RNA-seq data so we need to take into account the pre-mRNA and mRNA transcripts. 
 This code kindly comes from [Charlotte Soneson](https://csoneson.github.io).
 
@@ -113,17 +122,15 @@ suppressPackageStartupMessages({
   library(GenomicFeatures)
   library(BSgenome)
 })
+```
 
-## Get genomic (DNA) sequence
-genomefasta <- here("salmon_files", "GRCh38.primary_assembly.genome.fa.gz")
+### Combined GTF file
 
-## Import FASTA file (DNA) with Biostrings::readDNAStringSet
-genome <- Biostrings::readDNAStringSet(genomefasta)
-names(genome) <- sapply(strsplit(names(genome), " "), .subset, 1) # creates chr1, etc
+First, make a pre-mRNA GTF file (using the mRNA GTF file). Then combine it with the mRNA GTF file to get a GTF file for both pre-mRNA and mRNA.
 
-ingtf <- here("salmon_files","gencode.v32.annotation.gtf.gz")
-
+```{r}
 ## Read gtf file and group exons by transcript
+ingtf <- here("salmon_files","gencode.v32.annotation.gtf.gz")
 txdb <- GenomicFeatures::makeTxDbFromGFF(ingtf)
 grl <- GenomicFeatures::exonsBy(txdb, by = "tx", use.names = TRUE)
 
@@ -142,10 +149,12 @@ tmp <- c(unlist(grl), grrange) # 1599770 rows
 ## example of a transcript with three exons (mRNA) or entire pre-mRNA region
 tmp[grep("ENST00000456328.2", names(tmp)),]
 
-## Save pre-mRNA gtf file
+## Save combined pre-mRNA and mRNA gtf file
 preandmrna_gtf <- here("salmon_files","gencode.v32.preandmrnaaannotation.gtf")
 rtracklayer::export(tmp, preandmrna_gtf)
 ```
+
+### Combined FASTA file
 
 Now, for each entry in `grrange`, we extract the sequence from the corresponding `seqnames` entry in the `genome`.
 
@@ -155,6 +164,13 @@ So, if you do this, you will likely need to remove the version numbers before me
 Or just use the Gencode annotation where the naming is consistent between the transcriptome fasta and the gtf.
 
 ```{r}
+## Get genomic (DNA) sequence from FASTA file
+genomefasta <- here("salmon_files", "GRCh38.primary_assembly.genome.fa.gz")
+
+## Import FASTA file (DNA) with Biostrings::readDNAStringSet
+genome <- Biostrings::readDNAStringSet(genomefasta)
+names(genome) <- sapply(strsplit(names(genome), " "), .subset, 1) # creates chr1, etc
+
 ## Get the sequence of each pre-mRNA molecule
 premrnaseq <- BSgenome::getSeq(x = genome, names = grrange)
 
@@ -163,12 +179,13 @@ premrna_fasta <- here("salmon_files", "GRCh38.premRNA.fa")
 Biostrings::writeXStringSet(premrnaseq, filepath = premrna_fasta)
 ```
 
-Let's first check to make sure they have the same number of transcripts (pre-mRNA and mRNA). 
+Let's check to make sure the pre-mRNA and the mRNA have the same number of transcripts.
+
 ```{bash}
 cd /fastscratch/myscratch/shicks1/alsf-filbin/salmon_files
 # cd /fastscratch/myscratch/akuo/alsf-filbin/salmon_files
-zcat gencode.v32.transcripts.fa.gz | grep ">"  | wc -l
-grep ">" GRCh38.premRNA.fa | wc -l
+zcat gencode.v32.transcripts.fa.gz | grep ">"  | wc -l # mRNA
+grep ">" GRCh38.premRNA.fa | wc -l                     # pre-mRNA
 ```
 
 Both have the same number of rows (or transcripts): 227462.
@@ -193,7 +210,8 @@ cd /fastscratch/myscratch/shicks1/alsf-filbin/salmon_files
 gzip gencode.v32.preandmrna.fa
 ```
 
-And clean up our space 
+And clean up our space
+
 ```{bash}
 cd /fastscratch/myscratch/shicks1/alsf-filbin/salmon_files
 # cd /fastscratch/myscratch/akuo/alsf-filbin/salmon_files
@@ -205,9 +223,11 @@ rm gencode.v32.premrnaannotation.gtf
 rm GRCh38.primary_assembly.genome.fa.gz
 ```
 
+We have made a GTF file (`gencode.v32.preandmrnaaannotation.gtf`) and a FASTA file (`gencode.v32.preandmrna.fa`) for the combined pre-mRNA and mRNA.
+
 ## Install and build salmon index 
 
-This part will have be done for each user. 
+This part will have to be done for each user. 
 I installed the salmon 1.0.0 binary in my home directory here `/users/shicks1/src/`. 
 
 To install salmon v1.0.0: 
@@ -236,17 +256,18 @@ Therefore, I do not keep the duplicates as we are interested in gene level aggre
 The `--gencode` flag will handle the composite fasta headers in GENCODE transcript fasta files and split the transcript name at the first '|' character. 
 The `--threads` argument says how many threads to use when building the index. 
 
-There is a script `build-index-salmon.sh` in the `/scripts` folder that was used to run this code with 4 cores.
+There is a script `build-index-salmon.sh` in the `/scripts` folder that was used to run this code with 4 cores. The index is built from the combined FASTA file.
 
-## Running salmon 
+## Run salmon 
 
-See the `scripts/run-salmon.sh` file in the terminal. 
+We will now use the index created by `build-index-salmon.sh`.
+See the `scripts/run-salmon.sh` file or the `scripts/run-salmon-paralle.sh` file in the terminal. They do the same thing, but the latter will run salmon in parallel and be much faster.
 
-## Setting up the tximeta package 
+## Set up the tximeta package 
 
 Next, we use the `tximeta` package to create a SummarizedExperiment object.
-If we try to run `tximeta(coldata)` that will fail because `tximeta` won't be able to detect automatically what the reference transcriptome is. 
-So, here we create our own [linked transcriptome](https://bioconductor.org/packages/release/bioc/vignettes/tximeta/inst/doc/tximeta.html#linked_transcriptomes).
+If we try to run `tximeta(coldata)`, that will fail because `tximeta` won't be able to detect automatically what the reference transcriptome is. 
+So, here we create our own [linked transcriptome](https://bioconductor.org/packages/release/bioc/vignettes/tximeta/inst/doc/tximeta.html#linked_transcriptomes) from the combined GTF file.
 
 A `linkedTxome` records key information about the sources of the transcript FASTA files, and the location of the relevant GTF file. 
 It also records the checksum of the transcriptome that was computed by Salmon during the index step.
@@ -256,7 +277,7 @@ suppressPackageStartupMessages({
   library(tximeta)
 })
 
-# created linkedTranscriptome 
+# create linkedTranscriptome 
 index_dir <- here("salmon_files", "gencode.v32_salmon-index-v1.0.0")
 fasta_path <-  here("salmon_files", "gencode.v32.preandmrna.fa.gz")
 gtf_path <-  here("salmon_files", "gencode.v32.preandmrnaaannotation.gtf") 
@@ -266,7 +287,7 @@ makeLinkedTxome(indexDir=index_dir,
                 source="other", organism="Homo sapiens",
                 release="other", genome="GRCh38",
                 fasta=fasta_path, gtf=gtf_path,
-                jsonFile=json_file)
+                jsonFile=json_file) # this command will add the index to the cache automatically
 ```
 
 
