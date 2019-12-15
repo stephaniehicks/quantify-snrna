@@ -48,18 +48,34 @@ for(tum in tumor_names){
 coldata <- data.frame(files = unique_sf_paths, names = unique_sf_ids)
 ```
 
-The only way I've figured out how to make this work is with `skipMeta = TRUE`. We need to figure out how to use the linkedTxome correctly so that `rowRanges(se)` isn't `NULL`. Then `tximeta` would be able to match the transcripts to genes for us.
+We also need to use the linkedTxome object to use `tximeta` properly, i.e. `rowRanges(se)` won't be `NULL` and tximeta will be able to match the transcripts to the genes for us. **Note: still doesn't work**
 
 ```{r}
 suppressPackageStartupMessages({
   library(tximeta)
+  library(BiocFileCache)
 })
 
+# check if linkedTxome is already in the cache
+bfcloc <- getTximetaBFC()
+bfc <- BiocFileCache(bfcloc)
+bfcinfo(bfc)
+
+# if not, load linkedTxome json file
+json_file <- here("salmon_files", "gencode.v32_salmon-index-v1.0.0.json")
+loadLinkedTxome(json_file)
+```
+
+The only way I've figured out how to make this work for now is with `skipMeta = TRUE`.
+
+```{r}
 se_file_name = here("salmon_quants", "se.rds")
 
+coldata = coldata[1:2, ] # for testing
 if(!file.exists(se_file_name)){
   # Create SummarizedExperiment object
   se <- tximeta(coldata, skipMeta = TRUE) # Takes a few minutes, file size = 597 MB
+  se <- tximeta(coldata, ignoreAfterBar = TRUE)
   saveRDS(se, se_file_name)
 } else {
   se = readRDS(se_file_name) # Takes a couple of seconds
