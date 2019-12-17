@@ -165,6 +165,7 @@ library(here)
 library(SingleCellExperiment)
 library(ggplot2)
 library(dplyr)
+library(tidyr)
 ```
 
 ## Proportion of counts that are pre-mRNA
@@ -179,7 +180,7 @@ dat_filtered = counts(filtered)
 
 # Split data into pre-mRNA and mRNA
 dat_prem = dat_filtered[grepl(".premrna", rownames(dat_filtered)),]
-dat_mrna = dat_filtered[!grepl(".premrna", rownames(dat)),]
+dat_mrna = dat_filtered[!grepl(".premrna", rownames(dat_filtered)),]
 
 # Proportion of counts that are pre_mRNA
 premrna_prop = colSums(dat_prem)/colSums(dat_filtered)
@@ -188,29 +189,65 @@ summary(premrna_prop) # Min = 0.17, Median/Mean = 0.66, Max = 0.91
 
 ## Distribution of pre-mRNA
 
+First, I plot the mean and variance for every row (transcript). Under a poisson distribution,
+they should be the same.
+
 ```{r}
-# estimate lambdas and variances
-lambdas = colMeans(dat_prem)
-vars = apply(dat_prem, MARGIN = 2, var)
+# estimate lambdas and variances for every transcript
+means = rowMeans(dat_prem)
+vars = apply(dat_prem, MARGIN = 1, var)
 
 # variance = mean under Poisson distribution
-# variance >> mean in data
-tibble(lambdas, vars) %>%
-  ggplot(aes(x = log(lambdas), y = log(vars))) +
+tibble(means, vars) %>%
+  ggplot(aes(x = log(means), y = log(vars))) +
   geom_point() +
   geom_abline(intercept = 0, slope = 1) +
   labs(title = "pre-mRNA")
 ```
 
+I first compute the average expression for every row (x-axis) and the empirical $P(X_i=0)$, which is the probability that for a given gene $i$, the count is 0.
+
 ```{r}
-# qqplot for first column
+# empirical P(X = 0)
+emp_probs_0 = apply(dat_prem, MARGIN = 1, function(r) sum(r==0)/ncol(dat_prem))
+plot_dt = tibble(means, emp_probs_0)
+```
+
+I add what $P(X_i=0)$ would be under the model assumptions of binomial or poisson, using parameters estimated from the data. In particular, for a $Binom(n_i, p_i)$, $n_i$ is the median number of total counts across cells and $p_i$ is the mean proportion of counts that were in gene $i$. 
+
+```{r}
+# Model P(X = 0) under Binomial
+emp_props = rowMeans(dat_prem/colSums(dat_prem))
+n = round(median(colSums(dat_prem)))
+binom_probs_0 = dbinom(x = 0, size = n, p = emp_props)
+# Model P(X = 0) under Poisson
+poiss_probs_0 = dpois(x = 0, lambda = n*emp_props)
+
+# Add to plot
+plot_dt = plot_dt %>%
+  mutate(binom_probs_0 = binom_probs_0,
+         poiss_probs_0 = poiss_probs_0) %>%
+  pivot_longer(-means, names_to = "model", values_to = "probs_0")
+  
+# Plot
+plot_dt %>%
+  ggplot(aes(x = log(means), y = log(probs_0), color = model)) +
+  geom_point(alpha = 0.5) +
+  labs(title = "pre-mRNA",
+       x = "Average expression level E(X_i)",
+       y = "P(X_i = 0)")
+```
+
+```{r}
+# qqplot for first row
 qprobs = seq(0.01, 0.99, by = 0.01)
 plot(quantile(rpois(1000, lambda = lambdas[1]), qprobs),
      quantile(dat_prem[,1], probs = qprobs))
 ```
 
 ```{r}
-# plot P(X=0) against the average expression level?
+# plot P(X=0) against the average expression level for every transcript
+
 probs_0 = sapply(lambdas, function(lambda) dpois(0, lambda)) # P(X = 0)
 vars = apply(dat_prem, MARGIN = 2, var)
 ```
