@@ -150,7 +150,7 @@ tmp <- c(unlist(grl), grrange) # 1599770 rows
 tmp[grep("ENST00000456328.2", names(tmp)),]
 
 ## Save combined pre-mRNA and mRNA gtf file
-preandmrna_gtf <- here("salmon_files","gencode.v32.preandmrnaaannotation.gtf")
+preandmrna_gtf <- here("salmon_files","gencode.v32.preandmrnaannotation.gtf") # typo
 rtracklayer::export(tmp, preandmrna_gtf)
 ```
 
