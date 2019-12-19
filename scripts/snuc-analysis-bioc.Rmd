@@ -205,52 +205,65 @@ I plot the mean and variance for every row (transcript). Under a poisson distrib
 they should be the same.
 
 ```{r}
-# estimate lambdas and variances for every transcript
-means = rowMeans(dat_prem)
-vars = apply(dat_prem, MARGIN = 1, var)
-
-# variance = mean under Poisson distribution
-tibble(means, vars) %>%
-  ggplot(aes(x = log(means), y = log(vars))) +
-  geom_point() +
-  geom_abline(intercept = 0, slope = 1) +
-  labs(title = "pre-mRNA")
+plot_meanvar = function(dat_sub){
+  # estimate lambdas and variances for every transcript
+  means = rowMeans(dat_sub)
+  vars = apply(dat_sub, MARGIN = 1, var)
+  
+  # variance = mean under Poisson distribution
+  tibble(means, vars) %>%
+    ggplot(aes(x = log(means), y = log(vars))) +
+    geom_point() +
+    geom_abline(intercept = 0, slope = 1) +
+    labs(title = "pre-mRNA")
+}
 ```
-
-I first compute the average expression for every row (x-axis) $\hat{\mu}_i$ and the empirical $P(X_i=0)$, which is the probability that for a given transcript $i$, the count is 0.
 
 ```{r}
-# empirical P(X = 0)
-emp_probs_0 = apply(dat_prem, MARGIN = 1, function(r) sum(r==0)/ncol(dat_prem))
-plot_dt = tibble(means, emp_probs_0)
+plot_meanvar(dat_prem)
 ```
+
+I first compute the average expression for every row (x-axis) $\hat{\mu}_i$ and the empirical $P(X_i=0)$, which is the probability that for a given transcript $i$, the count is 0. 
 
 I then compute what $P(X_i=0)$ would be under the model assumptions of binomial or poisson, using parameters estimated from the data. In particular, for a $Binom(n_i, p_i)$, $n_i$ is the median number of total counts of cells and $p_i$ is the mean proportion of counts that were in gene $i$.
 
 ```{r}
-emp_props = rowMeans(dat_prem/colSums(dat_prem))
-# Model P(X = 0) under Binomial
-binom_probs_0 = dbinom(x = 0, size = n, prob = emp_props)
-# Model P(X = 0) under Poisson
-poiss_probs_0 = dpois(x = 0, lambda = n*emp_props)
-# Model P(X = 0) under Negative Binomial
-nbinom_probs_0 = dnbinom(x = 0, size = n, mu = n*emp_props/15) 
-
-# Tibble for plot
-plot_lines_dt = tibble(means = means,
-                       binomial = binom_probs_0,
-                       poisson = poiss_probs_0,
-                       nbinomial = nbinom_probs_0) %>%
-  pivot_longer(-means, names_to = "model", values_to = "probs_0")
-
-# Plot
-plot_lines_dt %>%
-  ggplot(aes(x = log(means), y = probs_0)) +
+# Function to plot P(X_i = 0) against average expression level mu_i
+plot_prob = function(dat_sub){
+  means = rowMeans(dat_sub)
+  
+  # empirical P(X_i = 0)
+  emp_probs_0 = apply(dat_sub, MARGIN = 1, function(r) sum(r==0)/ncol(dat_sub))
+  plot_dt = tibble(means, emp_probs_0)
+  
+  emp_props = rowMeans(dat_sub/colSums(dat_sub))
+  # Model P(X_i = 0) under Binomial
+  binom_probs_0 = dbinom(x = 0, size = n, prob = emp_props)
+  # Model P(X_i = 0) under Poisson
+  poiss_probs_0 = dpois(x = 0, lambda = n*emp_props)
+  # Model P(X_i = 0) under Negative Binomial
+  nbinom_probs_0 = dnbinom(x = 0, size = n, mu = n*emp_props/15) 
+  
+  # Tibble for plot
+  plot_lines_dt = tibble(means = means,
+                         binomial = binom_probs_0,
+                         poisson = poiss_probs_0,
+                         nbinomial = nbinom_probs_0) %>%
+    pivot_longer(-means, names_to = "model", values_to = "probs_0")
+  
+  # Plot
+  plot_lines_dt %>%
+    ggplot(aes(x = log(means), y = probs_0)) +
     geom_point(data = plot_dt, aes(x = log(means), y = emp_probs_0), alpha = 0.4) + # Add data points
-  geom_line(aes(color = model)) + # Add lines for models
-  labs(title = "pre-mRNA",
-       x = "Average expression level log(E(X_i))",
-       y = "P(X_i = 0)")
+    geom_line(aes(color = model)) + # Add lines for models
+    labs(title = "pre-mRNA",
+         x = "Average expression level log(E(X_i))",
+         y = "P(X_i = 0)")
+}
+```
+
+```{r}
+plot_prob(dat_prem)
 ```
 
 ```{r}
@@ -272,56 +285,16 @@ dat_mrna = apply(dat_mrna, MARGIN = 2, function(x) x*n/sum(x))
 summary(colSums(dat_mrna))
 ```
 
-I plot the mean and variance for every row (transcript). Under a poisson distribution,
-they should be the same.
-
 ```{r}
-# estimate lambdas and variances for every transcript
-means = rowMeans(dat_mrna)
-vars = apply(dat_mrna, MARGIN = 1, var)
-
-# variance = mean under Poisson distribution
-tibble(means, vars) %>%
-  ggplot(aes(x = log(means), y = log(vars))) +
-  geom_point() +
-  geom_abline(intercept = 0, slope = 1) +
-  labs(title = "mRNA")
+# Plot mean against variance
+plot_meanvar(dat_mrna)
 ```
 
-I first compute the average expression for every row (x-axis) $\hat{\mu}_i$ and the empirical $P(X_i=0)$, which is the probability that for a given transcript $i$, the count is 0.
-
 ```{r}
-# empirical P(X = 0)
-emp_probs_0 = apply(dat_mrna, MARGIN = 1, function(r) sum(r==0)/ncol(dat_mrna))
-plot_dt = tibble(means, emp_probs_0)
+# Plot P(X_i = 0) against average expression level
+plot_prob(dat_mrna)
 ```
 
-I then compute what $P(X_i=0)$ would be under the model assumptions of binomial or poisson, using parameters estimated from the data. In particular, for a $Binom(n_i, p_i)$, $n_i$ is the median number of total counts of cells and $p_i$ is the mean proportion of counts that were in gene $i$.
-
-```{r}
-emp_props = rowMeans(dat_mrna/colSums(dat_mrna))
-# Model P(X = 0) under Binomial
-binom_probs_0 = dbinom(x = 0, size = n, prob = emp_props)
-# Model P(X = 0) under Poisson
-poiss_probs_0 = dpois(x = 0, lambda = n*emp_props)
-# Model P(X = 0) under Negative Binomial
-nbinom_probs_0 = dnbinom(x = 0, size = n, mu = n*emp_props/15) 
-
-# Tibble for plot
-plot_lines_dt = tibble(means = means,
-                       binomial = binom_probs_0,
-                       poisson = poiss_probs_0,
-                       nbinomial = nbinom_probs_0) %>%
-  pivot_longer(-means, names_to = "model", values_to = "probs_0")
-
-# Plot
-plot_lines_dt %>%
-  ggplot(aes(x = log(means), y = probs_0)) +
-    geom_point(data = plot_dt, aes(x = log(means), y = emp_probs_0), alpha = 0.4) + # Add data points
-  geom_line(aes(color = model)) + # Add lines for models
-  labs(title = "mRNA",
-       x = "Average expression level log(E(X_i))",
-       y = "P(X_i = 0)")
-```
+# Distribution of both pre-mRNA and mRNA
 
 
