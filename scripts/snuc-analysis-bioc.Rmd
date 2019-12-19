@@ -256,14 +256,14 @@ plot_prob = function(dat_sub){
     ggplot(aes(x = log(means), y = probs_0)) +
     geom_point(data = plot_dt, aes(x = log(means), y = emp_probs_0), alpha = 0.4) + # Add data points
     geom_line(aes(color = model)) + # Add lines for models
-    labs(title = "pre-mRNA",
-         x = "Average expression level log(E(X_i))",
+    labs(x = "Average expression level log(E(X_i))",
          y = "P(X_i = 0)")
 }
 ```
 
 ```{r}
-plot_prob(dat_prem)
+plot_prob(dat_prem) +
+  labs(title = "pre-mRNA")
 ```
 
 ```{r}
@@ -292,9 +292,30 @@ plot_meanvar(dat_mrna)
 
 ```{r}
 # Plot P(X_i = 0) against average expression level
-plot_prob(dat_mrna)
+plot_prob(dat_mrna) +
+  labs(title = "mRNA")
 ```
 
 # Distribution of both pre-mRNA and mRNA
 
+```{r}
+summary(colSums(dat_filtered))
+
+# Apply transformation
+n = round(median(colSums(dat_filtered)))
+dat_filtered = apply(dat_filtered, MARGIN = 2, function(x) x*n/sum(x))
+
+summary(colSums(dat_filtered))
+```
+
+```{r}
+# Plot mean against variance
+plot_meanvar(dat_filtered)
+```
+
+```{r}
+# Plot P(X_i = 0) against average expression level
+plot_prob(dat_filtered) +
+  labs(title = "Both pre-mRNA and mRNA")
+```
 
