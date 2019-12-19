@@ -189,7 +189,19 @@ summary(premrna_prop) # Min = 0.17, Median/Mean = 0.66, Max = 0.91
 
 ## Distribution of pre-mRNA
 
-First, I plot the mean and variance for every row (transcript). Under a poisson distribution,
+First, I make all the column sums the same. The count in row $i$ and column $j$ is transformed as $x_{ij}' = x_{ij}*\sum_i x_{ij}/median_j(\sum_i(x_{ij}))$. 
+
+```{r}
+summary(colSums(dat_prem))
+
+# Apply transformation
+n = round(median(colSums(dat_prem)))
+dat_prem = apply(dat_prem, MARGIN = 2, function(x) x*n/sum(x))
+
+summary(colSums(dat_prem))
+```
+
+I plot the mean and variance for every row (transcript). Under a poisson distribution,
 they should be the same.
 
 ```{r}
@@ -205,7 +217,7 @@ tibble(means, vars) %>%
   labs(title = "pre-mRNA")
 ```
 
-I first compute the average expression for every row (x-axis) and the empirical $P(X_i=0)$, which is the probability that for a given gene $i$, the count is 0.
+I first compute the average expression for every row (x-axis) $\hat{\mu}_i$ and the empirical $P(X_i=0)$, which is the probability that for a given transcript $i$, the count is 0.
 
 ```{r}
 # empirical P(X = 0)
@@ -213,28 +225,31 @@ emp_probs_0 = apply(dat_prem, MARGIN = 1, function(r) sum(r==0)/ncol(dat_prem))
 plot_dt = tibble(means, emp_probs_0)
 ```
 
-I add what $P(X_i=0)$ would be under the model assumptions of binomial or poisson, using parameters estimated from the data. In particular, for a $Binom(n_i, p_i)$, $n_i$ is the median number of total counts across cells and $p_i$ is the mean proportion of counts that were in gene $i$. 
+I then compute what $P(X_i=0)$ would be under the model assumptions of binomial or poisson, using parameters estimated from the data. In particular, for a $Binom(n_i, p_i)$, $n_i$ is the median number of total counts of cells and $p_i$ is the mean proportion of counts that were in gene $i$.
 
 ```{r}
-# Model P(X = 0) under Binomial
 emp_props = rowMeans(dat_prem/colSums(dat_prem))
-n = round(median(colSums(dat_prem)))
-binom_probs_0 = dbinom(x = 0, size = n, p = emp_props)
+# Model P(X = 0) under Binomial
+binom_probs_0 = dbinom(x = 0, size = n, prob = emp_props)
 # Model P(X = 0) under Poisson
 poiss_probs_0 = dpois(x = 0, lambda = n*emp_props)
+# Model P(X = 0) under Negative Binomial
+nbinom_probs_0 = dnbinom(x = 0, size = n, mu = n*emp_props/2) 
 
-# Add to plot
-plot_dt = plot_dt %>%
-  mutate(binom_probs_0 = binom_probs_0,
-         poiss_probs_0 = poiss_probs_0) %>%
+# Tibble for plot
+plot_lines_dt = tibble(means = means,
+                       binom_probs_0 = binom_probs_0,
+                       poiss_probs_0 = poiss_probs_0,
+                       nbinom_probs_0 = nbinom_probs_0) %>%
   pivot_longer(-means, names_to = "model", values_to = "probs_0")
-  
+
 # Plot
-plot_dt %>%
-  ggplot(aes(x = log(means), y = log(probs_0), color = model)) +
-  geom_point(alpha = 0.5) +
+plot_lines_dt %>%
+  ggplot(aes(x = log(means), y = probs_0)) +
+    geom_point(data = plot_dt, aes(x = log(means), y = emp_probs_0), alpha = 0.4) + # Add data points
+  geom_line(aes(color = model)) + # Add lines for models
   labs(title = "pre-mRNA",
-       x = "Average expression level E(X_i)",
+       x = "Average expression level log(E(X_i))",
        y = "P(X_i = 0)")
 ```
 
@@ -245,34 +260,68 @@ plot(quantile(rpois(1000, lambda = lambdas[1]), qprobs),
      quantile(dat_prem[,1], probs = qprobs))
 ```
 
-```{r}
-# plot P(X=0) against the average expression level for every transcript
-
-probs_0 = sapply(lambdas, function(lambda) dpois(0, lambda)) # P(X = 0)
-vars = apply(dat_prem, MARGIN = 2, var)
-```
-
 ## Distribution of mRNA
 
 ```{r}
-# estimate lambdas and variances
-lambdas_m = colMeans(dat_mrna)
-vars_m = apply(dat_mrna, MARGIN = 2, var)
+summary(colSums(dat_mrna))
+
+# Apply transformation
+n = round(median(colSums(dat_mrna)))
+dat_mrna = apply(dat_mrna, MARGIN = 2, function(x) x*n/sum(x))
+
+summary(colSums(dat_mrna))
+```
+
+I plot the mean and variance for every row (transcript). Under a poisson distribution,
+they should be the same.
+
+```{r}
+# estimate lambdas and variances for every transcript
+means = rowMeans(dat_mrna)
+vars = apply(dat_mrna, MARGIN = 1, var)
 
 # variance = mean under Poisson distribution
-# variance >> mean in data
-tibble(lambdas_m, vars_m) %>%
-  ggplot(aes(x = log(lambdas_m), y = log(vars_m))) + 
+tibble(means, vars) %>%
+  ggplot(aes(x = log(means), y = log(vars))) +
   geom_point() +
   geom_abline(intercept = 0, slope = 1) +
   labs(title = "mRNA")
 ```
 
+I first compute the average expression for every row (x-axis) $\hat{\mu}_i$ and the empirical $P(X_i=0)$, which is the probability that for a given transcript $i$, the count is 0.
+
 ```{r}
-# qqplot for first column
-qprobs = seq(0.01, 0.99, by = 0.01)
-plot(quantile(rpois(1000, lambda = lambdas_m[1]), qprobs),
-     quantile(dat_mrna[,1], probs = qprobs))
+# empirical P(X = 0)
+emp_probs_0 = apply(dat_mrna, MARGIN = 1, function(r) sum(r==0)/ncol(dat_mrna))
+plot_dt = tibble(means, emp_probs_0)
+```
+
+I then compute what $P(X_i=0)$ would be under the model assumptions of binomial or poisson, using parameters estimated from the data. In particular, for a $Binom(n_i, p_i)$, $n_i$ is the median number of total counts of cells and $p_i$ is the mean proportion of counts that were in gene $i$.
+
+```{r}
+emp_props = rowMeans(dat_mrna/colSums(dat_mrna))
+# Model P(X = 0) under Binomial
+binom_probs_0 = dbinom(x = 0, size = n, prob = emp_props)
+# Model P(X = 0) under Poisson
+poiss_probs_0 = dpois(x = 0, lambda = n*emp_props)
+# Model P(X = 0) under Negative Binomial
+nbinom_probs_0 = dnbinom(x = 0, size = n, mu = n*emp_props/2) 
+
+# Tibble for plot
+plot_lines_dt = tibble(means = means,
+                       binom_probs_0 = binom_probs_0,
+                       poiss_probs_0 = poiss_probs_0,
+                       nbinom_probs_0 = nbinom_probs_0) %>%
+  pivot_longer(-means, names_to = "model", values_to = "probs_0")
+
+# Plot
+plot_lines_dt %>%
+  ggplot(aes(x = log(means), y = probs_0)) +
+    geom_point(data = plot_dt, aes(x = log(means), y = emp_probs_0), alpha = 0.4) + # Add data points
+  geom_line(aes(color = model)) + # Add lines for models
+  labs(title = "mRNA",
+       x = "Average expression level log(E(X_i))",
+       y = "P(X_i = 0)")
 ```
 
 
