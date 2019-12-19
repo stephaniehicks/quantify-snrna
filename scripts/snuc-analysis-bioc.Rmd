@@ -234,13 +234,13 @@ binom_probs_0 = dbinom(x = 0, size = n, prob = emp_props)
 # Model P(X = 0) under Poisson
 poiss_probs_0 = dpois(x = 0, lambda = n*emp_props)
 # Model P(X = 0) under Negative Binomial
-nbinom_probs_0 = dnbinom(x = 0, size = n, mu = n*emp_props/2) 
+nbinom_probs_0 = dnbinom(x = 0, size = n, mu = n*emp_props/15) 
 
 # Tibble for plot
 plot_lines_dt = tibble(means = means,
-                       binom_probs_0 = binom_probs_0,
-                       poiss_probs_0 = poiss_probs_0,
-                       nbinom_probs_0 = nbinom_probs_0) %>%
+                       binomial = binom_probs_0,
+                       poisson = poiss_probs_0,
+                       nbinomial = nbinom_probs_0) %>%
   pivot_longer(-means, names_to = "model", values_to = "probs_0")
 
 # Plot
@@ -305,13 +305,13 @@ binom_probs_0 = dbinom(x = 0, size = n, prob = emp_props)
 # Model P(X = 0) under Poisson
 poiss_probs_0 = dpois(x = 0, lambda = n*emp_props)
 # Model P(X = 0) under Negative Binomial
-nbinom_probs_0 = dnbinom(x = 0, size = n, mu = n*emp_props/2) 
+nbinom_probs_0 = dnbinom(x = 0, size = n, mu = n*emp_props/15) 
 
 # Tibble for plot
 plot_lines_dt = tibble(means = means,
-                       binom_probs_0 = binom_probs_0,
-                       poiss_probs_0 = poiss_probs_0,
-                       nbinom_probs_0 = nbinom_probs_0) %>%
+                       binomial = binom_probs_0,
+                       poisson = poiss_probs_0,
+                       nbinomial = nbinom_probs_0) %>%
   pivot_longer(-means, names_to = "model", values_to = "probs_0")
 
 # Plot
