@@ -231,6 +231,7 @@ I then compute what $P(X_i=0)$ would be under the model assumptions of binomial 
 # Function to plot P(X_i = 0) against average expression level mu_i
 plot_prob = function(dat_sub){
   means = rowMeans(dat_sub)
+  vars = apply(dat_sub, MARGIN = 1, var)
   
   # empirical P(X_i = 0)
   emp_probs_0 = apply(dat_sub, MARGIN = 1, function(r) sum(r==0)/ncol(dat_sub))
@@ -242,7 +243,10 @@ plot_prob = function(dat_sub){
   # Model P(X_i = 0) under Poisson
   poiss_probs_0 = dpois(x = 0, lambda = n*emp_props)
   # Model P(X_i = 0) under Negative Binomial
-  nbinom_probs_0 = dnbinom(x = 0, size = n, mu = n*emp_props/15) 
+  # Estimate size/dispersion parameter
+  model = lm(vars ~ 1*means + I(means^2) + 0, tibble(means, vars))
+  phi = 1/coef(model)["I(means^2)"]
+  nbinom_probs_0 = dnbinom(x = 0, size = phi, mu = n*emp_props) 
   
   # Tibble for plot
   plot_lines_dt = tibble(means = means,
