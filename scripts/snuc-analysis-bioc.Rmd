@@ -151,9 +151,10 @@ colSums(as.matrix(reasons))
 ```{r}
 # Discard outliers
 filtered = sce[, !reasons$discard] # 42 out of 576 cells were discarded
+dat_filtered = counts(filtered)
 
 filtered_file_name = here("salmon_quants", "dat_filtered.rds")
-saveRDS(filtered, filtered_file_name)
+saveRDS(dat_filtered, filtered_file_name)
 ```
 
 Diagnostic plots: https://osca.bioconductor.org/quality-control.html#quality-control-plots 
@@ -162,7 +163,6 @@ Diagnostic plots: https://osca.bioconductor.org/quality-control.html#quality-con
 
 ```{r}
 library(here)
-library(SingleCellExperiment)
 library(ggplot2)
 library(dplyr)
 library(tidyr)
@@ -171,12 +171,11 @@ library(tidyr)
 ## Proportion of counts that are pre-mRNA
 
 ```{r}
+# Load filtered counts
 filtered_file_name = here("salmon_quants", "dat_filtered.rds")
 if(file.exists(filtered_file_name)){
-  filtered = readRDS(filtered_file_name)
+  dat_filtered = readRDS(filtered_file_name)
 }
-
-dat_filtered = counts(filtered)
 
 # Split data into pre-mRNA and mRNA
 dat_prem = dat_filtered[grepl(".premrna", rownames(dat_filtered)),]
