@@ -168,23 +168,35 @@ library(dplyr)
 library(tidyr)
 ```
 
-## Proportion of counts that are pre-mRNA
+## Convert read counts to pseudo-UMIs
 
 ```{r}
+source(here("scripts", "nblomax.R"))
+
 # Load filtered counts
 filtered_file_name = here("salmon_quants", "dat_filtered.rds")
 if(file.exists(filtered_file_name)){
   dat_filtered = readRDS(filtered_file_name)
 }
 
+# How to choose shape parameter?
+dat_umi = quminorm_matrix(dat_filtered, shape = 2)
+```
+
+## Proportion of counts that are pre-mRNA
+
+```{r}
 # Split data into pre-mRNA and mRNA
-dat_prem = dat_filtered[grepl(".premrna", rownames(dat_filtered)),]
-dat_mrna = dat_filtered[!grepl(".premrna", rownames(dat_filtered)),]
+dat_prem = dat_umi[grepl(".premrna", rownames(dat_umi)),]
+dat_mrna = dat_umi[!grepl(".premrna", rownames(dat_umi)),]
 
 # Proportion of counts that are pre_mRNA
-premrna_prop = colSums(dat_prem)/colSums(dat_filtered)
+premrna_prop = colSums(dat_prem)/colSums(dat_umi)
 summary(premrna_prop) # Min = 0.17, Median/Mean = 0.66, Max = 0.91
 ```
+
+
+
 
 ## Distribution of pre-mRNA
 
@@ -298,27 +310,3 @@ plot_meanvar(dat_mrna)
 plot_prob(dat_mrna) +
   labs(title = "mRNA")
 ```
-
-# Distribution of both pre-mRNA and mRNA
-
-```{r}
-summary(colSums(dat_filtered))
-
-# Apply transformation
-n = round(median(colSums(dat_filtered)))
-dat_filtered = apply(dat_filtered, MARGIN = 2, function(x) x*n/sum(x))
-
-summary(colSums(dat_filtered))
-```
-
-```{r}
-# Plot mean against variance
-plot_meanvar(dat_filtered)
-```
-
-```{r}
-# Plot P(X_i = 0) against average expression level
-plot_prob(dat_filtered) +
-  labs(title = "Both pre-mRNA and mRNA")
-```
-
