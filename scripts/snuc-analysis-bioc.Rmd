@@ -224,7 +224,7 @@ plot_meanvar = function(dat_sub){
   # variance = mean under Poisson distribution
   tibble(means, vars) %>%
     ggplot(aes(x = log(means), y = log(vars))) +
-    geom_point() +
+    geom_point(alpha = 0.4) +
     geom_abline(intercept = 0, slope = 1) +
     labs(title = "pre-mRNA")
 }
@@ -241,6 +241,7 @@ I then compute what $P(X_i=0)$ would be under the model assumptions of binomial 
 ```{r}
 # Function to plot P(X_i = 0) against average expression level mu_i
 plot_prob = function(dat_sub){
+  n = round(median(colSums(dat_sub)))
   means = rowMeans(dat_sub)
   vars = apply(dat_sub, MARGIN = 1, var)
   
@@ -281,7 +282,7 @@ plot_prob(dat_prem) +
   labs(title = "pre-mRNA")
 ```
 
-```{r}
+```{r eval = F}
 # qqplot for first row
 qprobs = seq(0.01, 0.99, by = 0.01)
 plot(quantile(rpois(1000, lambda = lambdas[1]), qprobs),
