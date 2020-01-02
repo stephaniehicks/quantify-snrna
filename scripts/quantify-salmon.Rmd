@@ -261,7 +261,7 @@ There is a script `build-index-salmon.sh` in the `/scripts` folder that was used
 ## Run salmon 
 
 We will now use the index created by `build-index-salmon.sh`.
-See the `scripts/run-salmon.sh` file or the `scripts/run-salmon-paralle.sh` file in the terminal. They do the same thing, but the latter will run salmon in parallel and be much faster.
+See the `scripts/run-salmon.sh` file or the `scripts/run-salmon-parallel.sh` file in the terminal. They do the same thing, but the latter will run salmon in parallel and be much faster.
 
 ## Set up the tximeta package 
 
