@@ -99,11 +99,14 @@ rowRanges(se)
 
 ```{r}
 dat <- assay(se, "counts")
-dat <- dat[!(rowSums(dat) == 0),]
-dim(dat)
-dat[grep("ENST00000355537.4", rownames(dat)),]
-summary(colSums(dat))
-hist(colSums(dat))
+dim(dat) # 326453 x 576
+# dat2 <- dat[!(rowSums(dat) == 0),]
+# dim(dat2) # 239650 x 576
+# dat[grep("ENST00000355537.4", rownames(dat)),]
+# summary(colSums(dat))
+# hist(colSums(dat))
+# dat_prem = dat[grepl(".premrna", rownames(dat)),]  # 99845 x 576
+# dat_mrna = dat[!grepl(".premrna", rownames(dat)),] # 226608 x 576
 ```
 
 ## Create SingleCellExperiment object
@@ -187,16 +190,13 @@ dat_umi = quminorm_matrix(dat_filtered, shape = 2)
 
 ```{r}
 # Split data into pre-mRNA and mRNA
-dat_prem = dat_umi[grepl(".premrna", rownames(dat_umi)),]
+dat_prem = dat_umi[grepl(".premrna", rownames(dat_umi)),]  
 dat_mrna = dat_umi[!grepl(".premrna", rownames(dat_umi)),]
 
 # Proportion of counts that are pre_mRNA
 premrna_prop = colSums(dat_prem)/colSums(dat_umi)
-summary(premrna_prop) # Min = 0.17, Median/Mean = 0.66, Max = 0.91
+summary(premrna_prop) # Min = 0.31, Median = 0.68, Max = 0.87
 ```
-
-
-
 
 ## Distribution of pre-mRNA
 
@@ -309,4 +309,46 @@ plot_meanvar(dat_mrna)
 # Plot P(X_i = 0) against average expression level
 plot_prob(dat_mrna) +
   labs(title = "mRNA")
+```
+
+# Distribution of combined pre-mRNA and mRNA counts
+
+```{r}
+# Combine pre-mRNA and mRNA counts
+dim(dat_prem) # 99845 x 534
+dim(dat_mrna) # 226608 x 534
+
+transcript_names = gsub(".{8}$", "" , rownames(dat_prem)) # length = 99845
+transcript_names = intersect(transcript_names, rownames(dat_mrna)) # length = 99771
+premrna_names = paste(transcript_names, "premrna", sep = ".")
+
+# Check that the rows of pre-mRNA and mRNA are in the same exact order
+tmp1 = gsub(".{8}$", "", rownames(dat_prem[premrna_names,]))
+tmp2 = rownames(dat_mrna[transcript_names,])
+identical(tmp1, tmp2)
+
+# Add counts for pre-mRNA and mRNA element-wise
+dat_combined = dat_prem[premrna_names,] + dat_mrna[transcript_names,]
+rownames(dat_combined) = transcript_names
+```
+
+```{r}
+summary(colSums(dat_combined))
+
+# Apply transformation
+n = round(median(colSums(dat_combined)))
+dat_combined = apply(dat_combined, MARGIN = 2, function(x) x*n/sum(x))
+
+summary(colSums(dat_combined))
+```
+
+```{r}
+# Plot mean against variance
+plot_meanvar(dat_combined)
+```
+
+```{r}
+# Plot P(X_i = 0) against average expression level
+plot_prob(dat_combined) +
+  labs(title = "pre-mRNA + mRNA")
 ```
