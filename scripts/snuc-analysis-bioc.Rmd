@@ -174,7 +174,7 @@ library(tidyr)
 ## Convert read counts to pseudo-UMIs
 
 ```{r}
-source(here("scripts", "nblomax.R"))
+source(here("scripts", "quminorm.R"))
 
 # Load filtered counts
 filtered_file_name = here("salmon_quants", "dat_filtered.rds")
@@ -182,7 +182,12 @@ if(file.exists(filtered_file_name)){
   dat_filtered = readRDS(filtered_file_name)
 }
 
-# How to choose shape parameter?
+# Find mle parameters mu and sig
+m = round(dat_filtered) # Must be integers
+chunksize = 50          # chunksize = 50 cells is what Will used
+res = poilog_mle_matrix(m, chunksize = chunksize) # Takes a few minutes
+
+# Shape parameter is likely sig
 dat_umi = quminorm_matrix(dat_filtered, shape = 2)
 ```
 
@@ -268,7 +273,7 @@ plot_prob = function(dat_sub){
     pivot_longer(-means, names_to = "model", values_to = "probs_0")
   
   # Plot
-  plot_lines_dt %>%
+  plt = plot_lines_dt %>%
     ggplot(aes(x = log(means), y = probs_0)) +
     geom_point(data = plot_dt, aes(x = log(means), y = emp_probs_0), alpha = 0.4) + # Add data points
     geom_line(aes(color = model)) + # Add lines for models
