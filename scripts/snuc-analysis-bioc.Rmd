@@ -182,11 +182,6 @@ if(file.exists(filtered_file_name)){
   dat_filtered = readRDS(filtered_file_name)
 }
 
-# Find mle parameters mu and sig
-m = round(dat_filtered) # Must be integers
-chunksize = 50          # chunksize = 50 cells is what Will used
-res = parcolapply(m, poilog_mle_matrix, chunksize = chunksize) # Takes at least x minutes
-
 # Shape parameter is likely sig
 dat_umi = quminorm_matrix(dat_filtered, shape = 2)
 ```
@@ -325,7 +320,7 @@ prob_out_mrna$plot +
   labs(title = "mRNA")
 ```
 
-# Distribution of combined pre-mRNA and mRNA counts
+## Distribution of combined pre-mRNA and mRNA counts
 
 ```{r}
 # Combine pre-mRNA and mRNA counts
@@ -367,3 +362,24 @@ prob_out_combined = plot_prob(dat_combined)
 prob_out_combined$plot +
   labs(title = "pre-mRNA + mRNA")
 ```
+
+## Combined plot
+
+```{r}
+lines_prem_dt = prob_out_prem$lines_dt %>%
+  mutate(data = "pre-mRNA")
+lines_mrna_dt = prob_out_mrna$lines_dt %>%
+  mutate(data = "mRNA")
+lines_combined_dt = prob_out_combined$lines_dt %>%
+  mutate(data = "combined")
+
+lines_all_dt = bind_rows(lines_prem_dt, lines_mrna_dt, lines_combined_dt)
+```
+
+```{r}
+lines_all_dt %>%
+  ggplot(aes(x = log(means), y = probs_0)) +
+  geom_line(aes(color = data, linetype = model)) 
+```
+
+
