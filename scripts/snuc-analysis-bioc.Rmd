@@ -185,7 +185,7 @@ if(file.exists(filtered_file_name)){
 # Find mle parameters mu and sig
 m = round(dat_filtered) # Must be integers
 chunksize = 50          # chunksize = 50 cells is what Will used
-res = poilog_mle_matrix(m, chunksize = chunksize) # Takes a few minutes
+res = parcolapply(m, poilog_mle_matrix, chunksize = chunksize) # Takes at least x minutes
 
 # Shape parameter is likely sig
 dat_umi = quminorm_matrix(dat_filtered, shape = 2)
