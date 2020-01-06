@@ -279,11 +279,18 @@ plot_prob = function(dat_sub){
     geom_line(aes(color = model)) + # Add lines for models
     labs(x = "Average expression level log(E(X_i))",
          y = "P(X_i = 0)")
+  
+  # Return object
+  out = list(plot = plt,
+             lines_dt = plot_lines_dt)
+  return(out)
 }
 ```
 
 ```{r}
-plot_prob(dat_prem) +
+# Plot P(X_i = 0) against average expression level
+prob_out_prem = plot_prob(dat_prem)
+prob_out_prem$plot +
   labs(title = "pre-mRNA")
 ```
 
@@ -313,7 +320,8 @@ plot_meanvar(dat_mrna)
 
 ```{r}
 # Plot P(X_i = 0) against average expression level
-plot_prob(dat_mrna) +
+prob_out_mrna = plot_prob(dat_mrna)
+prob_out_mrna$plot +
   labs(title = "mRNA")
 ```
 
@@ -355,6 +363,7 @@ plot_meanvar(dat_combined)
 
 ```{r}
 # Plot P(X_i = 0) against average expression level
-plot_prob(dat_combined) +
+prob_out_combined = plot_prob(dat_combined)
+prob_out_combined$plot +
   labs(title = "pre-mRNA + mRNA")
 ```
