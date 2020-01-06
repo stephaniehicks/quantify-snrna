@@ -4,6 +4,7 @@
 library(here)
 source(here("scripts", "nblomax.R"))
 source(here("scripts", "poilog.R"))
+source(here("scripts", "misc.R"))
 
 #x,y must be scalars!
 logspace_add<-function(x,y){ matrixStats::logSumExp(c(x,y)) }
