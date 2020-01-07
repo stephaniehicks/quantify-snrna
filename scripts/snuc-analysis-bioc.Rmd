@@ -205,7 +205,7 @@ umi_file_name = here("salmon_quants", "dat_umi.rds")
 if(file.exists(umi_file_name)){
   dat_umi = readRDS(umi_file_name)
 } else {
-  dat_umi = quminorm_matrix(dat_filtered, shape = median(sig_vec)) # Takes a couple of minutes, you should be able to use a vector for the shape parameter too
+  dat_umi = quminorm_matrix(dat_filtered, shape = median(sig_vec)) # Takes a couple of minutes. You should be able to use a vector for the shape parameter too instead of using the median for all cells.
   saveRDS(dat_umi, umi_file_name)
 }
 ```
@@ -442,5 +442,13 @@ data.frame(PC2 = pc$x[,2], PC3 = pc$x[,3]) %>%
   ggplot(aes(PC2, PC3)) +
   geom_point(alpha = 0.5) +
   theme_bw()
+
+data.frame(PC4 = pc$x[,4], PC5 = pc$x[,5]) %>%
+  ggplot(aes(PC4, PC5)) +
+  geom_point(alpha = 0.5) +
+  theme_bw()
+
+# Outliers are S19334F5Nuc-P2-D05 (219), SUDIPG55Biop1Nuc-P1-C03 (473) in PC1, PC2, PC3
+# MUV16Nuc-P1-D04 (129), S19334F5Nuc-P2-C08 in PC4
 ```
 
