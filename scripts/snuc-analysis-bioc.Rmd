@@ -228,9 +228,9 @@ summary(premrna_prop) # Min = 0.31, Median = 0.68, Max = 0.87
 
 ### Distribution of pre-mRNA
 
-First, I make all the column sums the same. The count in row $i$ and column $j$ is transformed as $x_{ij}' = x_{ij}*\sum_i x_{ij}/median_j(\sum_i(x_{ij}))$. 
+First, I make all the column sums the same by scaling. The count in row $i$ and column $j$ is transformed as $x_{ij} = x_{ij}*\sum_i x_{ij}/median_j(\sum_i x_{ij})$. 
 
-```{r}
+```{r pre-mRNA_distribution}
 summary(colSums(dat_prem))
 
 # Apply transformation
@@ -326,7 +326,7 @@ plot(quantile(rpois(1000, lambda = lambdas[1]), qprobs),
 
 ### Distribution of mRNA
 
-```{r}
+```{r mRNA_distribution}
 summary(colSums(dat_mrna))
 
 # Apply transformation
@@ -351,7 +351,7 @@ prob_out_mrna$plot +
 
 ### Distribution of combined pre-mRNA and mRNA counts
 
-```{r}
+```{r combined_distribution}
 # Combine pre-mRNA and mRNA counts
 dim(dat_prem) # 99845 x 534
 dim(dat_mrna) # 226608 x 534
@@ -414,7 +414,7 @@ lines_all_dt %>%
 
 ## PCA
 
-```{r}
+```{r pca}
 X = dat_umi %>%
   as.matrix() %>%
   t()
