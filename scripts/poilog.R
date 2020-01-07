@@ -125,7 +125,7 @@ nb_pzero2mu<-function(lpz,size){
   size*expm1(-lpz/size)
 }
 
-poilog_pzero2mu<-function(lpz,sig=2.5,lims=c(-100,100)){
+poilog_pzero2mu<-function(lpz,sig=2.5,lims=c(-200,100)){
   #Assuming the data follows a Poisson-lognormal
   #if we fix the 'sig' parameter to a specified value
   #we can infer the mu parameter from the fraction of zeros
@@ -139,7 +139,10 @@ poilog_pzero2mu<-function(lpz,sig=2.5,lims=c(-100,100)){
     f<-function(mu){
       x-sads::dpoilog(0,mu,sig=s,log=TRUE)
     }
-    uniroot(f,lims)$root
+    # print(f(-200))
+    # print(f(100))
+    # print(uniroot(f, lims)$root)
+    return(uniroot(f, lims)$root)
   }
   if(length(sig)==1){ #single sig parameter for all cells
     return(vapply(lpz,inner,FUN.VALUE=1.0,s=sig))
