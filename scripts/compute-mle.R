@@ -15,8 +15,9 @@ if(file.exists(filtered_file_name)){
 }
 
 # Find mle parameters mu and sig
-m = round(dat_filtered) # Must be integers
-chunksize = 50          # chunksize = 50 cells is what Will used
-res = parcolapply(m, poilog_mle_matrix, chunksize = chunksize)
+i = as.integer(Sys.getenv("SGE_TASK_ID")) 
+x = dat_filtered[, i]
+x = round(x) # counts must be integers
+res = poilog_mle(x)
 
-saveRDS(res, here("salmon_quants", "mle_results.rds"))
+saveRDS(res, here("mle_results", paste0(i, ".rds")))
