@@ -182,8 +182,22 @@ if(file.exists(filtered_file_name)){
   dat_filtered = readRDS(filtered_file_name)
 }
 
-# Shape parameter is likely sig
-dat_umi = quminorm_matrix(dat_filtered, shape = 2)
+# Read in mle parameters
+mle_file_names = list.files(here("mle_results"), full.names = TRUE)
+mle_results = lapply(mle_file_names, readRDS)
+sig_vec = sapply(mle_results, function(r) r["sig"])
+mu_vec = sapply(mle_results, function(r) r["mu"])
+
+# Plot sig distribution
+ggplot(tibble(sig = sig_vec), aes(x = sig)) +
+  geom_histogram(bins = 30) +
+  labs(title = "Distribution of sig parameter",
+       x = "sig",
+       y = "Number of cells")
+
+# Shape parameter is "sig"
+dat_umi = quminorm_matrix(dat_filtered, shape = 2.5)
+dat_umi = quminorm_matrix(dat_filtered, shape = 3)
 ```
 
 ## Proportion of counts that are pre-mRNA
