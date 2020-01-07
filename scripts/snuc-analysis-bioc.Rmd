@@ -1,14 +1,18 @@
 ---
 title: qc and analysis of single nuc-seq data (alsf-filbin)
 author: Stephanie Hicks and Albert Kuo
-output: html_document
+output: 
+  html_document:
+    code_folding: "hide"
+    toc: TRUE
+    toc_float: TRUE
 ---
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
-```{bash}
+```{bash eval = F}
 # Commands to start an interactive session on the JHPCE cluster
 qrsh -l mem_free=20G,h_vmem=20G
 module load conda_R
@@ -16,7 +20,7 @@ cd /fastscratch/myscratch/akuo/alsf-filbin
 R
 ```
 
-```{r}
+```{r eval = F}
 library(here)
 ```
 
@@ -25,7 +29,7 @@ library(here)
 First, we create a table with information about where each file (quantified counts from salmon) is. 
 This will be used to create a `SummarizedExperiment` object.
 
-```{r}
+```{r eval = F}
 # list tumor names
 tumor_names <- list.files(here("sample_data"))[
                   !grepl("*.txt", list.files(here("sample_data")))]
@@ -50,7 +54,7 @@ coldata <- data.frame(files = unique_sf_paths, names = unique_sf_ids)
 
 We also need to use the linkedTxome object to use `tximeta` properly, i.e. `rowRanges(se)` won't be `NULL` and tximeta will be able to match the transcripts to the genes for us. **Note: still doesn't work**
 
-```{r}
+```{r eval = F}
 suppressPackageStartupMessages({
   library(tximeta)
   library(BiocFileCache)
@@ -68,7 +72,7 @@ loadLinkedTxome(json_file)
 
 The only way I've figured out how to make this work for now is with `skipMeta = TRUE`.
 
-```{r}
+```{r eval = F}
 se_file_name = here("salmon_quants", "se.rds")
 
 # coldata = coldata[1:2, ] # for testing
@@ -86,7 +90,7 @@ if(!file.exists(se_file_name)){
 
 ## Explore SummarizedExperiment object
 
-```{r}
+```{r eval = F}
 suppressPackageStartupMessages({
   library(SummarizedExperiment)
   library(DESeq2)
@@ -97,7 +101,7 @@ assayNames(se)
 rowRanges(se)
 ```
 
-```{r}
+```{r eval = F}
 dat <- assay(se, "counts")
 dim(dat) # 326453 x 576
 # dat2 <- dat[!(rowSums(dat) == 0),]
@@ -113,12 +117,12 @@ dim(dat) # 326453 x 576
 
 A SingleCellExperiment class is derived from the SummarizedExperiment class. The most important change is the addition of a new slot called `reducedDims`. Read more [here](https://osca.bioconductor.org/data-infrastructure.html#a-brief-recap-from-se-to-sce).
 
-```{r}
+```{r eval = F}
 # BiocManager::install('SingleCellExperiment')
 library(SingleCellExperiment)
 ```
 
-```{r}
+```{r eval = F}
 sce = SingleCellExperiment(assays = list(counts = dat))
 
 # you can access counts by assay(sce, "counts") or counts(sce)
@@ -135,7 +139,7 @@ There are a couple of [QC metrics](https://osca.bioconductor.org/quality-control
 
 I will only do (1) for now.
 
-```{r}
+```{r eval = F}
 library(scater)
 
 # Compute quality control metrics:
@@ -145,13 +149,13 @@ df = perCellQCMetrics(sce)
 df
 ```
 
-```{r}
+```{r eval = F}
 # Find outliers with low library sizes (LibSize) and few detected features (n_features)
 reasons = quickPerCellQC(df) # DataFrame of logical values
 colSums(as.matrix(reasons))
 ```
 
-```{r}
+```{r eval = F}
 # Discard outliers
 filtered = sce[, !reasons$discard] # 42 out of 576 cells were discarded
 dat_filtered = counts(filtered)
@@ -426,6 +430,8 @@ pc = prcomp(X, center = T, scale = T)
 fviz_eig(pc)
 ```
 
+Currently, the top principal components appear to be dominated by outlier cells. The outliers are S19334F5Nuc-P2-D05 (219), SUDIPG55Biop1Nuc-P1-C03 (473) in PC1, PC2, PC3. And MUV16Nuc-P1-D04 (129), S19334F5Nuc-P2-C08 in PC4.
+
 ```{r}
 # Plot PC
 data.frame(PC1 = pc$x[,1], PC2 = pc$x[,2]) %>%
@@ -448,7 +454,6 @@ data.frame(PC4 = pc$x[,4], PC5 = pc$x[,5]) %>%
   geom_point(alpha = 0.5) +
   theme_bw()
 
-# Outliers are S19334F5Nuc-P2-D05 (219), SUDIPG55Biop1Nuc-P1-C03 (473) in PC1, PC2, PC3
-# MUV16Nuc-P1-D04 (129), S19334F5Nuc-P2-C08 in PC4
+
 ```
 
