@@ -196,8 +196,7 @@ ggplot(tibble(sig = sig_vec), aes(x = sig)) +
        y = "Number of cells")
 
 # Shape parameter is "sig"
-dat_umi = quminorm_matrix(dat_filtered, shape = 2.5)
-dat_umi = quminorm_matrix(dat_filtered, shape = 3)
+dat_umi = quminorm_matrix(dat_filtered, shape = median(sig_vec)) # You should be able to use a vector for the shape parameter too
 ```
 
 ## Proportion of counts that are pre-mRNA
