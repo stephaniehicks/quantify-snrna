@@ -253,13 +253,13 @@ plot_meanvar = function(dat_sub){
   tibble(means, vars) %>%
     ggplot(aes(x = log(means), y = log(vars))) +
     geom_point(alpha = 0.4) +
-    geom_abline(intercept = 0, slope = 1) +
-    labs(title = "pre-mRNA")
+    geom_abline(intercept = 0, slope = 1)
 }
 ```
 
 ```{r}
-plot_meanvar(dat_prem)
+plot_meanvar(dat_prem) +
+  labs(title = "pre-mRNA")
 ```
 
 I first compute the average expression for every row (x-axis) $\hat{\mu}_i$ and the empirical $P(X_i=0)$, which is the probability that for a given transcript $i$, the count is 0. 
@@ -338,7 +338,8 @@ summary(colSums(dat_mrna))
 
 ```{r}
 # Plot mean against variance
-plot_meanvar(dat_mrna)
+plot_meanvar(dat_mrna) +
+  labs(title = "mRNA")
 ```
 
 ```{r}
@@ -381,7 +382,8 @@ summary(colSums(dat_combined))
 
 ```{r}
 # Plot mean against variance
-plot_meanvar(dat_combined)
+plot_meanvar(dat_combined) +
+  labs(title = "pre-mRNA + mRNA")
 ```
 
 ```{r}
