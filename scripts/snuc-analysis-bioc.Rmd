@@ -419,7 +419,7 @@ X = dat_umi %>%
   as.matrix() %>%
   t()
 
-# Remove columns with zero variance
+# Remove columns (transcripts) with zero variance
 nonzero_var_cols = which(apply(X, 2, var) != 0)
 X = X[, nonzero_var_cols]
 
@@ -432,7 +432,7 @@ pc = prcomp(X, center = T, scale = T)
 fviz_eig(pc)
 ```
 
-Currently, the top principal components appear to be dominated by outlier cells. The outliers are S19334F5Nuc-P2-D05 (219), SUDIPG55Biop1Nuc-P1-C03 (473) in PC1, PC2, PC3. And MUV16Nuc-P1-D04 (129), S19334F5Nuc-P2-C08 in PC4.
+The top principal components appear to be dominated by outlier cells. The outliers are S19334F5Nuc-P2-D05 (219), SUDIPG55Biop1Nuc-P1-C03 (473) in PC1, PC2, PC3. And MUV16Nuc-P1-D04 (129), S19334F5Nuc-P2-C08 (210) in PC4.
 
 ```{r}
 # Plot PC
@@ -455,7 +455,46 @@ data.frame(PC4 = pc$x[,4], PC5 = pc$x[,5]) %>%
   ggplot(aes(PC4, PC5)) +
   geom_point(alpha = 0.5) +
   theme_bw()
+```
 
+I remove the outliers and do PCA again.
 
+```{r pca_2}
+X2 = X[-c(129, 219, 473, 210), ]
+
+# Remove columns (transcripts) with zero variance
+nonzero_var_cols = which(apply(X2, 2, var) != 0)
+X2 = X2[, nonzero_var_cols]
+
+# Run PCA (takes a couple of minutes)
+pc2 = prcomp(X2, center = T, scale = T)
+```
+
+```{r}
+# % variance explained by each PC
+fviz_eig(pc2)
+```
+
+```{r}
+# Plot PC
+data.frame(PC1 = pc2$x[,1], PC2 = pc2$x[,2]) %>%
+  ggplot(aes(PC1, PC2)) +
+  geom_point(alpha = 0.5) +
+  theme_bw()
+
+data.frame(PC1 = pc2$x[,1], PC3 = pc2$x[,3]) %>%
+  ggplot(aes(PC1, PC3)) +
+  geom_point(alpha = 0.5) +
+  theme_bw()
+
+data.frame(PC2 = pc2$x[,2], PC3 = pc2$x[,3]) %>%
+  ggplot(aes(PC2, PC3)) +
+  geom_point(alpha = 0.5) +
+  theme_bw()
+
+data.frame(PC4 = pc2$x[,4], PC5 = pc2$x[,5]) %>%
+  ggplot(aes(PC4, PC5)) +
+  geom_point(alpha = 0.5) +
+  theme_bw()
 ```
 
