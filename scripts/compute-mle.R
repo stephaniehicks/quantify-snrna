@@ -15,6 +15,7 @@ if(file.exists(filtered_file_name)){
 }
 
 # Find mle parameters mu and sig
+use_matrix = T
 if(use_matrix){
   m = round(dat_filtered)
   res = poilog_mle_matrix(m)
