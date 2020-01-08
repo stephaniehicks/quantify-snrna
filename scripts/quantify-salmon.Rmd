@@ -144,13 +144,13 @@ rtracklayer::export(grrange, premrna_gtf)
 
 ## Combine two gtf files (pre-mRNA and mRNA) to be used in tximeta a bit later
 unlist(grl) # 1372308 rows
-tmp <- c(unlist(grl), grrange) # 1599770 rows
+tmp <- c(grrange, unlist(grl)) # 1599770 rows, pre-mRNA comes in front of mRNA
 
 ## example of a transcript with three exons (mRNA) or entire pre-mRNA region
 tmp[grep("ENST00000456328.2", names(tmp)),]
 
 ## Save combined pre-mRNA and mRNA gtf file
-preandmrna_gtf <- here("salmon_files","gencode.v32.preandmrnaannotation.gtf") # typo
+preandmrna_gtf <- here("salmon_files","gencode.v32.preandmrnaannotation.gtf")
 rtracklayer::export(tmp, preandmrna_gtf)
 ```
 
