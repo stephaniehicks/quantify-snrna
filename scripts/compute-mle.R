@@ -1,7 +1,7 @@
 # compute-mle.R
 # -----------------------------------------------------------------------------
 # Author:             Albert Kuo
-# Date last modified: Jan 6, 2020
+# Date last modified: Jan 8, 2020
 #
 # Run function to compute poisson lognormal mle parameters
 
@@ -15,9 +15,16 @@ if(file.exists(filtered_file_name)){
 }
 
 # Find mle parameters mu and sig
-i = as.integer(Sys.getenv("SGE_TASK_ID")) 
-x = dat_filtered[, i]
-x = round(x) # counts must be integers
-res = poilog_mle(x)
-
-saveRDS(res, here("mle_results", paste0(i, ".rds")))
+if(use_matrix){
+  m = round(dat_filtered)
+  res = poilog_mle_matrix(m)
+  saveRDS(res, here("mle_results", "all.rds"))
+} else {
+  #$ -t 1-534
+  #$ -tc 50
+  i = as.integer(Sys.getenv("SGE_TASK_ID")) 
+  x = dat_filtered[, i]
+  x = round(x) # counts must be integers
+  res = poilog_mle(x)
+  saveRDS(res, here("mle_results", paste0(i, ".rds")))
+}
