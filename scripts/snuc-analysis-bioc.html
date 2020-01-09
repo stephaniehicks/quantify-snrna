@@ -1724,40 +1724,19 @@ saveRDS(dat_filtered, filtered_file_name)</code></pre>
 </div>
 <div id="exploratory-plots-of-counts" class="section level1">
 <h1>Exploratory Plots of Counts</h1>
-<pre class="r"><code>library(here)</code></pre>
-<pre><code>## here() starts at /Users/albertkuo/Google Drive/Grad School/Research/alsf-filbin</code></pre>
-<pre class="r"><code>library(ggplot2)
-library(dplyr)</code></pre>
-<pre><code>## 
-## Attaching package: &#39;dplyr&#39;</code></pre>
-<pre><code>## The following objects are masked from &#39;package:stats&#39;:
-## 
-##     filter, lag</code></pre>
-<pre><code>## The following objects are masked from &#39;package:base&#39;:
-## 
-##     intersect, setdiff, setequal, union</code></pre>
-<pre class="r"><code>library(tidyr)
+<pre class="r"><code>library(here)
+library(ggplot2)
+library(dplyr)
+library(tidyr)
 library(factoextra)</code></pre>
-<pre><code>## Welcome! Want to learn more? See two factoextra-related books at https://goo.gl/ve3WBa</code></pre>
 <div id="distribution-plots" class="section level2">
 <h2>Distribution Plots</h2>
 <div id="convert-read-counts-to-pseudo-umis" class="section level3">
 <h3>Convert read counts to pseudo-UMIs</h3>
 <p>Run <code>compute-mle.sh</code> to get mle sig (“shape”) parameter first. There will be a parameter for every cell. It will take about 30 minutes to an hour.</p>
-<pre class="r"><code>source(here(&quot;scripts&quot;, &quot;quminorm.R&quot;))</code></pre>
-<pre><code>## 
-## Attaching package: &#39;Matrix&#39;</code></pre>
-<pre><code>## The following objects are masked from &#39;package:tidyr&#39;:
-## 
-##     expand, pack, unpack</code></pre>
-<pre><code>## Loading required package: bbmle</code></pre>
-<pre><code>## Loading required package: stats4</code></pre>
-<pre><code>## 
-## Attaching package: &#39;bbmle&#39;</code></pre>
-<pre><code>## The following object is masked from &#39;package:dplyr&#39;:
-## 
-##     slice</code></pre>
-<pre class="r"><code># Load filtered counts
+<pre class="r"><code>source(here(&quot;scripts&quot;, &quot;quminorm.R&quot;))
+
+# Load filtered counts
 filtered_file_name = here(&quot;salmon_quants&quot;, &quot;dat_filtered.rds&quot;)
 if(file.exists(filtered_file_name)){
   dat_filtered = readRDS(filtered_file_name)
