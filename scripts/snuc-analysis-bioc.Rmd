@@ -485,6 +485,7 @@ data.frame(PC4 = pc$x[,4], PC5 = pc$x[,5]) %>%
 ### GLM-PCA
 
 ```{r}
+# Takes a long time, may want to try on cluster
 tic("glm PCA")
 glmpca(dat_umi %>% as.matrix(), L = 5, fam = c("poi"))
 toc()
