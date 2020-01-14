@@ -264,7 +264,7 @@ plot_meanvar(dat_prem) +
 
 I first compute the average expression for every row (x-axis) $\hat{\mu}_i$ and the empirical $P(X_i=0)$, which is the probability that for a given transcript $i$, the count is 0. 
 
-I then compute what $P(X_i=0)$ would be under the model assumptions of binomial or poisson, using parameters estimated from the data. In particular, for a $Binom(n_i, p_i)$, $n_i$ is the median number of total counts of cells and $p_i$ is the mean proportion of counts that were in gene $i$.
+I then compute what $P(X_i=0)$ would be under the model assumptions of binomial or poisson, using parameters estimated from the data. In particular, for a $Binom(n, p_i)$, $n$ is the median number of total counts of cells and $p_i$ is the mean proportion of counts that were in gene $i$.
 
 ```{r}
 # Function to plot P(X_i = 0) against average expression level mu_i
