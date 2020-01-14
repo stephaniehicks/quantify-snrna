@@ -173,7 +173,6 @@ library(here)
 library(ggplot2)
 library(dplyr)
 library(tidyr)
-library(factoextra)
 ```
 
 ## Distribution Plots
@@ -414,22 +413,48 @@ lines_all_dt %>%
 
 ## PCA
 
-```{r pca}
+```{r}
+library(scran)
+library(BiocSingular)
+# library(factoextra)
+library(tictoc)
+```
+
+```{r}
+# Cells in each cluster are normalized separately
+clust = quickCluster(dat_umi)
+table(clust)
+deconv = computeSumFactors(dat_umi, cluster = clust)
+```
+
+```{r}
 X = dat_umi %>%
   as.matrix() %>%
+  sweep(., 2, deconv, "/") %>% # Divide by library size
   t()
+X = log2(X + 1) # Apply log transformation
 
 # Remove columns (transcripts) with zero variance
 nonzero_var_cols = which(apply(X, 2, var) != 0)
 X = X[, nonzero_var_cols]
-
-# Run PCA (takes a couple of minutes)
-pc = prcomp(X, center = T, scale = T)
 ```
 
-```{r}
+```{r pca}
+# Run approximate PCA (8 seconds)
+tic("approx PCA")
+pc = runPCA(X, rank = 5, BSPARAM = IrlbaParam())
+toc()
+
+# set.seed(1)
+# Run random PCA (2 minutes)
+# tic("random PCA")
+# pc = runPCA(X, rank = 5, BSPARAM = RandomParam())
+# toc()
+
+# Run PCA with prcomp (~10 minutes)
+# pc = prcomp(X, center = T, scale = F)
 # % variance explained by each PC
-fviz_eig(pc)
+# fviz_eig(pc)
 ```
 
 The top principal components appear to be dominated by outlier cells. The outliers are S19334F5Nuc-P2-D05 (219), SUDIPG55Biop1Nuc-P1-C03 (473) in PC1, PC2, PC3. And MUV16Nuc-P1-D04 (129), S19334F5Nuc-P2-C08 (210) in PC4.
