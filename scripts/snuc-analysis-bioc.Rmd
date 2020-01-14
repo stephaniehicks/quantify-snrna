@@ -209,6 +209,7 @@ if(file.exists(umi_file_name)){
   dat_umi = readRDS(umi_file_name)
 } else {
   dat_umi = quminorm_matrix(dat_filtered, shape = median(sig_vec)) # Takes a couple of minutes. You should be able to use a vector for the shape parameter too instead of using the median for all cells.
+  dat_umi = dat_umi[!(rowSums(dat_umi) == 0), ] # Remove transcripts with all zeros
   saveRDS(dat_umi, umi_file_name)
 }
 ```
@@ -418,6 +419,7 @@ library(scran)
 library(BiocSingular)
 # library(factoextra)
 library(tictoc)
+library(glmpca)
 ```
 
 ```{r}
@@ -457,8 +459,6 @@ toc()
 # fviz_eig(pc)
 ```
 
-The top principal components appear to be dominated by outlier cells. The outliers are S19334F5Nuc-P2-D05 (219), SUDIPG55Biop1Nuc-P1-C03 (473) in PC1, PC2, PC3. And MUV16Nuc-P1-D04 (129), S19334F5Nuc-P2-C08 (210) in PC4.
-
 ```{r}
 # Plot PC
 data.frame(PC1 = pc$x[,1], PC2 = pc$x[,2]) %>%
@@ -482,44 +482,11 @@ data.frame(PC4 = pc$x[,4], PC5 = pc$x[,5]) %>%
   theme_bw()
 ```
 
-I remove the outliers and do PCA again.
-
-```{r pca_2}
-X2 = X[-c(129, 219, 473, 210), ]
-
-# Remove columns (transcripts) with zero variance
-nonzero_var_cols = which(apply(X2, 2, var) != 0)
-X2 = X2[, nonzero_var_cols]
-
-# Run PCA (takes a couple of minutes)
-pc2 = prcomp(X2, center = T, scale = T)
-```
+### GLM-PCA
 
 ```{r}
-# % variance explained by each PC
-fviz_eig(pc2)
-```
-
-```{r}
-# Plot PC
-data.frame(PC1 = pc2$x[,1], PC2 = pc2$x[,2]) %>%
-  ggplot(aes(PC1, PC2)) +
-  geom_point(alpha = 0.5) +
-  theme_bw()
-
-data.frame(PC1 = pc2$x[,1], PC3 = pc2$x[,3]) %>%
-  ggplot(aes(PC1, PC3)) +
-  geom_point(alpha = 0.5) +
-  theme_bw()
-
-data.frame(PC2 = pc2$x[,2], PC3 = pc2$x[,3]) %>%
-  ggplot(aes(PC2, PC3)) +
-  geom_point(alpha = 0.5) +
-  theme_bw()
-
-data.frame(PC4 = pc2$x[,4], PC5 = pc2$x[,5]) %>%
-  ggplot(aes(PC4, PC5)) +
-  geom_point(alpha = 0.5) +
-  theme_bw()
+tic("glm PCA")
+glmpca(dat_umi %>% as.matrix(), L = 5, fam = c("poi"))
+toc()
 ```
 
