@@ -409,7 +409,9 @@ lines_all_dt = bind_rows(lines_prem_dt, lines_mrna_dt, lines_combined_dt)
 ```{r}
 lines_all_dt %>%
   ggplot(aes(x = log(means), y = probs_0)) +
-  geom_line(aes(color = data, linetype = model)) 
+  geom_line(aes(color = data, linetype = model)) +
+  labs(x = "Average expression level log(E(X_i))",
+         y = "P(X_i = 0)")
 ```
 
 ## PCA
@@ -484,7 +486,7 @@ data.frame(PC4 = pc$x[,4], PC5 = pc$x[,5]) %>%
 
 ### GLM-PCA
 
-```{r}
+```{r eval = F}
 # Takes a long time, may want to try on cluster
 tic("glm PCA")
 glmpca(dat_umi %>% as.matrix(), L = 5, fam = c("poi"))
