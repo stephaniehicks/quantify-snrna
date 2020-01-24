@@ -208,7 +208,7 @@ umi_file_name = here("salmon_quants", "dat_umi.rds")
 if(file.exists(umi_file_name)){
   dat_umi = readRDS(umi_file_name)
 } else {
-  dat_umi = quminorm_matrix(dat_filtered, shape = median(sig_vec)) # Takes a couple of minutes. You should be able to use a vector for the shape parameter too instead of using the median for all cells.
+  dat_umi = quminorm_matrix(dat_filtered, shape = median(sig_vec)) # Takes a couple of minutes. You should be able to use a vector for the shape parameter too instead of using the median for all cells. # You should use the mode
   dat_umi = dat_umi[!(rowSums(dat_umi) == 0), ] # Remove transcripts with all zeros
   saveRDS(dat_umi, umi_file_name)
 }
