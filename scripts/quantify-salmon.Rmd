@@ -26,7 +26,7 @@ However, the person using this script needs to adjust which paths to use.
 
 ```{r}
 # stephanie_data_path <- "/users/shicks1/data/alsf_filbin/sample"
-albert_data_path <- "/users/akuo/alsf_filbin/data/sample_data"
+albert_data_path <- "/users/akuo/alsf-filbin/sample_data"
 
 if(!dir.exists(here("sample_data"))){
   dir.create(here("sample_data"))
@@ -268,6 +268,7 @@ See the `scripts/run-salmon.sh` file or the `scripts/run-salmon-parallel.sh` fil
 Next, we use the `tximeta` package to create a SummarizedExperiment object.
 If we try to run `tximeta(coldata)`, that will fail because `tximeta` won't be able to detect automatically what the reference transcriptome is. 
 So, here we create our own [linked transcriptome](https://bioconductor.org/packages/release/bioc/vignettes/tximeta/inst/doc/tximeta.html#linked_transcriptomes) from the combined GTF file.
+This step is not necessary if your index was only the mRNA transcripts.
 
 A `linkedTxome` records key information about the sources of the transcript FASTA files, and the location of the relevant GTF file. 
 It also records the checksum of the transcriptome that was computed by Salmon during the index step.

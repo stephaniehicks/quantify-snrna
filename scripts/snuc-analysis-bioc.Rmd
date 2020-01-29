@@ -22,6 +22,7 @@ R
 
 ```{r eval = F}
 library(here)
+dataset = "mrna" # options = "premrna_mrna", "mrna", or "premrna"
 ```
 
 # Creating SummarizedExperiment object
@@ -73,19 +74,18 @@ loadLinkedTxome(json_file)
 The only way I've figured out how to make this work for now is with `skipMeta = TRUE`.
 
 ```{r eval = F}
-se_file_name = here("salmon_quants", "se.rds")
+se_file_name = here("salmon_quants", paste0("se_", dataset, ".rds"))
 
 # coldata = coldata[1:2, ] # for testing
 if(!file.exists(se_file_name)){
   # Create SummarizedExperiment object
   se <- tximeta(coldata, skipMeta = TRUE) # Takes a few minutes, file size = 597 MB
+  # se <- tximeta(coldata) # run this line if you used mRNA transcripts in your index only, it will automatically detect the right transcriptome
   # se <- tximeta(coldata, ignoreAfterBar = TRUE)
   saveRDS(se, se_file_name)
 } else {
   se = readRDS(se_file_name) # Takes a couple of seconds
 }
-
-# Copy se file from fastscratch to local folder?
 ```
 
 ## Explore SummarizedExperiment object
@@ -160,7 +160,7 @@ colSums(as.matrix(reasons))
 filtered = sce[, !reasons$discard] # 42 out of 576 cells were discarded
 dat_filtered = counts(filtered)
 
-filtered_file_name = here("salmon_quants", "dat_filtered.rds")
+filtered_file_name = here("salmon_quants", paste0("dat_filtered_", dataset, ".rds"))
 saveRDS(dat_filtered, filtered_file_name)
 ```
 
@@ -204,7 +204,7 @@ ggplot(tibble(sig = sig_vec), aes(x = sig)) +
        y = "Number of cells")
 
 # Convert to pseudo-UMIs
-umi_file_name = here("salmon_quants", "dat_umi.rds")
+umi_file_name = here("salmon_quants", paste0("dat_umi_", dataset, ".rds"))
 if(file.exists(umi_file_name)){
   dat_umi = readRDS(umi_file_name)
 } else {
