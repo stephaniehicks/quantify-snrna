@@ -185,7 +185,7 @@ Run `compute-mle.sh` to get mle sig ("shape") parameter first. There will be a p
 source(here("scripts", "quminorm.R"))
 
 # Load filtered counts
-filtered_file_name = here("salmon_quants", "dat_filtered.rds")
+filtered_file_name = here("salmon_quants", paste0("dat_filtered_", dataset, ".rds"))
 if(file.exists(filtered_file_name)){
   dat_filtered = readRDS(filtered_file_name)
 }
