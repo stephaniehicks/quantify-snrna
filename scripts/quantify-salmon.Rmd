@@ -208,6 +208,9 @@ This takes a while (~30-40 mins).
 cd /fastscratch/myscratch/shicks1/alsf-filbin/salmon_files
 # cd /fastscratch/myscratch/akuo/alsf-filbin/salmon_files
 gzip gencode.v32.preandmrna.fa
+
+# gzip the pre-mRNA only
+gzip GRCh38.premRNA.fa
 ```
 
 And clean up our space
