@@ -281,10 +281,15 @@ suppressPackageStartupMessages({
   library(tximeta)
 })
 
-# create linkedTranscriptome 
+# create linkedTranscriptome for combined list of pre-mRNA and mRNA
 index_dir <- here("salmon_files", "gencode.v32_salmon-index-v1.0.0")
 fasta_path <-  here("salmon_files", "gencode.v32.preandmrna.fa.gz")
 gtf_path <-  here("salmon_files", "gencode.v32.preandmrnaaannotation.gtf") 
+
+# create linkedTranscriptome for pre-mRNA only
+index_dir <- here("salmon_files", "gencode.v32_salmon-index-v1.0.0-premRNA")
+fasta_path <-  here("salmon_files", "GRCh38.premRNA.fa.gz")
+gtf_path <-  here("salmon_files", "gencode.v32.premrnaannotation.gtf") 
 
 json_file <- here("salmon_files", paste0(basename(index_dir), ".json"))
 makeLinkedTxome(indexDir=index_dir,
