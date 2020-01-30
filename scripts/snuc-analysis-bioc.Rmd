@@ -173,6 +173,7 @@ library(here)
 library(ggplot2)
 library(dplyr)
 library(tidyr)
+dataset = "mrna" # options = "premrna_mrna", "mrna", or "premrna"
 ```
 
 ## Distribution Plots
@@ -181,9 +182,7 @@ library(tidyr)
 
 Run `compute-mle.sh` to get mle sig ("shape") parameter first. There will be a parameter for every cell. It will take about 30 minutes to an hour.
 
-```{r}
-source(here("scripts", "quminorm.R"))
-
+```{r eval = F}
 # Load filtered counts
 filtered_file_name = here("salmon_quants", paste0("dat_filtered_", dataset, ".rds"))
 if(file.exists(filtered_file_name)){
@@ -202,7 +201,9 @@ ggplot(tibble(sig = sig_vec), aes(x = sig)) +
   labs(title = "Distribution of sig parameter",
        x = "sig",
        y = "Number of cells")
-
+```
+```{r}
+source(here("scripts", "quminorm.R"))
 # Convert to pseudo-UMIs
 umi_file_name = here("salmon_quants", paste0("dat_umi_", dataset, ".rds"))
 if(file.exists(umi_file_name)){
@@ -299,9 +300,11 @@ plot_prob = function(dat_sub){
   plt = plot_lines_dt %>%
     ggplot(aes(x = log(means), y = probs_0)) +
     geom_point(data = plot_dt, aes(x = log(means), y = emp_probs_0), alpha = 0.4) + # Add data points
-    geom_line(aes(color = model)) + # Add lines for models
+    geom_line(aes(color = model),
+              size = 1.5) + # Add lines for models
     labs(x = "Average expression level log(E(X_i))",
-         y = "P(X_i = 0)")
+         y = "P(X_i = 0)") +
+    theme(text = element_text(size = 15))
   
   # Return object
   out = list(plot = plt,
