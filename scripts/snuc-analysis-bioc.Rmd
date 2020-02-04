@@ -22,7 +22,7 @@ R
 
 ```{r eval = F}
 library(here)
-dataset = "premrna" # options = "premrna_mrna", "mrna", or "premrna"
+dataset = "mrna" # options = "premrna_mrna", "mrna", or "premrna"
 ```
 
 # Create SummarizedExperiment object
@@ -141,8 +141,8 @@ reasons = quickPerCellQC(df) # DataFrame of logical values
 colSums(as.matrix(reasons))
 
 # Discard outliers
-filtered = sce[, !reasons$discard] # 42 out of 576 cells were discarded
-dat_filtered = counts(filtered)
+filtered = sce[, !reasons$discard] 
+dat_filtered = counts(filtered) # 226608 x 518 for mrna, 221988 x 546 for premrna
 
 filtered_file_name = here("salmon_quants", paste0("dat_filtered_", dataset, ".rds"))
 saveRDS(dat_filtered, filtered_file_name)
@@ -157,6 +157,8 @@ library(here)
 library(ggplot2)
 library(dplyr)
 library(tidyr)
+library(SingleCellExperiment)
+dataset = "mrna"
 ```
 
 ## Convert read counts to pseudo-UMIs
@@ -196,7 +198,7 @@ umi_file_name = here("salmon_quants", paste0("dat_umi_", dataset, ".rds"))
 if(file.exists(umi_file_name)){
   dat_umi = readRDS(umi_file_name)
 } else {
-  dat_umi = quminorm_matrix(dat_filtered, shape = getMode(sig_vec)) # Takes several minutes. In the paper, they use the mode.
+  dat_umi = quminorm_matrix(dat_filtered, shape = getMode(sig_vec)) # Takes several minutes (20~30 min). In the paper, they use the mode.
   dat_umi = dat_umi[!(rowSums(dat_umi) == 0), ] # Remove transcripts with all zeros
   saveRDS(dat_umi, umi_file_name)
 }
@@ -209,14 +211,14 @@ umi_file_name = here("salmon_quants", paste0("dat_umi_", dataset, ".rds"))
 dat_umi = readRDS(umi_file_name)
 
 # Original data by transcript
-dim(dat_umi) # 226608 x 576 for mRNA, 221988 x 576 for premRNA
+dim(dat_umi) #  x  for mRNA, 173926 x 546 for premRNA
 
 if(dataset == "mrna"){
   row_ranges = rowRanges(se)
   genes = unlist(elementMetadata(row_ranges)$gene_id)
-  dat = rowsum(dat_orig, group = genes, reorder = FALSE)
-  dim(dat) # 60179 x 576 for mRNA
-} else {
+  dat = rowsum(dat_umi, group = genes, reorder = FALSE)
+  dim(dat) # 
+} else if(dataset == "premrna") {
   se_mrna = readRDS(here("salmon_quants", paste0("se_mrna.rds")))
   transcripts_mrna = rownames(assay(se_mrna, "counts"))
   row_ranges = rowRanges(se_mrna)
@@ -225,18 +227,15 @@ if(dataset == "mrna"){
                                  genes)
   
   # Get genes for every premrna transcript
-  # Note: 303 premRNA transcripts did not have corresponding mRNA transcripts
-  transcripts_premrna = rownames(dat_orig)
+  # Note: 208 premRNA transcripts did not have corresponding mRNA transcripts
+  transcripts_premrna = rownames(dat_umi)
   transcripts_premrna_converted = gsub(".{8}$", "" , transcripts_premrna)
   premrna_gene_matching_dt = left_join(tibble(transcript = transcripts_premrna_converted),
                                        mrna_gene_matching_dt, by = "transcript")
   
-  dat = rowsum(dat_orig, group = premrna_gene_matching_dt$genes, reorder = FALSE)
-  dim(dat) # 60106 x 576
+  dat = rowsum(dat_umi, group = premrna_gene_matching_dt$genes, reorder = FALSE)
+  dim(dat) # 50477 x 546
 }
-
-# Remove genes that have 0 counts for all cells
-dat_gene = dat[!(rowSums(dat) == 0),] # 48942 x 576 for mRNA, 50501 x 576 for premRNA
 
 gene_file_name = here("salmon_quants", paste0("dat_gene_", dataset, ".rds"))
 saveRDS(dat_gene, gene_file_name)
@@ -277,8 +276,7 @@ dat_prem = apply(dat_prem, MARGIN = 2, function(x) x*n/sum(x))
 summary(colSums(dat_prem))
 ```
 
-I plot the mean and variance for every row (transcript). Under a poisson distribution,
-they should be the same.
+I plot the mean and variance for every row (transcript). Under a poisson distribution, they should be the same.
 
 ```{r}
 plot_meanvar = function(dat_sub){
@@ -388,70 +386,6 @@ prob_out_mrna$plot +
   labs(title = "mRNA")
 ```
 
-### Distribution of combined pre-mRNA and mRNA counts
-
-```{r combined_distribution}
-# Combine pre-mRNA and mRNA counts
-dim(dat_prem) # 99845 x 534
-dim(dat_mrna) # 226608 x 534
-
-transcript_names = gsub(".{8}$", "" , rownames(dat_prem)) # length = 99845
-transcript_names = intersect(transcript_names, rownames(dat_mrna)) # length = 99771
-premrna_names = paste(transcript_names, "premrna", sep = ".")
-
-# Check that the rows of pre-mRNA and mRNA are in the same exact order
-tmp1 = gsub(".{8}$", "", rownames(dat_prem[premrna_names,]))
-tmp2 = rownames(dat_mrna[transcript_names,])
-identical(tmp1, tmp2)
-
-# Add counts for pre-mRNA and mRNA element-wise
-dat_combined = dat_prem[premrna_names,] + dat_mrna[transcript_names,]
-rownames(dat_combined) = transcript_names
-```
-
-```{r}
-summary(colSums(dat_combined))
-
-# Apply transformation
-n = round(median(colSums(dat_combined)))
-dat_combined = apply(dat_combined, MARGIN = 2, function(x) x*n/sum(x))
-
-summary(colSums(dat_combined))
-```
-
-```{r}
-# Plot mean against variance
-plot_meanvar(dat_combined) +
-  labs(title = "pre-mRNA + mRNA")
-```
-
-```{r}
-# Plot P(X_i = 0) against average expression level
-prob_out_combined = plot_prob(dat_combined)
-prob_out_combined$plot +
-  labs(title = "pre-mRNA + mRNA")
-```
-
-### Combined plot
-
-```{r}
-lines_prem_dt = prob_out_prem$lines_dt %>%
-  mutate(data = "pre-mRNA")
-lines_mrna_dt = prob_out_mrna$lines_dt %>%
-  mutate(data = "mRNA")
-lines_combined_dt = prob_out_combined$lines_dt %>%
-  mutate(data = "combined")
-
-lines_all_dt = bind_rows(lines_prem_dt, lines_mrna_dt, lines_combined_dt)
-```
-
-```{r}
-lines_all_dt %>%
-  ggplot(aes(x = log(means), y = probs_0)) +
-  geom_line(aes(color = data, linetype = model)) +
-  labs(x = "Average expression level log(E(X_i))",
-         y = "P(X_i = 0)")
-```
 
 ## PCA
 
