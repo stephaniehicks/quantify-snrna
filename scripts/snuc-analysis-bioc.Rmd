@@ -260,6 +260,7 @@ library(here)
 library(ggplot2)
 library(dplyr)
 library(tidyr)
+library(SingleCellExperiment)
 
 sce_prem = readRDS(here("salmon_quants", "sce_gene_premrna.rds"))
 sce_mrna = readRDS(here("salmon_quants", "sce_gene_mrna.rds"))
@@ -420,14 +421,13 @@ library(glmpca)
 ```
 
 ### pre-mRNA
+
 ```{r}
 sce = sce_prem
+dat = dat_prem
 ```
 
-### mRNA
-
 ```{r}
-dat = dat_mrna
 # Cells in each cluster are normalized separately
 clust = quickCluster(dat)
 table(clust)
@@ -461,24 +461,91 @@ toc()
 ```
 
 ```{r}
+tumor_labels = gsub("-.*$", "", colnames(sce))
+
 # Plot PC
-data.frame(PC1 = pc$x[,1], PC2 = pc$x[,2]) %>%
-  ggplot(aes(PC1, PC2)) +
+data.frame(PC1 = pc$x[,1], PC2 = pc$x[,2], color = tumor_labels) %>%
+  ggplot(aes(PC1, PC2, color = color)) +
   geom_point(alpha = 0.5) +
   theme_bw()
 
-data.frame(PC1 = pc$x[,1], PC3 = pc$x[,3]) %>%
-  ggplot(aes(PC1, PC3)) +
+data.frame(PC1 = pc$x[,1], PC3 = pc$x[,3], color = tumor_labels) %>%
+  ggplot(aes(PC1, PC3, color = color)) +
   geom_point(alpha = 0.5) +
   theme_bw()
 
-data.frame(PC2 = pc$x[,2], PC3 = pc$x[,3]) %>%
-  ggplot(aes(PC2, PC3)) +
+data.frame(PC2 = pc$x[,2], PC3 = pc$x[,3], color = tumor_labels) %>%
+  ggplot(aes(PC2, PC3, color = color)) +
   geom_point(alpha = 0.5) +
   theme_bw()
 
-data.frame(PC4 = pc$x[,4], PC5 = pc$x[,5]) %>%
-  ggplot(aes(PC4, PC5)) +
+data.frame(PC4 = pc$x[,4], PC5 = pc$x[,5], color = tumor_labels) %>%
+  ggplot(aes(PC4, PC5, color = color)) +
+  geom_point(alpha = 0.5) +
+  theme_bw()
+```
+
+### mRNA
+
+```{r}
+sce = sce_mrna
+dat = dat_mrna
+```
+
+```{r}
+# Cells in each cluster are normalized separately
+clust = quickCluster(dat)
+table(clust)
+deconv = computeSumFactors(dat, cluster = clust)
+
+X = dat %>%
+  as.matrix() %>%
+  sweep(., 2, deconv, "/") %>% # Divide by library size
+  t()
+X = log2(X + 1) # Apply log transformation
+
+# Remove columns (transcripts) with zero variance
+nonzero_var_cols = which(apply(X, 2, var) != 0)
+X = X[, nonzero_var_cols]
+
+# Run approximate PCA (8 seconds)
+tic("approx PCA")
+pc = runPCA(X, rank = 5, BSPARAM = IrlbaParam())
+toc()
+
+# set.seed(1)
+# Run random PCA (2 minutes)
+# tic("random PCA")
+# pc = runPCA(X, rank = 5, BSPARAM = RandomParam())
+# toc()
+
+# Run PCA with prcomp (~10 minutes)
+# pc = prcomp(X, center = T, scale = F)
+# % variance explained by each PC
+# fviz_eig(pc)
+```
+
+```{r}
+tumor_labels = gsub("-.*$", "", colnames(sce))
+
+# Plot PC
+data.frame(PC1 = pc$x[,1], PC2 = pc$x[,2], color = tumor_labels) %>%
+  ggplot(aes(PC1, PC2, color = color)) +
+  geom_point(alpha = 0.5) +
+  theme_bw()
+
+data.frame(PC1 = pc$x[,1], PC3 = pc$x[,3], color = tumor_labels) %>%
+  ggplot(aes(PC1, PC3, color = color)) +
+  geom_point(alpha = 0.5) +
+  theme_bw()
+
+data.frame(PC2 = pc$x[,2], PC3 = pc$x[,3], color = tumor_labels) %>%
+  ggplot(aes(PC2, PC3, color = color)) +
+  geom_point(alpha = 0.5) +
+  theme_bw()
+
+data.frame(PC4 = pc$x[,4], PC5 = pc$x[,5], color = tumor_labels) %>%
+  ggplot(aes(PC4, PC5, color = color)) +
   geom_point(alpha = 0.5) +
   theme_bw()
 ```
