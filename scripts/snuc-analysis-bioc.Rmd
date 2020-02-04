@@ -22,10 +22,10 @@ R
 
 ```{r eval = F}
 library(here)
-dataset = "mrna" # options = "premrna_mrna", "mrna", or "premrna"
+dataset = "premrna" # options = "premrna_mrna", "mrna", or "premrna"
 ```
 
-# Creating SummarizedExperiment object
+# Create SummarizedExperiment object
 
 First, we create a table with information about where each file (quantified counts from salmon) is. 
 This will be used to create a `SummarizedExperiment` object.
@@ -88,8 +88,6 @@ if(!file.exists(se_file_name)){
 }
 ```
 
-## Explore SummarizedExperiment object
-
 ```{r eval = F}
 suppressPackageStartupMessages({
   library(SummarizedExperiment)
@@ -99,21 +97,11 @@ suppressPackageStartupMessages({
 colData(se)
 assayNames(se)
 rowRanges(se)
+
+dat = assay(se, "counts")
 ```
 
-```{r eval = F}
-dat <- assay(se, "counts")
-dim(dat) # 326453 x 576
-# dat2 <- dat[!(rowSums(dat) == 0),]
-# dim(dat2) # 239650 x 576
-# dat[grep("ENST00000355537.4", rownames(dat)),]
-# summary(colSums(dat))
-# hist(colSums(dat))
-# dat_prem = dat[grepl(".premrna", rownames(dat)),]  # 99845 x 576
-# dat_mrna = dat[!grepl(".premrna", rownames(dat)),] # 226608 x 576
-```
-
-## Create SingleCellExperiment object
+# Create SingleCellExperiment object
 
 A SingleCellExperiment class is derived from the SummarizedExperiment class. The most important change is the addition of a new slot called `reducedDims`. Read more [here](https://osca.bioconductor.org/data-infrastructure.html#a-brief-recap-from-se-to-sce).
 
@@ -147,15 +135,11 @@ library(scater)
 # detected contains the number of detected genes (actually transcripts for our data)
 df = perCellQCMetrics(sce)
 df
-```
 
-```{r eval = F}
 # Find outliers with low library sizes (LibSize) and few detected features (n_features)
 reasons = quickPerCellQC(df) # DataFrame of logical values
 colSums(as.matrix(reasons))
-```
 
-```{r eval = F}
 # Discard outliers
 filtered = sce[, !reasons$discard] # 42 out of 576 cells were discarded
 dat_filtered = counts(filtered)
@@ -166,19 +150,16 @@ saveRDS(dat_filtered, filtered_file_name)
 
 Diagnostic plots: https://osca.bioconductor.org/quality-control.html#quality-control-plots 
 
-# Exploratory Plots of Counts
+# Transform read counts
 
 ```{r}
 library(here)
 library(ggplot2)
 library(dplyr)
 library(tidyr)
-dataset = "mrna" # options = "premrna_mrna", "mrna", or "premrna"
 ```
 
-## Distribution Plots
-
-### Convert read counts to pseudo-UMIs
+## Convert read counts to pseudo-UMIs
 
 Run `compute-mle.sh` to get mle sig ("shape") parameter first. There will be a parameter for every cell. It will take about 30 minutes to an hour.
 
@@ -202,30 +183,85 @@ ggplot(tibble(sig = sig_vec), aes(x = sig)) +
        x = "sig",
        y = "Number of cells")
 ```
+
 ```{r}
+getMode <- function(x){
+  keys <- unique(x)
+  keys[which.max(tabulate(match(x, keys)))]
+}
+
 source(here("scripts", "quminorm.R"))
 # Convert to pseudo-UMIs
 umi_file_name = here("salmon_quants", paste0("dat_umi_", dataset, ".rds"))
 if(file.exists(umi_file_name)){
   dat_umi = readRDS(umi_file_name)
 } else {
-  dat_umi = quminorm_matrix(dat_filtered, shape = median(sig_vec)) # Takes a couple of minutes. You should be able to use a vector for the shape parameter too instead of using the median for all cells. # You should use the mode
+  dat_umi = quminorm_matrix(dat_filtered, shape = getMode(sig_vec)) # Takes several minutes. In the paper, they use the mode.
   dat_umi = dat_umi[!(rowSums(dat_umi) == 0), ] # Remove transcripts with all zeros
   saveRDS(dat_umi, umi_file_name)
 }
 ```
 
-Proportion of counts that are pre-mRNA.
+## Aggregate counts at gene level
+
+```{r eval = F}
+umi_file_name = here("salmon_quants", paste0("dat_umi_", dataset, ".rds"))
+dat_umi = readRDS(umi_file_name)
+
+# Original data by transcript
+dim(dat_umi) # 226608 x 576 for mRNA, 221988 x 576 for premRNA
+
+if(dataset == "mrna"){
+  row_ranges = rowRanges(se)
+  genes = unlist(elementMetadata(row_ranges)$gene_id)
+  dat = rowsum(dat_orig, group = genes, reorder = FALSE)
+  dim(dat) # 60179 x 576 for mRNA
+} else {
+  se_mrna = readRDS(here("salmon_quants", paste0("se_mrna.rds")))
+  transcripts_mrna = rownames(assay(se_mrna, "counts"))
+  row_ranges = rowRanges(se_mrna)
+  genes = unlist(elementMetadata(row_ranges)$gene_id)
+  mrna_gene_matching_dt = tibble(transcript = transcripts_mrna,
+                                 genes)
+  
+  # Get genes for every premrna transcript
+  # Note: 303 premRNA transcripts did not have corresponding mRNA transcripts
+  transcripts_premrna = rownames(dat_orig)
+  transcripts_premrna_converted = gsub(".{8}$", "" , transcripts_premrna)
+  premrna_gene_matching_dt = left_join(tibble(transcript = transcripts_premrna_converted),
+                                       mrna_gene_matching_dt, by = "transcript")
+  
+  dat = rowsum(dat_orig, group = premrna_gene_matching_dt$genes, reorder = FALSE)
+  dim(dat) # 60106 x 576
+}
+
+# Remove genes that have 0 counts for all cells
+dat_gene = dat[!(rowSums(dat) == 0),] # 48942 x 576 for mRNA, 50501 x 576 for premRNA
+
+gene_file_name = here("salmon_quants", paste0("dat_gene_", dataset, ".rds"))
+saveRDS(dat_gene, gene_file_name)
+```
+
+# Exploratory Plots
 
 ```{r}
-# Split data into pre-mRNA and mRNA
-dat_prem = dat_umi[grepl(".premrna", rownames(dat_umi)),]  
-dat_mrna = dat_umi[!grepl(".premrna", rownames(dat_umi)),]
+library(here)
+library(ggplot2)
+library(dplyr)
+library(tidyr)
+dataset = "mrna" # options = "premrna_mrna", "mrna", or "premrna"
 
-# Proportion of counts that are pre_mRNA
-premrna_prop = colSums(dat_prem)/colSums(dat_umi)
-summary(premrna_prop) # Min = 0.31, Median = 0.68, Max = 0.87
+dat_prem = readRDS(here("salmon_quants", "dat_gene_premrna.rds"))
+dat_mrna = readRDS(here("salmon_quants", "dat_gene_mrna.rds"))
 ```
+
+## Compare pre-mRNA vs mRNA counts
+
+```{r}
+
+```
+
+
 
 ### Distribution of pre-mRNA
 
