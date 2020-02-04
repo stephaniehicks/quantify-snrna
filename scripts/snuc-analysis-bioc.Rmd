@@ -159,7 +159,7 @@ library(ggplot2)
 library(dplyr)
 library(tidyr)
 library(SingleCellExperiment)
-dataset = "premrna"
+dataset = "mrna"
 ```
 
 ## Convert read counts to pseudo-UMIs
@@ -215,10 +215,12 @@ umi_file_name = here("salmon_quants", paste0("sce_umi_", dataset, ".rds"))
 sce_umi = readRDS(umi_file_name)
 dat_umi = counts(sce_umi)
 
-# Original data by transcript
-dim(dat_umi) #  176307 x 518 for mRNA, 173926 x 546 for premRNA
+# Counts by transcript
+dim(dat_umi) #  176307 x 518 for mRNA, 173927 x 546 for premRNA
 
 if(dataset == "mrna"){
+  se_mrna = readRDS(here("salmon_quants", paste0("se_mrna.rds")))
+  transcripts_mrna = rownames(assay(se_mrna, "counts"))
   row_ranges = rowRanges(se)
   genes = unlist(elementMetadata(row_ranges)$gene_id)
   mrna_gene_matching_dt = tibble(transcript = transcripts_mrna, genes) %>%
@@ -226,6 +228,7 @@ if(dataset == "mrna"){
   dat_gene = rowsum(dat_umi, group = mrna_gene_matching_dt$genes, reorder = FALSE)
   dim(dat_gene) # 48890 x 518 for mRNA
 } else if(dataset == "premrna") {
+  # Read in mrna data to look up genes
   se_mrna = readRDS(here("salmon_quants", paste0("se_mrna.rds")))
   transcripts_mrna = rownames(assay(se_mrna, "counts"))
   row_ranges = rowRanges(se_mrna)
@@ -240,12 +243,14 @@ if(dataset == "mrna"){
                                        mrna_gene_matching_dt, by = "transcript")
   
   dat_gene = rowsum(dat_umi, group = premrna_gene_matching_dt$genes, reorder = FALSE)
-  dim(dat_gene) # 50477 x 546
+  # Remove counts for unmatched transcripts
+  dat_gene = dat_gene[!is.na(rownames(dat_gene)), ]
+  dim(dat_gene) # 50476 x 546
 }
 
 gene_file_name = here("salmon_quants", paste0("sce_gene_", dataset, ".rds"))
 sce_gene = SingleCellExperiment(assays = list(counts = dat_gene))
-saveRDS(dat, gene_file_name)
+saveRDS(sce_gene, gene_file_name)
 ```
 
 # Exploratory Plots
@@ -256,8 +261,11 @@ library(ggplot2)
 library(dplyr)
 library(tidyr)
 
-dat_prem = readRDS(here("salmon_quants", "dat_gene_premrna.rds"))
-dat_mrna = readRDS(here("salmon_quants", "dat_gene_mrna.rds"))
+sce_prem = readRDS(here("salmon_quants", "sce_gene_premrna.rds"))
+sce_mrna = readRDS(here("salmon_quants", "sce_gene_mrna.rds"))
+
+dat_prem = counts(sce_prem)
+dat_mrna = counts(sce_mrna)
 ```
 
 ## Compare pre-mRNA vs mRNA counts
@@ -375,12 +383,6 @@ prob_out_prem$plot +
   labs(title = "pre-mRNA")
 ```
 
-```{r eval = F}
-# qqplot for first row
-qprobs = seq(0.01, 0.99, by = 0.01)
-plot(quantile(rpois(1000, lambda = lambdas[1]), qprobs),
-     quantile(dat_prem[,1], probs = qprobs))
-```
 
 ### mRNA
 
@@ -417,16 +419,21 @@ library(tictoc)
 library(glmpca)
 ```
 
+### pre-mRNA
 ```{r}
-dat_umi = dat_mrna
-# Cells in each cluster are normalized separately
-clust = quickCluster(dat_umi)
-table(clust)
-deconv = computeSumFactors(dat_umi, cluster = clust)
+sce = sce_prem
 ```
 
+### mRNA
+
 ```{r}
-X = dat_umi %>%
+dat = dat_mrna
+# Cells in each cluster are normalized separately
+clust = quickCluster(dat)
+table(clust)
+deconv = computeSumFactors(dat, cluster = clust)
+
+X = dat %>%
   as.matrix() %>%
   sweep(., 2, deconv, "/") %>% # Divide by library size
   t()
@@ -435,9 +442,7 @@ X = log2(X + 1) # Apply log transformation
 # Remove columns (transcripts) with zero variance
 nonzero_var_cols = which(apply(X, 2, var) != 0)
 X = X[, nonzero_var_cols]
-```
 
-```{r pca}
 # Run approximate PCA (8 seconds)
 tic("approx PCA")
 pc = runPCA(X, rank = 5, BSPARAM = IrlbaParam())
@@ -483,7 +488,7 @@ data.frame(PC4 = pc$x[,4], PC5 = pc$x[,5]) %>%
 ```{r eval = F}
 # Takes a long time, may want to try on cluster
 tic("glm PCA")
-glmpca(dat_umi %>% as.matrix(), L = 5, fam = c("poi"))
+glmpca(dat %>% as.matrix(), L = 5, fam = c("poi"))
 toc()
 ```
 
