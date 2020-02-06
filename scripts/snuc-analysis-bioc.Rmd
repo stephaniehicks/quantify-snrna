@@ -189,11 +189,6 @@ ggplot(tibble(sig = sig_vec), aes(x = sig)) +
 ```
 
 ```{r}
-getMode <- function(x){
-  keys <- unique(x)
-  keys[which.max(tabulate(match(x, keys)))]
-}
-
 source(here("scripts", "quminorm.R"))
 
 # Convert to pseudo-UMIs
@@ -201,7 +196,7 @@ umi_file_name = here("salmon_quants", paste0("sce_umi_", dataset, ".rds"))
 if(file.exists(umi_file_name)){
   dat_umi = readRDS(umi_file_name)
 } else {
-  dat_umi = quminorm_matrix(dat_filtered, shape = getMode(sig_vec)) # Takes several minutes (20~30 min). In the paper, they use the mode. The mode for mRNA is 3.27.
+  dat_umi = quminorm_matrix(dat_filtered, shape = median(sig_vec)) # Takes several minutes (20~30 min). In the paper, they use the mode, but I will use the median since it is not clear what mode means for continuous values. The median for mRNA is . The median for pre-mRNA is 3.28. 
   dat_umi = dat_umi[!(rowSums(dat_umi) == 0), ] # Remove transcripts with all zeros
   sce_umi = SingleCellExperiment(assays = list(counts = dat_umi))
   saveRDS(sce_umi, umi_file_name)
