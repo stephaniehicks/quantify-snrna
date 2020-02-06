@@ -175,7 +175,7 @@ if(file.exists(filtered_file_name)){
 }
 
 # Read in mle parameters
-mle_file_names = list.files(here("mle_results"), full.names = TRUE)
+mle_file_names = list.files(here(paste0("mle_results_", dataset)), full.names = TRUE)
 mle_results = lapply(mle_file_names, readRDS)
 sig_vec = sapply(mle_results, function(r) r["sig"])
 mu_vec = sapply(mle_results, function(r) r["mu"])
@@ -201,7 +201,7 @@ umi_file_name = here("salmon_quants", paste0("sce_umi_", dataset, ".rds"))
 if(file.exists(umi_file_name)){
   dat_umi = readRDS(umi_file_name)
 } else {
-  dat_umi = quminorm_matrix(dat_filtered, shape = getMode(sig_vec)) # Takes several minutes (20~30 min). In the paper, they use the mode.
+  dat_umi = quminorm_matrix(dat_filtered, shape = getMode(sig_vec)) # Takes several minutes (20~30 min). In the paper, they use the mode. The mode for mRNA is 3.27.
   dat_umi = dat_umi[!(rowSums(dat_umi) == 0), ] # Remove transcripts with all zeros
   sce_umi = SingleCellExperiment(assays = list(counts = dat_umi))
   saveRDS(sce_umi, umi_file_name)
@@ -221,7 +221,7 @@ dim(dat_umi) #  176307 x 518 for mRNA, 173927 x 546 for premRNA
 if(dataset == "mrna"){
   se_mrna = readRDS(here("salmon_quants", paste0("se_mrna.rds")))
   transcripts_mrna = rownames(assay(se_mrna, "counts"))
-  row_ranges = rowRanges(se)
+  row_ranges = rowRanges(se_mrna)
   genes = unlist(elementMetadata(row_ranges)$gene_id)
   mrna_gene_matching_dt = tibble(transcript = transcripts_mrna, genes) %>%
     filter(transcript %in% rownames(dat_umi))
