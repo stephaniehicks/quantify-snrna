@@ -159,7 +159,7 @@ library(ggplot2)
 library(dplyr)
 library(tidyr)
 library(SingleCellExperiment)
-dataset = "mrna"
+dataset = "mrna" # options = "premrna_mrna", "mrna", or "premrna"
 ```
 
 ## Convert read counts to pseudo-UMIs
@@ -443,10 +443,10 @@ X = log2(X + 1) # Apply log transformation
 nonzero_var_cols = which(apply(X, 2, var) != 0)
 X = X[, nonzero_var_cols]
 
-# Run approximate PCA (8 seconds)
+# Run approximate PCA (a few seconds)
 tic("approx PCA")
 pc = runPCA(X, rank = 5, BSPARAM = IrlbaParam())
-toc()
+ptoc()
 
 # set.seed(1)
 # Run random PCA (2 minutes)
@@ -550,13 +550,43 @@ data.frame(PC4 = pc$x[,4], PC5 = pc$x[,5], color = tumor_labels) %>%
   theme_bw()
 ```
 
-### GLM-PCA
+## GLM-PCA
+
+### pre-mRNA
+
+```{r}
+sce = sce_prem
+dat = dat_prem
+```
 
 ```{r eval = F}
+X = dat
+
 # Takes a long time, may want to try on cluster
+# Time increases with number of rows and number of latent dimensions ("L")
 tic("glm PCA")
-glmpca(dat %>% as.matrix(), L = 5, fam = c("poi"))
+glmpc = glmpca(X, L = 3, fam = c("poi"))
 toc()
+```
+
+```{r}
+tumor_labels = gsub("-.*$", "", colnames(sce))
+
+# Plot PC
+data.frame(PC1 = glmpc$factors[,1], PC2 = glmpc$factors[,2], color = tumor_labels) %>%
+  ggplot(aes(PC1, PC2, color = color)) +
+  geom_point(alpha = 0.5) +
+  theme_bw()
+
+data.frame(PC1 = glmpc$factors[,1], PC3 = glmpc$factors[,3], color = tumor_labels) %>%
+  ggplot(aes(PC1, PC3, color = color)) +
+  geom_point(alpha = 0.5) +
+  theme_bw()
+
+data.frame(PC2 = glmpc$factors[,2], PC3 = glmpc$factors[,3], color = tumor_labels) %>%
+  ggplot(aes(PC2, PC3, color = color)) +
+  geom_point(alpha = 0.5) +
+  theme_bw()
 ```
 
 ## Clustering
