@@ -441,7 +441,7 @@ X = X[, nonzero_var_cols]
 # Run approximate PCA (a few seconds)
 tic("approx PCA")
 pc = runPCA(X, rank = 5, BSPARAM = IrlbaParam())
-ptoc()
+toc()
 
 # set.seed(1)
 # Run random PCA (2 minutes)
