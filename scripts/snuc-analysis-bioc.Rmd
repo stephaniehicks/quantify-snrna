@@ -320,6 +320,23 @@ scattermoreplot(d,
 toc() # 0.5 sec
 ```
 
+```{r}
+# MA plot is a plot of log-intensity ratios (M) vs log-intensity averages (A)
+dat_rowmeans = dat_rowmeans %>%
+  mutate(m = log(mean_prem) - log(mean_mrna),
+         a = (log(mean_prem) + log(mean_mrna)/2))
+
+dat_rowmeans %>%
+  ggplot(aes(x = a,
+             y = m)) + 
+  geom_point(alpha = 0.5) +
+  labs(x = "A",
+       y = "M") +
+  geom_smooth() +
+  theme_bw()
+```
+
+
 ## Comparison to parametric distributions
 
 ### pre-mRNA
