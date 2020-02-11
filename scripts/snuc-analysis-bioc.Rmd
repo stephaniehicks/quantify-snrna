@@ -92,6 +92,7 @@ if(!file.exists(se_file_name)){
 suppressPackageStartupMessages({
   library(SummarizedExperiment)
   library(DESeq2)
+  library(scater)
 })
 
 colData(se)
@@ -115,6 +116,24 @@ sce = SingleCellExperiment(assays = list(counts = dat))
 
 # you can access counts by assay(sce, "counts") or counts(sce)
 # you can add a new entry to assays slot by assay(sce, "counts_new") = dat_new
+```
+
+## Add gene names (hgnc symbol)
+
+```{r}
+# This will take a long time (> 45 min); should probably separate out as a script
+sce <- getBMFeatureAnnos(sce, 
+            ids = rownames(sce),
+            filters = "ensembl_gene_id", 
+            attributes = c("ensembl_gene_id", "hgnc_symbol",
+                           "chromosome_name", "gene_biotype",
+                           "start_position", "end_position"),
+            biomart = "ENSEMBL_MART_ENSEMBL", 
+            dataset = "hsapiens_gene_ensembl",
+            host = "www.ensembl.org")
+rowData(sce)$gene_name_unique <- 
+  uniquifyFeatureNames(rowData(sce)$gene_name_ensembl, 
+                     rowData(sce)$hgnc_symbol)
 ```
 
 ## Quality Control
