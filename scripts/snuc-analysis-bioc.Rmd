@@ -464,6 +464,7 @@ library(BiocSingular)
 # library(factoextra)
 library(tictoc)
 library(glmpca)
+source(here("scripts", "functions_genefilter.R"))
 ```
 
 ### pre-mRNA
@@ -480,6 +481,13 @@ table(clust)
 sce = computeSumFactors(sce, clusters = clust)
 sce = logNormCounts(sce)
 ```
+
+```{r}
+# Filter out highly variant genes
+# filterHVG(sce)
+```
+
+
 ```{r}
 X = assay(sce, "logcounts")
 tic("approx PCA")
