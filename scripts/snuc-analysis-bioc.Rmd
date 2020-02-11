@@ -459,6 +459,7 @@ prob_out_mrna$plot +
 
 ```{r}
 library(scran)
+library(scater)
 library(BiocSingular)
 # library(factoextra)
 library(tictoc)
@@ -473,22 +474,14 @@ dat = dat_prem
 ```
 
 ```{r}
-# Cells in each cluster are normalized separately
-clust = quickCluster(dat)
+# Normalize and take log
+clust = quickCluster(sce)
 table(clust)
-deconv = computeSumFactors(dat, cluster = clust)
-
-X = dat %>%
-  as.matrix() %>%
-  sweep(., 2, deconv, "/") %>% # Divide by library size
-  t()
-X = log2(X + 1) # Apply log transformation
-
-# Remove columns (transcripts) with zero variance
-nonzero_var_cols = which(apply(X, 2, var) != 0)
-X = X[, nonzero_var_cols]
-
-# Run approximate PCA (a few seconds)
+sce = computeSumFactors(sce, clusters = clust)
+sce = logNormCounts(sce)
+```
+```{r}
+X = assay(sce, "logcounts")
 tic("approx PCA")
 pc = runPCA(X, rank = 5, BSPARAM = IrlbaParam())
 toc()
@@ -500,6 +493,9 @@ toc()
 # toc()
 
 # Run PCA with prcomp (~10 minutes)
+# X = t(X)
+# nonzero_var_cols = which(apply(X, 2, var) != 0) # Remove columns (transcripts) with zero variance
+# X = X[, nonzero_var_cols]
 # pc = prcomp(X, center = T, scale = F)
 # % variance explained by each PC
 # fviz_eig(pc)
@@ -538,22 +534,15 @@ dat = dat_mrna
 ```
 
 ```{r}
-# Cells in each cluster are normalized separately
-clust = quickCluster(dat)
+# Normalize and take log
+clust = quickCluster(sce)
 table(clust)
-deconv = computeSumFactors(dat, cluster = clust)
+sce = computeSumFactors(sce, clusters = clust)
+sce = logNormCounts(sce)
+```
 
-X = dat %>%
-  as.matrix() %>%
-  sweep(., 2, deconv, "/") %>% # Divide by library size
-  t()
-X = log2(X + 1) # Apply log transformation
-
-# Remove columns (transcripts) with zero variance
-nonzero_var_cols = which(apply(X, 2, var) != 0)
-X = X[, nonzero_var_cols]
-
-# Run approximate PCA (8 seconds)
+```{r}
+X = assay(sce, "logcounts")
 tic("approx PCA")
 pc = runPCA(X, rank = 5, BSPARAM = IrlbaParam())
 toc()
@@ -565,6 +554,9 @@ toc()
 # toc()
 
 # Run PCA with prcomp (~10 minutes)
+# X = t(X)
+# nonzero_var_cols = which(apply(X, 2, var) != 0) # Remove columns (transcripts) with zero variance
+# X = X[, nonzero_var_cols]
 # pc = prcomp(X, center = T, scale = F)
 # % variance explained by each PC
 # fviz_eig(pc)
