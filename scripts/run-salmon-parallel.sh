@@ -4,7 +4,7 @@
 #$ -o log/
 #$ -e log/
 #$ -l mem_free=20G,h_vmem=20G
-#$ -t 1-576
+#$ -t 1-1152
 #$ -tc 10
 
 # set project directory path
@@ -23,4 +23,4 @@ echo "Processing sample ${samp}"
 salmon quant -i $d/salmon_files/gencode.v32_salmon-index-v1.0.0-premRNA -l A \
          -1 ${fn}1.fastq.gz \
          -2 ${fn}2.fastq.gz \
-         -p 6 --validateMappings -o $d/salmon_quants/${samp}_quant
+         -p 6 --validateMappings -o $d/salmon_quants_premrna/${samp}_quant
