@@ -275,6 +275,8 @@ library(ggplot2)
 library(dplyr)
 library(tidyr)
 library(SingleCellExperiment)
+library(scattermore)
+library(tictoc)
 
 sce_prem = readRDS(here("salmon_quants", "sce_gene_premrna.rds"))
 sce_mrna = readRDS(here("salmon_quants", "sce_gene_mrna.rds"))
@@ -294,6 +296,7 @@ dat_rowmeans = full_join(dat_prem_rowmeans, dat_mrna_rowmeans, by = "genes")
 ```
 
 ```{r}
+tic()
 dat_rowmeans %>%
   ggplot(aes(x = log(mean_mrna),
              y = log(mean_prem))) + 
@@ -302,6 +305,19 @@ dat_rowmeans %>%
   labs(x = "Log(average gene expression with mRNA)",
        y = "Log(average gene expression with pre-mRNA)") +
   theme_bw()
+toc() # 2.5 sec
+
+# Scattermoreplot version
+tic()
+d = dat_rowmeans %>%
+  mutate(log_mean_prem = log(mean_prem),
+         log_mean_mrna = log(mean_mrna)) %>%
+  select(log_mean_prem, log_mean_mrna)
+  
+d = d[complete.cases(d), ] %>% as.matrix()
+scattermoreplot(d,
+                main='Scattermore version')
+toc() # 0.5 sec
 ```
 
 ## Comparison to parametric distributions
