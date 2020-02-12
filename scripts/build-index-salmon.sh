@@ -1,5 +1,7 @@
 #$ -pe local 4
 #$ -cwd
+#$ -o log/
+#$ -e log/
 #$ -l mem_free=15G,h_vmem=20G
 
 # create salmon index (this process takes ~2-3 hours)
