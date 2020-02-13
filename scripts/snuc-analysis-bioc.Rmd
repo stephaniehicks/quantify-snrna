@@ -122,7 +122,7 @@ sce = SingleCellExperiment(assays = list(counts = dat))
 
 ## Add gene names (hgnc symbol)
 
-```{r}
+```{r eval = F}
 # This will take a long time (> 45 min); should probably separate out as a script
 sce <- getBMFeatureAnnos(sce, 
             ids = rownames(sce),
