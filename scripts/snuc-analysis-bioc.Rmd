@@ -22,7 +22,7 @@ R
 
 ```{r eval = F}
 library(here)
-dataset = "premrna" # options = "premrna_mrna", "mrna", or "premrna"
+dataset = "mrna" # options = "premrna_mrna", "mrna", or "premrna"
 ```
 
 # Create SummarizedExperiment object
@@ -39,7 +39,7 @@ unique_sf_paths <- NULL
 for(tum in tumor_names){
   ids <- list.files(here("sample_data", tum))
   ids <- unique(stringr::str_sub(ids, end=-13))
-  ids <- here("salmon_quants", paste0(ids, "_quant"), "quant.sf")
+  ids <- here(paste0("salmon_quants_", dataset), paste0(ids, "_quant"), "quant.sf")
   unique_sf_paths <- c(unique_sf_paths, ids)
 }
 
@@ -79,8 +79,10 @@ se_file_name = here("salmon_quants", paste0("se_", dataset, ".rds"))
 # coldata = coldata[1:2, ] # for testing
 if(!file.exists(se_file_name)){
   # Create SummarizedExperiment object
-  se <- tximeta(coldata, skipMeta = TRUE) # Takes a few minutes, file size = 597 MB
-  # se <- tximeta(coldata) # run this line if you used mRNA transcripts in your index only, it will automatically detect the right transcriptome
+  if(dataset == "premrna")
+    se <- tximeta(coldata, skipMeta = TRUE) # Takes a few minutes, file size = 597 MB
+  else if (dataset == "mrna")
+    se <- tximeta(coldata) # run this line if you used mRNA transcripts in your index only, it will automatically detect the right transcriptome
   # se <- tximeta(coldata, ignoreAfterBar = TRUE)
   saveRDS(se, se_file_name)
 } else {
