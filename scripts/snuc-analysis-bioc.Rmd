@@ -616,7 +616,7 @@ glmpc = glmpca(X, L = 3, fam = c("poi"))
 toc()
 ```
 
-```{r}
+```{r eval = F}
 tumor_labels = gsub("-.*$", "", colnames(sce))
 
 # Plot PC
