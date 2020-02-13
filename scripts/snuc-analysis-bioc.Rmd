@@ -74,7 +74,7 @@ loadLinkedTxome(json_file)
 The only way I've figured out how to make this work for now is with `skipMeta = TRUE`.
 
 ```{r eval = F}
-se_file_name = here("salmon_quants", paste0("se_", dataset, ".rds"))
+se_file_name = here(paste0("salmon_quants_", dataset), paste0("se_", dataset, ".rds"))
 
 # coldata = coldata[1:2, ] # for testing
 if(!file.exists(se_file_name)){
@@ -162,11 +162,11 @@ reasons = quickPerCellQC(df) # DataFrame of logical values
 colSums(as.matrix(reasons))
 
 # Discard outliers
-filtered = sce[, !reasons$discard] 
+filtered = sce[, !reasons$discard]
 dat_filtered = counts(filtered) # 226608 x 518 for mrna, 221988 x 546 for premrn
 sce_filtered = SingleCellExperiment(assays = list(counts = dat_filtered))
 
-filtered_file_name = here("salmon_quants", paste0("sce_filtered_", dataset, ".rds"))
+filtered_file_name = here(paste0("salmon_quants_", dataset), paste0("sce_filtered_", dataset, ".rds"))
 saveRDS(sce_filtered, filtered_file_name)
 ```
 
@@ -189,7 +189,7 @@ Run `compute-mle.sh` to get mle sig ("shape") parameter first. There will be a p
 
 ```{r eval = F}
 # Load filtered counts
-filtered_file_name = here("salmon_quants", paste0("sce_filtered_", dataset, ".rds"))
+filtered_file_name = here(paste0("salmon_quants_", dataset), paste0("sce_filtered_", dataset, ".rds"))
 if(file.exists(filtered_file_name)){
   sce_filtered = readRDS(filtered_file_name)
   dat_filtered = counts(sce_filtered)
@@ -213,7 +213,7 @@ ggplot(tibble(sig = sig_vec), aes(x = sig)) +
 source(here("scripts", "quminorm.R"))
 
 # Convert to pseudo-UMIs
-umi_file_name = here("salmon_quants", paste0("sce_umi_", dataset, ".rds"))
+umi_file_name = here(paste0("salmon_quants_", dataset), paste0("sce_umi_", dataset, ".rds"))
 if(file.exists(umi_file_name)){
   dat_umi = readRDS(umi_file_name)
 } else {
@@ -227,7 +227,7 @@ if(file.exists(umi_file_name)){
 ## Aggregate counts at gene level
 
 ```{r eval = F}
-umi_file_name = here("salmon_quants", paste0("sce_umi_", dataset, ".rds"))
+umi_file_name = here(paste0("salmon_quants_", dataset), paste0("sce_umi_", dataset, ".rds"))
 sce_umi = readRDS(umi_file_name)
 dat_umi = counts(sce_umi)
 
@@ -235,7 +235,7 @@ dat_umi = counts(sce_umi)
 dim(dat_umi) #  176307 x 518 for mRNA, 173927 x 546 for premRNA
 
 if(dataset == "mrna"){
-  se_mrna = readRDS(here("salmon_quants", paste0("se_mrna.rds")))
+  se_mrna = readRDS(here(paste0("salmon_quants_", dataset), paste0("se_mrna.rds")))
   transcripts_mrna = rownames(assay(se_mrna, "counts"))
   row_ranges = rowRanges(se_mrna)
   genes = unlist(elementMetadata(row_ranges)$gene_id)
@@ -245,7 +245,7 @@ if(dataset == "mrna"){
   dim(dat_gene) # 48890 x 518 for mRNA
 } else if(dataset == "premrna") {
   # Read in mrna data to look up genes
-  se_mrna = readRDS(here("salmon_quants", paste0("se_mrna.rds")))
+  se_mrna = readRDS(here(paste0("salmon_quants_", dataset), paste0("se_mrna.rds")))
   transcripts_mrna = rownames(assay(se_mrna, "counts"))
   row_ranges = rowRanges(se_mrna)
   genes = unlist(elementMetadata(row_ranges)$gene_id)
@@ -264,7 +264,7 @@ if(dataset == "mrna"){
   dim(dat_gene) # 50476 x 546
 }
 
-gene_file_name = here("salmon_quants", paste0("sce_gene_", dataset, ".rds"))
+gene_file_name = here(paste0("salmon_quants_", dataset), paste0("sce_gene_", dataset, ".rds"))
 sce_gene = SingleCellExperiment(assays = list(counts = dat_gene))
 saveRDS(sce_gene, gene_file_name)
 ```
@@ -280,8 +280,8 @@ library(SingleCellExperiment)
 library(scattermore)
 library(tictoc)
 
-sce_prem = readRDS(here("salmon_quants", "sce_gene_premrna.rds"))
-sce_mrna = readRDS(here("salmon_quants", "sce_gene_mrna.rds"))
+sce_prem = readRDS(here(paste0("salmon_quants_premrna"), "sce_gene_premrna.rds"))
+sce_mrna = readRDS(here(paste0("salmon_quants_mrna"), "sce_gene_mrna.rds"))
 
 dat_prem = counts(sce_prem)
 dat_mrna = counts(sce_mrna)
@@ -493,13 +493,13 @@ sce = logNormCounts(sce)
 ```{r}
 X = assay(sce, "logcounts")
 tic("approx PCA")
-pc = runPCA(X, rank = 5, BSPARAM = IrlbaParam())
+pc = runPCA(t(X), rank = 5, BSPARAM = IrlbaParam())
 toc()
 
 # set.seed(1)
 # Run random PCA (2 minutes)
 # tic("random PCA")
-# pc = runPCA(X, rank = 5, BSPARAM = RandomParam())
+# pc = runPCA(t(X), rank = 5, BSPARAM = RandomParam())
 # toc()
 
 # Run PCA with prcomp (~10 minutes)
@@ -554,13 +554,13 @@ sce = logNormCounts(sce)
 ```{r}
 X = assay(sce, "logcounts")
 tic("approx PCA")
-pc = runPCA(X, rank = 5, BSPARAM = IrlbaParam())
+pc = runPCA(t(X), rank = 5, BSPARAM = IrlbaParam())
 toc()
 
 # set.seed(1)
 # Run random PCA (2 minutes)
 # tic("random PCA")
-# pc = runPCA(X, rank = 5, BSPARAM = RandomParam())
+# pc = runPCA(t(X), rank = 5, BSPARAM = RandomParam())
 # toc()
 
 # Run PCA with prcomp (~10 minutes)
