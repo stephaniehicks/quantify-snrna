@@ -551,9 +551,10 @@ sce = logNormCounts(sce)
 
 
 ```{r}
-X = assay(sce, "logcounts")
+set.seed(1)
 tic("approx PCA")
-pc = runPCA(t(X), rank = 5, BSPARAM = IrlbaParam())
+sce = runPCA(sce, exprs_values = "logcounts", BSPARAM = IrlbaParam())
+pc = list(x = reducedDim(sce, "PCA"))
 toc()
 
 # set.seed(1)
@@ -612,9 +613,10 @@ sce = logNormCounts(sce)
 ```
 
 ```{r}
-X = assay(sce, "logcounts")
+set.seed(1)
 tic("approx PCA")
-pc = runPCA(t(X), rank = 5, BSPARAM = IrlbaParam())
+sce = runPCA(sce, exprs_values = "logcounts", BSPARAM = IrlbaParam())
+pc = list(x = reducedDim(sce, "PCA"))
 toc()
 
 # set.seed(1)
