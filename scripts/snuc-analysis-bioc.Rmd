@@ -332,6 +332,7 @@ toc() # 0.5 sec
 ```
 
 ### MA plot
+
 MA plot is a plot of log-intensity ratios (M) vs log-intensity averages (A)
 
 ```{r}
@@ -354,8 +355,8 @@ dat_rowmeans %>%
 dat_rowmeans %>%
   ggplot(aes(x = a,
              y = m)) + 
-  stat_density2d(aes(fill = ..density..^0.2), geom = "tile", contour = FALSE, n = 200) +
-  scale_fill_continuous(low = "white", high = "dodgerblue4") + 
+  stat_density2d(aes(fill = ..density..^0.3), geom = "tile", contour = FALSE, n = 200) +
+  scale_fill_continuous(low = "white", high = "#1C5E7E") + 
   geom_hline(yintercept = 0, color = "red") +
   geom_smooth() +
   labs(x = "A",
@@ -371,7 +372,29 @@ smoothScatter(x = dat_rowmeans$a, y = dat_rowmeans$m,
 Plot for one cell only.
 
 ```{r}
+dat_prem_subset = as_tibble(dat_prem[, 1:5]) %>%
+  rename_all(function(x) paste0(x, "_premrna")) %>%
+  mutate(genes = rownames(dat_prem))
+dat_mrna_subset = as_tibble(dat_mrna[, 1:5]) %>%
+  rename_all(function(x) paste0(x, "_mrna")) %>%
+  mutate(genes = rownames(dat_mrna))
+dat_subset = full_join(dat_prem_subset, dat_mrna_subset, by = "genes")
+```
 
+```{r}
+dat_subset %>%
+  mutate(m = log(`BT1179Nuc-P1-A01_premrna`) - log(`BT1179Nuc-P1-A01_mrna`),
+         a = (log(`BT1179Nuc-P1-A01_premrna`) + log(`BT1179Nuc-P1-A01_mrna`)/2)) %>%
+  ggplot(aes(x = a,
+             y = m)) + 
+  stat_density2d(aes(fill = ..density..^0.3), geom = "tile", contour = FALSE, n = 200) +
+  scale_fill_continuous(low = "white", high = "#1C5E7E") + 
+  geom_hline(yintercept = 0, color = "red") +
+  geom_smooth() +
+  geom_point(alpha = 0.1) +
+  labs(x = "A",
+       y = "M") +
+  theme_bw()
 ```
 
 ## Comparison to parametric distributions
