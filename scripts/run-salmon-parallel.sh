@@ -1,4 +1,4 @@
-#$ -pe local 6
+#$ -pe local 4
 #$ -R y
 #$ -cwd
 #$ -o log/
@@ -23,4 +23,4 @@ echo "Processing sample ${samp}"
 salmon quant -i $d/salmon_files/gencode.v32_salmon-index-v1.0.0-mRNA -l A \
          -1 ${fn}1.fastq.gz \
          -2 ${fn}2.fastq.gz \
-         -p 6 --validateMappings -o $d/salmon_quants_mrna/${samp}_quant
+         -p 4 --validateMappings -o $d/salmon_quants_mrna/${samp}_quant
