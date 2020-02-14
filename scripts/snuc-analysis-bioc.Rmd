@@ -128,8 +128,7 @@ sce <- getBMFeatureAnnos(sce,
             ids = rownames(sce),
             filters = "ensembl_gene_id", 
             attributes = c("ensembl_gene_id", "hgnc_symbol",
-                           "chromosome_name", "gene_biotype",
-                           "start_position", "end_position"),
+                           "gene_biotype"),
             biomart = "ENSEMBL_MART_ENSEMBL", 
             dataset = "hsapiens_gene_ensembl",
             host = "www.ensembl.org")
@@ -289,6 +288,8 @@ dat_mrna = counts(sce_mrna)
 
 ## Compare pre-mRNA vs mRNA counts
 
+### Log-log counts
+
 ```{r}
 dat_prem_rowmeans = tibble(genes = rownames(dat_prem),
                            mean_prem = rowMeans(dat_prem))
@@ -302,7 +303,7 @@ tic()
 dat_rowmeans %>%
   ggplot(aes(x = log(mean_mrna),
              y = log(mean_prem))) + 
-  geom_point(alpha = 0.5) +
+  geom_point(alpha = 0.1) +
   geom_abline(intercept = 0, slope = 1, color = "red") +
   labs(x = "Log(average gene expression with mRNA)",
        y = "Log(average gene expression with pre-mRNA)") +
@@ -312,7 +313,9 @@ toc() # 2.5 sec
 # Smoothscatter
 tic()
 smoothScatter(x = log(dat_rowmeans$mean_mrna),
-              y = log(dat_rowmeans$mean_prem))
+              y = log(dat_rowmeans$mean_prem),
+              xlab = "Log(average gene expression with mRNA)",
+              ylab = "Log(average gene expression with pre-mRNA)")
 toc() # 1 sec
 
 # Scattermoreplot version
@@ -328,13 +331,47 @@ scattermoreplot(d,
 toc() # 0.5 sec
 ```
 
+### MA plot
+MA plot is a plot of log-intensity ratios (M) vs log-intensity averages (A)
+
 ```{r}
-# MA plot is a plot of log-intensity ratios (M) vs log-intensity averages (A)
 dat_rowmeans = dat_rowmeans %>%
   mutate(m = log(mean_prem) - log(mean_mrna),
          a = (log(mean_prem) + log(mean_mrna)/2))
 
-smoothScatter(x = dat_rowmeans$a, y = dat_rowmeans$m)
+# ggplot geom_point
+dat_rowmeans %>%
+  ggplot(aes(x = a,
+             y = m)) + 
+  geom_point(alpha = 0.1) +
+  geom_smooth() +
+  geom_hline(yintercept = 0, color = "red") +
+  labs(x = "A",
+       y = "M") +
+  theme_bw()
+
+# ggplot smoothscatter version
+dat_rowmeans %>%
+  ggplot(aes(x = a,
+             y = m)) + 
+  stat_density2d(aes(fill = ..density..^0.2), geom = "tile", contour = FALSE, n = 200) +
+  scale_fill_continuous(low = "white", high = "dodgerblue4") + 
+  geom_hline(yintercept = 0, color = "red") +
+  geom_smooth() +
+  labs(x = "A",
+       y = "M") +
+  theme_bw()
+
+# smoothscatter version
+smoothScatter(x = dat_rowmeans$a, y = dat_rowmeans$m,
+              xlab = "A",
+              ylab = "M")
+```
+
+Plot for one cell only.
+
+```{r}
+
 ```
 
 ## Comparison to parametric distributions
