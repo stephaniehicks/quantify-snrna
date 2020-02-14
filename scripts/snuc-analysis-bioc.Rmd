@@ -549,7 +549,7 @@ sce = logNormCounts(sce)
 ```{r}
 set.seed(1)
 tic("approx PCA")
-sce = runPCA(sce, exprs_values = "logcounts", BSPARAM = IrlbaParam())
+sce = runPCA(sce, exprs_values = "logcounts", ntop = ncol(sce), BSPARAM = IrlbaParam())
 pc = list(x = reducedDim(sce, "PCA"))
 toc()
 
