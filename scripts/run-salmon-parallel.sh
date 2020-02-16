@@ -20,7 +20,13 @@ fn=`awk -F'\r' -v var=$SGE_TASK_ID '{if(NR==var)print $1}' $samplefile`;
 samp=`basename ${fn}`
 samp=${samp::-2}
 echo "Processing sample ${samp}"
-salmon quant -i $d/salmon_files/gencode.v32_salmon-index-v1.0.0-mRNA -l A \
+# premRNA index
+salmon quant -i $d/salmon_files/gencode.v32_salmon-index-v1.0.0-premRNA -l A \
          -1 ${fn}1.fastq.gz \
          -2 ${fn}2.fastq.gz \
-         -p 4 --validateMappings -o $d/salmon_quants_mrna/${samp}_quant
+         -p 4 --validateMappings -o $d/salmon_quants_premrna/${samp}_quant
+# mRNA index
+# salmon quant -i $d/salmon_files/gencode.v32_salmon-index-v1.0.0-mRNA -l A \
+#          -1 ${fn}1.fastq.gz \
+#          -2 ${fn}2.fastq.gz \
+#          -p 4 --validateMappings -o $d/salmon_quants_mrna/${samp}_quant
