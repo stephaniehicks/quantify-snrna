@@ -124,6 +124,7 @@ sce = SingleCellExperiment(assays = list(counts = dat))
 
 ```{r eval = F}
 # This will take a long time (> 45 min); should probably separate out as a script
+tic()
 sce <- getBMFeatureAnnos(sce, 
             ids = rownames(sce),
             filters = "ensembl_gene_id", 
@@ -132,6 +133,7 @@ sce <- getBMFeatureAnnos(sce,
             biomart = "ENSEMBL_MART_ENSEMBL", 
             dataset = "hsapiens_gene_ensembl",
             host = "www.ensembl.org")
+toc()
 rowData(sce)$gene_name_unique <- 
   uniquifyFeatureNames(rowData(sce)$gene_name_ensembl, 
                      rowData(sce)$hgnc_symbol)
