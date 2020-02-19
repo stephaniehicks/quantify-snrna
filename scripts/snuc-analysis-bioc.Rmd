@@ -233,7 +233,7 @@ sce_umi = readRDS(umi_file_name)
 dat_umi = counts(sce_umi)
 
 # Counts by transcript
-dim(dat_umi) #  176307 x 518 for mRNA, 173927 x 546 for premRNA
+dim(dat_umi) #  192459 x 1018 for mRNA, 173927 x 546 for premRNA
 
 # Read in mrna data to look up genes
 se_mrna = readRDS(here(paste0("salmon_quants_", dataset), paste0("se_mrna.rds")))
@@ -245,7 +245,7 @@ mrna_gene_matching_dt = tibble(transcript = transcripts_mrna, genes)
 if(dataset == "mrna"){
   matched_index = match(rownames(dat_umi), mrna_gene_matching_dt$transcript)
   dat_gene = rowsum(dat_umi, group = mrna_gene_matching_dt$genes[matched_index], reorder = FALSE)
-  dim(dat_gene) # 48890 x 518 for mRNA
+  dim(dat_gene) # 52142 x 1018 for mRNA
 } else if(dataset == "premrna") {
   # Get genes for every premrna transcript
   # Note: 208 premRNA transcripts did not have corresponding mRNA transcripts
