@@ -80,7 +80,7 @@ se_file_name = here(paste0("salmon_quants_", dataset), paste0("se_", dataset, ".
 if(!file.exists(se_file_name)){
   # Create SummarizedExperiment object
   if(dataset == "premrna")
-    se <- tximeta(coldata, skipMeta = TRUE) # Takes a few minutes, file size = 597 MB
+    se <- tximeta(coldata, skipMeta = TRUE) # Takes a couple of minutes, file size = 800 MB
   else if (dataset == "mrna")
     se <- tximeta(coldata) # run this line if you used mRNA transcripts in your index only, it will automatically detect the right transcriptome
   # se <- tximeta(coldata, ignoreAfterBar = TRUE)
@@ -164,7 +164,7 @@ colSums(as.matrix(reasons))
 
 # Discard outliers
 filtered = sce[, !reasons$discard]
-dat_filtered = counts(filtered) # 226608 x 518 for mrna, 221988 x 546 for premrn
+dat_filtered = counts(filtered) # 226608 x 1018 for mrna, 221988 x 546 for premrn
 sce_filtered = SingleCellExperiment(assays = list(counts = dat_filtered))
 
 filtered_file_name = here(paste0("salmon_quants_", dataset), paste0("sce_filtered_", dataset, ".rds"))
