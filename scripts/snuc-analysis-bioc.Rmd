@@ -233,10 +233,10 @@ sce_umi = readRDS(umi_file_name)
 dat_umi = counts(sce_umi)
 
 # Counts by transcript
-dim(dat_umi) #  192459 x 1018 for mRNA, 173927 x 546 for premRNA
+dim(dat_umi) #  192459 x 1018 for mRNA, 186368 x 1090 for premRNA
 
 # Read in mrna data to look up genes
-se_mrna = readRDS(here(paste0("salmon_quants_", dataset), paste0("se_mrna.rds")))
+se_mrna = readRDS(here(paste0("salmon_quants_mrna"), paste0("se_mrna.rds")))
 transcripts_mrna = rownames(assay(se_mrna, "counts"))
 row_ranges = rowRanges(se_mrna)
 genes = unlist(elementMetadata(row_ranges)$gene_id)
