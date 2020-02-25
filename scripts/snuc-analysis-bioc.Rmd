@@ -39,7 +39,9 @@ unique_sf_paths <- NULL
 for(tum in tumor_names){
   ids <- list.files(here("sample_data", tum))
   ids <- unique(stringr::str_sub(ids, end=-13))
-  ids <- here(paste0("salmon_quants_", dataset), paste0(ids, "_quant"), "quant.sf")
+  if(!identical(ids, character(0))){
+    ids <- here(paste0("salmon_quants_", dataset), paste0(ids, "_quant"), "quant.sf")
+  }
   unique_sf_paths <- c(unique_sf_paths, ids)
 }
 
