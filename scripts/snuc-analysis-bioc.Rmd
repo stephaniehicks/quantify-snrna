@@ -250,9 +250,13 @@ if(dataset == "mrna"){
   dim(dat_gene) # 52142 x 1018 for mRNA
 } else if(dataset == "premrna") {
   # Get genes for every premrna transcript
-  # 20472 mRNA transcripts did not have an premRNA counterpart,
-  # but note that some mRNA transcripts were dropped in the pseudo-UMI conversion step (including those, 40471 mRNA transcripts did not have an premRNA counterpart)
-  # 231 premRNA transcripts did not have a mRNA counterpart
+  # 171987 in intersection of premRNA and mRNA transcripts
+  # 20472 mRNA transcripts did not have an premRNA counterpart
+  # 14381 premRNA transcripts did not have a mRNA counterpart
+  # Note some transcripts were dropped in the pseudo-UMI conversion step. If including those,
+  # 221685 in intersection
+  # 4923 mRNA transcripts did not have a premRNA counterpart
+  # 303 premRNA transcripts did not have a mRNA counterpart
   transcripts_premrna = rownames(dat_umi)
   transcripts_premrna_converted = gsub(".{8}$", "" , transcripts_premrna)
   matched_index = match(transcripts_premrna_converted, mrna_gene_matching_dt$transcript)
@@ -278,8 +282,8 @@ library(SingleCellExperiment)
 library(scattermore)
 library(tictoc)
 
-sce_prem = readRDS(here(paste0("salmon_quants_premrna"), "sce_gene_premrna.rds"))
-sce_mrna = readRDS(here(paste0("salmon_quants_mrna"), "sce_gene_mrna.rds"))
+sce_prem = readRDS(here(paste0("salmon_quants_premrna"), "sce_gene_premrna_nofilter.rds"))
+sce_mrna = readRDS(here(paste0("salmon_quants_mrna"), "sce_gene_mrna_nofilter.rds"))
 
 dat_prem = counts(sce_prem)
 dat_mrna = counts(sce_mrna)
