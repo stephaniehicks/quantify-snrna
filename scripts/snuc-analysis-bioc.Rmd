@@ -253,7 +253,7 @@ if(dataset == "mrna"){
   # 171987 in intersection of premRNA and mRNA transcripts
   # 20472 mRNA transcripts did not have an premRNA counterpart
   # 14381 premRNA transcripts did not have a mRNA counterpart
-  # Note some transcripts were dropped in the pseudo-UMI conversion step. If including those,
+  # Note some transcripts were dropped in the pseudo-UMI conversion step (when removing transcripts with zero counts). If including those,
   # 221685 in intersection
   # 4923 mRNA transcripts did not have a premRNA counterpart
   # 303 premRNA transcripts did not have a mRNA counterpart
