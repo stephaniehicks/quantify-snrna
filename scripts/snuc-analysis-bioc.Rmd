@@ -282,8 +282,8 @@ library(SingleCellExperiment)
 library(scattermore)
 library(tictoc)
 
-sce_prem = readRDS(here(paste0("salmon_quants_premrna"), "sce_gene_premrna_nofilter.rds"))
-sce_mrna = readRDS(here(paste0("salmon_quants_mrna"), "sce_gene_mrna_nofilter.rds"))
+sce_prem = readRDS(here(paste0("salmon_quants_premrna"), "sce_gene_premrna.rds"))
+sce_mrna = readRDS(here(paste0("salmon_quants_mrna"), "sce_gene_mrna.rds"))
 
 dat_prem = counts(sce_prem)
 dat_mrna = counts(sce_mrna)
