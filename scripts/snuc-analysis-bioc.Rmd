@@ -291,13 +291,19 @@ dat_mrna = counts(sce_mrna)
 
 ## Compare pre-mRNA vs mRNA counts
 
+```{r}
+# Normalize by library size
+dat_prem_normalized = prop.table(dat_prem, 2)
+dat_mrna_normalized = prop.table(dat_mrna, 2)
+```
+
 ### Log-log counts
 
 ```{r}
-dat_prem_rowmeans = tibble(genes = rownames(dat_prem),
-                           mean_prem = rowMeans(dat_prem))
-dat_mrna_rowmeans = tibble(genes = rownames(dat_mrna),
-                           mean_mrna = rowMeans(dat_mrna))
+dat_prem_rowmeans = tibble(genes = rownames(dat_prem_normalized),
+                           mean_prem = rowMeans(dat_prem_normalized))
+dat_mrna_rowmeans = tibble(genes = rownames(dat_mrna_normalized),
+                           mean_mrna = rowMeans(dat_mrna_normalized))
 dat_rowmeans = full_join(dat_prem_rowmeans, dat_mrna_rowmeans, by = "genes")
 ```
 
@@ -375,12 +381,12 @@ smoothScatter(x = dat_rowmeans$a, y = dat_rowmeans$m,
 Plot for one cell only.
 
 ```{r}
-dat_prem_subset = as_tibble(dat_prem[, 1:5]) %>%
+dat_prem_subset = as_tibble(dat_prem_normalized[, 1:5]) %>%
   rename_all(function(x) paste0(x, "_premrna")) %>%
-  mutate(genes = rownames(dat_prem))
-dat_mrna_subset = as_tibble(dat_mrna[, 1:5]) %>%
+  mutate(genes = rownames(dat_prem_normalized))
+dat_mrna_subset = as_tibble(dat_mrna_normalized[, 1:5]) %>%
   rename_all(function(x) paste0(x, "_mrna")) %>%
-  mutate(genes = rownames(dat_mrna))
+  mutate(genes = rownames(dat_mrna_normalized))
 dat_subset = full_join(dat_prem_subset, dat_mrna_subset, by = "genes")
 ```
 
