@@ -297,6 +297,7 @@ ingtf <- here("salmon_files","gencode.v32.annotation.gtf.gz")
 genomefasta <- here("salmon_files", "GRCh38.primary_assembly.genome.fa.gz")
 if(!exists("genome")){
   genome <- Biostrings::readDNAStringSet(genomefasta)
+  names(genome) <- sapply(strsplit(names(genome), " "), .subset, 1)
 }
 
 # Get intron sequence and gtf
