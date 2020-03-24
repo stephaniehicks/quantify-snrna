@@ -228,6 +228,91 @@ rm GRCh38.primary_assembly.genome.fa.gz
 
 We have made a GTF file (`gencode.v32.preandmrnaaannotation.gtf`) and a FASTA file (`gencode.v32.preandmrna.fa`) for the combined pre-mRNA and mRNA.
 
+### Alternative way: extracting introns
+
+```{r}
+# Modified from https://github.com/csoneson/rna_velocity_quant/blob/master/scripts/extractIntronSeqs.R
+#' Extract intron sequences
+#'
+#' @param gtf The path to a gtf file
+#' @param genome A \code{DNAStringSet} object with the genome sequence
+#' @param type Either 'collapse' or 'separate'
+#' @param flanklength The length of the exonic flanking sequence
+#' @param joinOverlappingIntrons Whether overlapping intron sequences (after adding 
+#'   the flanking sequence) should be joined into a single intron
+#'
+#' @return A \code{DNAStringSet} object with intronic sequences
+#' 
+extractIntronSeqs <- function(gtf, genome, type = "collapse", flanklength = 90,
+                              joinOverlappingIntrons = FALSE) {
+  ## Construct TxDb from gtf file
+  txdb <- GenomicFeatures::makeTxDbFromGFF(gtf, format = "gtf")
+
+  if (type == "separate") {
+    ## Group exons by transcript
+    grl <- GenomicFeatures::exonsBy(txdb, by = "tx", use.names = TRUE)
+  } else if (type == "collapse") {
+    ## Group exons by gene
+    grl <- GenomicFeatures::exonsBy(txdb, by = "gene")
+
+    ## Collapse the exons of each gene
+    grl <- GenomicRanges::reduce(grl)
+  } else {
+    stop("Unknown 'type' argument")
+  }
+
+  ## Get introns as the set difference between the range and the exons,
+  ## for each transcript/gene
+  ## Here, the order of the introns doesn't really matter, since they
+  ## will be considered separately (not joined together into a transcript)
+  grl <- BiocGenerics::setdiff(range(grl), grl)
+
+  ## Add flanking region
+  grl <- grl + flanklength
+
+  if (joinOverlappingIntrons) {
+    ## If two (introns + flanklength) overlap, join them
+    grl <- GenomicRanges::reduce(grl)
+  }
+  
+  gr <- unlist(grl)
+
+  ## Add -I{X} to names
+  names(gr) <- gsub("\\-I\\.", "-I", make.unique(paste0(names(gr), "-I")))
+
+  ## Get sequence
+  gs <- BSgenome::getSeq(x = genome, names = gr)
+  
+  ## Manually set names of extracted sequences
+  stopifnot(all(width(gs) == width(gr)))
+  names(gs) <- names(gr)
+  
+  return(list(gs = gs,
+              gr = gr))
+}
+```
+
+```{r}
+ingtf <- here("salmon_files","gencode.v32.annotation.gtf.gz")
+genomefasta <- here("salmon_files", "GRCh38.primary_assembly.genome.fa.gz")
+if(!exists("genome")){
+  genome <- Biostrings::readDNAStringSet(genomefasta)
+}
+
+# Get intron sequence and gtf
+intronseq <- extractIntronSeqs(gtf = ingtf, genome = genome, 
+                  type = "collapse", flanklength = 90,
+                  joinOverlappingIntrons = FALSE)
+
+# Save intron sequences to fasta file
+intron_fasta <- here("salmon_files", "GRCh38.intron.fa")
+Biostrings::writeXStringSet(intronseq$gs, filepath = intron_fasta)
+
+# Save intron gtf file
+intron_gtf <- here("salmon_files","gencode.v32.intronannotation.gtf")
+rtracklayer::export(intronseq$gr, intron_gtf)
+```
+
 ## Install and build salmon index 
 
 This part will have to be done for each user. 
