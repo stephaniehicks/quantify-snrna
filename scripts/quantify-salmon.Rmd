@@ -197,7 +197,7 @@ Now we will put the pre-mRNA (`GRCh38.premRNA.fa`) and mRNA (`gencode.v32.transc
 cd /fastscratch/myscratch/shicks1/alsf-filbin/salmon_files
 # cd /fastscratch/myscratch/akuo/alsf-filbin/salmon_files
 zcat gencode.v32.transcripts.fa.gz > gencode.v32.transcripts.fa
-cat gencode.v32.transcripts.fa GRCh38.premRNA.fa > gencode.v32.preandmrna.fa
+cat GRCh38.premRNA.fa gencode.v32.transcripts.fa > gencode.v32.preandmrna.fa
 grep ">" gencode.v32.preandmrna.fa | wc -l
 ```
 
@@ -287,18 +287,16 @@ extractIntronSeqs <- function(gtf, genome, type = "collapse", flanklength = 90,
   stopifnot(all(width(gs) == width(gr)))
   names(gs) <- names(gr)
   
-  return(list(gs = gs,
-              gr = gr))
+  return(list(gs = gs, # will be written into fasta file
+              gr = gr))# will be written into gtf file
 }
 ```
 
 ```{r}
 ingtf <- here("salmon_files","gencode.v32.annotation.gtf.gz")
 genomefasta <- here("salmon_files", "GRCh38.primary_assembly.genome.fa.gz")
-if(!exists("genome")){
-  genome <- Biostrings::readDNAStringSet(genomefasta)
-  names(genome) <- sapply(strsplit(names(genome), " "), .subset, 1)
-}
+genome <- Biostrings::readDNAStringSet(genomefasta)
+names(genome) <- sapply(strsplit(names(genome), " "), .subset, 1)
 
 # Get intron sequence and gtf
 intronseq <- extractIntronSeqs(gtf = ingtf, genome = genome, 
@@ -312,6 +310,36 @@ Biostrings::writeXStringSet(intronseq$gs, filepath = intron_fasta)
 # Save intron gtf file
 intron_gtf <- here("salmon_files","gencode.v32.intronannotation.gtf")
 rtracklayer::export(intronseq$gr, intron_gtf)
+```
+
+Now we also want to generate an intron + mrna gtf and FASTA file.
+
+```{r}
+## Read gtf file and group exons by transcript
+txdb <- GenomicFeatures::makeTxDbFromGFF(ingtf)
+grl <- GenomicFeatures::exonsBy(txdb, by = "tx", use.names = TRUE)
+
+## Combine gtf
+tmp <- c(intronseq$gr, unlist(grl)) # length = c(288455, 1372308) under default parameters for intronseq
+
+## Save combined pre-mRNA and mRNA gtf file
+intronandmrna_gtf <- here("salmon_files","gencode.v32.intronandmrnaannotation.gtf")
+rtracklayer::export(tmp, intronandmrna_gtf)
+```
+
+```{bash}
+# Cat FASTA files together
+cd /fastscratch/myscratch/akuo/alsf-filbin/salmon_files
+zcat gencode.v32.transcripts.fa.gz > gencode.v32.transcripts.fa
+cat GRCh38.intron.fa gencode.v32.transcripts.fa > gencode.v32.intronandmrna.fa
+```
+
+```{bash}
+# gzip the intron fasta
+gzip GRCh38.intron.fa
+
+# gzip the intron + mRNA fasta
+gzip gencode.v32.intronandmrna.fa
 ```
 
 ## Install and build salmon index 
