@@ -25,6 +25,18 @@ library(here)
 dataset = "mrna" # options = "premrna_mrna", "mrna", or "premrna"
 ```
 
+# FASTQ read length distribution
+
+```{bash eval = F}
+cat BT1179Nuc-P4-H12_R2.fastq.gz | awk '{if(NR%4==2) print length($1)}' | sort -n | uniq -c > read_length_BT1179Nuc.txt
+```
+
+```{r eval = F}
+reads <- read.csv(here("sample_data", "read_length_BT1179Nuc.txt"), sep="", header=FALSE)
+plot(reads$V2,reads$V1,type="l",xlab="read length",ylab="occurences",col="blue")
+```
+
+
 # Create SummarizedExperiment object
 
 First, we create a table with information about where each file (quantified counts from salmon) is. 
