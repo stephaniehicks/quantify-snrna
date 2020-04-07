@@ -331,6 +331,9 @@ gzip gencode.v32.intronandmrna.fa
 
 ## Generate decoy sequences
 
+* https://salmon.readthedocs.io/en/latest/salmon.html#preparing-transcriptome-indices-mapping-based-mode
+* https://github.com/COMBINE-lab/SalmonTools/blob/master/README.md
+
 > NOTE: Salmon version v1.0 can directly index the genome and transcriptome and doesn't mandates to run the generateDecoyTranscriptome script, however it's still backward compatible. Please checkout [this](https://combine-lab.github.io/alevin-tutorial/2019/selective-alignment/) tutorial on how to run salmon with full genome + transcriptome without the annotation.
 
 ```{bash}
@@ -370,6 +373,7 @@ You can check to make sure salmon has been upgraded correctly using `salmon -h` 
 OK, we are ready to use salmon. 
 The `-t` argument is the input transcripts file. 
 The `-i` argument is the index file to create. 
+The `-t` argument is the decoy sequence. 
 The `--keepDuplicates` argument forces all duplicate transcripts (for example, multiple unspliced transcript of the same gene that are identical for example) that appear in the input will be retained and quantified separately. 
 If you keep the duplicates they will be assigned identical expression levels since salmon can’t tell them apart. 
 When you aggregate on the gene level, this will not make a difference any more. 
