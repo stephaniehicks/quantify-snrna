@@ -73,6 +73,8 @@ if(!file.exists(here("sample_data", "unique_cell_paths.txt"))){
 
 # Quantification 
 
+> Selective alignment, enabled by the --validateMappings flag, is a major feature enhancement introduced in recent versions of salmon. When salmon is run with selective alignment, it adopts a considerably more sensitive scheme that we have developed for finding the potential mapping loci of a read, and score potential mapping loci using the chaining algorithm introdcued in minimap2 [5]. It scores and validates these mappings using the score-only, SIMD, dynamic programming algorithm of ksw2 [6]. Finally, we recommend using selective alignment with a decoy-aware transcriptome, to mitigate potential spurious mapping of reads that actually arise from some unannotated genomic locus that is sequence-similar to an annotated transcriptome.
+
 ## Download files needed for salmon
 
 We need to download 3 files:
