@@ -42,6 +42,8 @@ plot(reads$V2,reads$V1,type="l",xlab="read length",ylab="occurences",col="blue")
 First, we create a table with information about where each file (quantified counts from salmon) is. 
 This will be used to create a `SummarizedExperiment` object.
 
+* https://github.com/csoneson/rna_velocity_quant/blob/488b9f6c479201c99b588586e27b31a26faacaba/scripts/sce_helpers.R 
+
 ```{r eval = F}
 # list tumor names
 tumor_names <- list.files(here("sample_data"))[
@@ -64,7 +66,7 @@ for(tum in tumor_names){
   unique_sf_ids <- c(unique_sf_ids, ids)
 }
 
-coldata <- data.frame(files = unique_sf_paths, names = unique_sf_ids)
+coldata <- data.frame(files = unique_sf_paths, names = unique_sf_ids, stringsAsFactors = FALSE)
 ```
 
 We also need to use the linkedTxome object to use `tximeta` properly, i.e. `rowRanges(se)` won't be `NULL` and tximeta will be able to match the transcripts to the genes for us. **Note: still doesn't work**
@@ -96,7 +98,7 @@ if(!file.exists(se_file_name)){
   if(dataset == "premrna")
     se <- tximeta(coldata, skipMeta = TRUE) # Takes a couple of minutes, file size = 800 MB
   else if (dataset == "mrna")
-    se <- tximeta(coldata) # run this line if you used mRNA transcripts in your index only, it will automatically detect the right transcriptome
+    se <- tximeta(coldata, type = "salmon") # run this line if you used mRNA transcripts in your index only, it will automatically detect the right transcriptome
   # se <- tximeta(coldata, ignoreAfterBar = TRUE)
   saveRDS(se, se_file_name)
 } else {
