@@ -10,7 +10,7 @@ knitr::opts_chunk$set(echo = TRUE)
 
 ```{bash}
 # Commands to start an interactive session on the JHPCE cluster
-qrsh -l mem_free=10G,h_vmem=10G
+ii # alias for qrsh -l mem_free=20G,h_vmem=20G
 module load conda_R
 cd /fastscratch/myscratch/akuo/alsf-filbin
 R
@@ -23,8 +23,6 @@ library(here)
 ```
 
 This code chunk copies the data from where it is stored into the github repo so we can all work with relative paths. 
-I copy it so I can keep the backed up copy where I originally have it. 
-However, the person using this script needs to adjust which paths to use. 
 
 ```{r}
 # stephanie_data_path <- "/users/shicks1/data/alsf_filbin/sample"
@@ -73,9 +71,11 @@ if(!file.exists(here("sample_data", "unique_cell_paths.txt"))){
 
 # Quantification 
 
+We will do quantification with Salmon:
+
 > Selective alignment, enabled by the --validateMappings flag, is a major feature enhancement introduced in recent versions of salmon. When salmon is run with selective alignment, it adopts a considerably more sensitive scheme that we have developed for finding the potential mapping loci of a read, and score potential mapping loci using the chaining algorithm introdcued in minimap2 [5]. It scores and validates these mappings using the score-only, SIMD, dynamic programming algorithm of ksw2 [6]. Finally, we recommend using selective alignment with a decoy-aware transcriptome, to mitigate potential spurious mapping of reads that actually arise from some unannotated genomic locus that is sequence-similar to an annotated transcriptome.
 
-## Download files needed for salmon
+## Download files
 
 We need to download 3 files:
 
@@ -87,6 +87,8 @@ We need to download 3 files:
 Source: https://www.gencodegenes.org/human/
 
 ```{r}
+library(here)
+
 # download GENCODE primary assembly fasta file
 if(!file.exists(here("salmon_files", "GRCh38.primary_assembly.genome.fa.gz"))){
   tar_gz_file <- "ftp://ftp.ebi.ac.uk/pub/databases/gencode/Gencode_human/release_32/GRCh38.primary_assembly.genome.fa.gz"
@@ -112,53 +114,151 @@ if(!file.exists(here("salmon_files", "gencode.v32.annotation.gtf.gz"))){
 }
 ```
 
+## mRNA only ("transcripts") pipeline
 
-## Make pre-mRNA files
+### FASTA file
 
-We need to create a set of pre-mRNA sequences to save to a FASTA file. 
-This is needed because we have single nucleus RNA-seq data so we need to take into account the pre-mRNA and mRNA transcripts. 
-This code kindly comes from [Charlotte Soneson](https://csoneson.github.io).
+For the mRNA only index pipeline, we already downloaded the FASTA file from GENCODE, so we just need to unzip it (`gencode.v32.transcripts.fa`). 
+
+Note: Unzipping is technically not really necessary, since we will zip it into `gentrome_transcripts.fa.gz` later on anyway, but this will be consistent with the file formats in the other pipelines.
+
+```{bash}
+zcat gencode.v32.transcripts.fa.gz > gencode.v32.transcripts.fa
+```
+
+### tx2gene
+
+We make a transcript-to-gene mapping table from the gtf file. This table will serve as the basis for similar tables in the other pipelines.
+
+Source: README in https://github.com/csoneson/rna_velocity_quant
 
 ```{r}
 suppressPackageStartupMessages({
+  library(rtracklayer)
+  library(dplyr)
+  library(here)
+})
+
+# Read gtf
+gtf <- rtracklayer::import(here("salmon_files", "gencode.v32.annotation.gtf.gz"))
+gtftx <- subset(gtf, type == "transcript")
+gtfex <- subset(gtf, type == "exon")
+
+df <- data.frame(gtftx, stringsAsFactors = FALSE) %>%
+  dplyr::select(transcript_id, seqnames, start, end, strand, source, 
+                gene_id, gene_type, gene_name, level, havana_gene, transcript_type,
+                transcript_name, transcript_support_level, tag, havana_transcript) %>%
+  dplyr::left_join(data.frame(gtfex, stringsAsFactors = FALSE) %>%
+                     dplyr::group_by(transcript_id) %>% 
+                     dplyr::summarize(transcript_length = sum(width)),
+                   by = "transcript_id")
+
+# Write table as txt and rds
+write.table(df, file = here("salmon_files", "gencode.v32.annotation.tx2gene.txt"), 
+            sep = "\t", quote = FALSE, row.names = FALSE, 
+            col.names = FALSE)
+saveRDS(df, file = here("salmon_files", "gencode.v32.annotation.tx2gene.rds"))
+```
+
+### decoys
+
+The decoy sequence is going to be the whole genome sequence (`GRCh38.primary_assembly.genome.fa.gz`) for all 3 pipelines. You can read more about decoy sequences in Salmon below:
+
+* https://salmon.readthedocs.io/en/latest/salmon.html#preparing-transcriptome-indices-mapping-based-mode
+* https://github.com/COMBINE-lab/SalmonTools/blob/master/README.md
+
+Source for code: https://combine-lab.github.io/alevin-tutorial/2019/selective-alignment/
+
+To use a decoy, we need to create two files:
+
+1. `decoys.txt` is the names of the genome targets (decoys), will be used in the `-d` parameter in `build-index-salmon.sh`
+2. `gentrome_transcripts.fa.gz` is a concatenated FASTA transcriptome, will be used in the `-t` parameter in `build-index-salmon.sh`. Note that you need to recreate this in every pipeline.
+
+```{bash}
+# 1. Salmon indexing requires the names of the genome targets, which is extractable by using the grep command:
+grep "^>" <(gunzip -c GRCh38.primary_assembly.genome.fa.gz) | cut -d " " -f 1 > decoys.txt
+sed -i.bak -e 's/>//g' decoys.txt
+```
+
+```{bash}
+# 2. Along with the list of decoys salmon also needs the concatenated transcriptome and genome reference file for index. NOTE: the genome targets (decoys) should come after the transcriptome targets in the reference
+cat gencode.v32.transcripts.fa GRCh38.primary_assembly.genome.fa.gz > gentrome_transcripts.fa.gz
+```
+
+## mRNA and pre-mRNA ("preandmrna") pipeline
+
+For the mRNA and pre-mRNA pipeline, we will build an index with both mRNA and pre-mRNA sequences. 
+
+Source: generate_spliced_unspliced_fa.R in https://github.com/csoneson/rna_velocity_quant/.
+
+
+```{r}
+suppressPackageStartupMessages({
+  library(here)
+  library(dplyr)
   library(Biostrings)
   library(rtracklayer)
   library(GenomicFeatures)
   library(BSgenome)
 })
+source(here("scripts", "quantify-salmon-helpers.R"))
 ```
 
-### GTF file
+### FASTA file 
 
-First, make a pre-mRNA GTF file (using the mRNA GTF file). Then combine it with the mRNA GTF file to get a GTF file for both pre-mRNA and mRNA.
+We make a combined FASTA file with both mRNA and pre-mRNA sequences (`gencode.v32.preandmrna.fa`).
 
 ```{r}
-## Read gtf file and group exons by transcript
-ingtf <- here("salmon_files","gencode.v32.annotation.gtf.gz")
-txdb <- GenomicFeatures::makeTxDbFromGFF(ingtf)
-grl <- GenomicFeatures::exonsBy(txdb, by = "tx", use.names = TRUE)
+# Gtf path
+gtf_file <- here("salmon_files", "gencode.v32.annotation.gtf.gz")
 
-## Create the pre-mRNA coordinates by adding all introns to each transcript
-grrange <- unlist(range(grl)) # 227462 rows
-names(grrange) <- paste(names(grrange), "premrna", sep= ".")
+# Read genomic (DNA) sequence from FASTA file
+genome_fasta <- here("salmon_files", "GRCh38.primary_assembly.genome.fa.gz")
+genome <- Biostrings::readDNAStringSet(genome_fasta)
+names(genome) <- sapply(strsplit(names(genome), " "), .subset, 1) # creates chr1, etc
 
-## Save pre-mRNA gtf file
-premrna_gtf <- here("salmon_files","gencode.v32.premrnaannotation.gtf")
-rtracklayer::export(grrange, premrna_gtf)
+# Extract transcript (tx) and pre-mRNA (premrna) sequences (takes a few minutes)
+tx <- extractTxSeqs(gtf = gtf_file, genome = genome, type = "spliced") # you might want to use the transcripts FASTA directly here?
+premrna <- extractTxSeqs(gtf = gtf_file, genome = genome, type = "unspliced")
+names(premrna) <- paste0(names(premrna), "_unspliced")
 
-## Combine two gtf files (pre-mRNA and mRNA) to be used in tximeta a bit later
-unlist(grl) # 1372308 rows
-tmp <- c(grrange, unlist(grl)) # 1599770 rows, pre-mRNA comes in front of mRNA
+# Combine mRNA and pre-mRNA sequences
+preandmrna <- c(tx, premrna)
 
-## example of a transcript with three exons (mRNA) or entire pre-mRNA region
-tmp[grep("ENST00000456328.2", names(tmp)),]
-
-## Save combined pre-mRNA and mRNA gtf file
-preandmrna_gtf <- here("salmon_files","gencode.v32.preandmrnaannotation.gtf")
-rtracklayer::export(tmp, preandmrna_gtf)
+# Write FASTA file (9 GB)
+Biostrings::writeXStringSet(preandmrna, file = here("salmon_files", "gencode.v32.preandmrna.fa"))
 ```
 
-### FASTA file
+### tx2gene
+
+```{r}
+# Generate tx2gene table for mRNA and pre-mRNA transcripts
+t2g <- readRDS(here("salmon_files", "gencode.v32.annotation.tx2gene.rds"))
+t2gpre <- t2g %>% dplyr::mutate(transcript_id = paste0(transcript_id, "_unspliced"),
+                                gene_id = paste0(gene_id, "_unspliced"),
+                                gene_name = paste0(gene_name, "_unspliced"))
+t2g <- rbind(t2g, t2gpre)
+
+# Write table as txt
+write.table(t2g %>% dplyr::select(transcript_id, gene_id), 
+            file = here("salmon_files", "gencode.v32.preandmrna.tx2gene.txt"), 
+            row.names = FALSE, col.names = FALSE, 
+            sep = "\t", quote = FALSE)
+```
+
+### decoys
+
+1. `decoys.txt` was already generated in the mRNA only pipeline
+
+2. `gentrome_preandmrna.fa.gz` is a concatenated FASTA transcriptome, will be used in the `-t` parameter in `build-index-salmon.sh`
+
+```{bash}
+# The genome targets (decoys) should come after the transcriptome targets in the reference
+cat gencode.v32.preandmrna.fa GRCh38.primary_assembly.genome.fa.gz > gentrome_preandmrna.fa.gz
+```
+
+### old code
+#### FASTA file
 
 Now, for each entry in `grrange`, we extract the sequence from the corresponding `seqnames` entry in the `genome`.
 
@@ -217,7 +317,39 @@ gzip gencode.v32.preandmrna.fa
 gzip GRCh38.premRNA.fa
 ```
 
-## Make intron files
+
+#### GTF file
+
+First, make a pre-mRNA GTF file (using the mRNA GTF file). Then combine it with the mRNA GTF file to get a GTF file for both pre-mRNA and mRNA.
+
+```{r}
+## Read gtf file and group exons by transcript
+ingtf <- here("salmon_files","gencode.v32.annotation.gtf.gz")
+txdb <- GenomicFeatures::makeTxDbFromGFF(ingtf)
+grl <- GenomicFeatures::exonsBy(txdb, by = "tx", use.names = TRUE)
+
+## Create the pre-mRNA coordinates by adding all introns to each transcript
+grrange <- unlist(range(grl)) # 227462 rows
+names(grrange) <- paste(names(grrange), "premrna", sep= ".")
+
+## Save pre-mRNA gtf file
+premrna_gtf <- here("salmon_files","gencode.v32.premrnaannotation.gtf")
+rtracklayer::export(grrange, premrna_gtf)
+
+## Combine two gtf files (pre-mRNA and mRNA) to be used in tximeta a bit later
+unlist(grl) # 1372308 rows
+tmp <- c(grrange, unlist(grl)) # 1599770 rows, pre-mRNA comes in front of mRNA
+
+## example of a transcript with three exons (mRNA) or entire pre-mRNA region
+tmp[grep("ENST00000456328.2", names(tmp)),]
+
+## Save combined pre-mRNA and mRNA gtf file
+preandmrna_gtf <- here("salmon_files","gencode.v32.preandmrnaannotation.gtf")
+rtracklayer::export(tmp, preandmrna_gtf)
+```
+
+
+## mRNA and intron ("intronandmrna") pipeline
 
 ```{r}
 # Modified from https://github.com/csoneson/rna_velocity_quant/blob/master/scripts/extractIntronSeqs.R
@@ -331,24 +463,6 @@ gzip GRCh38.intron.fa
 gzip gencode.v32.intronandmrna.fa
 ```
 
-## Generate decoy sequences
-
-* https://salmon.readthedocs.io/en/latest/salmon.html#preparing-transcriptome-indices-mapping-based-mode
-* https://github.com/COMBINE-lab/SalmonTools/blob/master/README.md
-
-> NOTE: Salmon version v1.0 can directly index the genome and transcriptome and doesn't mandates to run the generateDecoyTranscriptome script, however it's still backward compatible. Please checkout [this](https://combine-lab.github.io/alevin-tutorial/2019/selective-alignment/) tutorial on how to run salmon with full genome + transcriptome without the annotation.
-
-```{bash}
-# Salmon indexing requires the names of the genome targets, which is extractable by using the grep command:
-grep "^>" <(gunzip -c GRCh38.primary_assembly.genome.fa.gz) | cut -d " " -f 1 > decoys.txt
-sed -i.bak -e 's/>//g' decoys.txt
-
-# Along with the list of decoys salmon also needs the concatenated transcriptome and genome reference file for index. NOTE: the genome targets (decoys) should come after the transcriptome targets in the reference
-cat gencode.v32.transcripts.fa GRCh38.primary_assembly.genome.fa.gz > gentrome_transcripts.fa.gz
-```
-
-
-https://github.com/csoneson/rna_velocity_quant/blob/488b9f6c479201c99b588586e27b31a26faacaba/spermatogenesis_mouse/Makefile
 
 
 ## Install and build salmon index 
