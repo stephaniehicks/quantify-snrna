@@ -80,7 +80,7 @@ We will do quantification with Salmon:
 We need to download 3 files:
 
 1. `GRCh38.primary_assembly.genome.fa.gz` - nucleotide (DNA) sequences of the **GRCH38 primary genome assembly** (chromosomes and scaffolds -- i.e. unplaced scaffolds?)
-2. `gencode.v32.transcripts.fa.gz` - nucleotide (DNA) sequences of **all transcripts** on reference chromosomes
+2. `gencode.v32.transcripts.fa.gz` - nucleotide (DNA) sequences of **all transcripts** on reference chromosomes (Note: We are going to extract the transcript sequences from \#1, so this will on longer be used.)
 3. `gencode.v32.annotation.gtf.gz` - gene annotation on the reference chromosomes (i.e. for humans, these are chromosomes 1 to 22, X, and Y), i.e. locations of genes and other information about the genes, gene structure
   * Gene transfer format (GTF) is a file format used to hold information about gene structure. It is a tab-delimited text format based on the general feature format (GFF), but contains some additional conventions specific to gene information.
 
@@ -116,14 +116,38 @@ if(!file.exists(here("salmon_files", "gencode.v32.annotation.gtf.gz"))){
 
 ## mRNA only ("transcripts") pipeline
 
+```{r}
+suppressPackageStartupMessages({
+  library(here)
+  library(dplyr)
+  library(Biostrings)
+  library(rtracklayer)
+  library(GenomicFeatures)
+  library(BSgenome)
+})
+source(here("scripts", "quantify-salmon-helpers.R"))
+```
+
 ### FASTA file
 
-For the mRNA only index pipeline, we already downloaded the FASTA file from GENCODE, so we just need to unzip it (`gencode.v32.transcripts.fa`). 
+For the mRNA only index pipeline, we will build the transcripts FASTA using the transcripts GTF and the whole genome FASTA.
 
-Note: Unzipping is technically not really necessary, since we will zip it into `gentrome_transcripts.fa.gz` later on anyway, but this will be consistent with the file formats in the other pipelines.
+Note: We used to use the downloaded FASTA file from GENCODE. However, extracting the FASTA from the whole genome is more consistent with the other pipelines. In theory, they should be the same thing.
 
-```{bash}
-zcat gencode.v32.transcripts.fa.gz > gencode.v32.transcripts.fa
+```{r}
+# Gtf path
+gtf_file <- here("salmon_files", "gencode.v32.annotation.gtf.gz")
+
+# Read genomic (DNA) sequence from FASTA file
+genome_fasta <- here("salmon_files", "GRCh38.primary_assembly.genome.fa.gz")
+genome <- Biostrings::readDNAStringSet(genome_fasta)
+names(genome) <- sapply(strsplit(names(genome), " "), .subset, 1) # creates chr1, etc
+
+# Extract transcript (tx) sequences 
+tx <- extractTxSeqs(gtf = gtf_file, genome = genome, type = "spliced")
+
+# Write FASTA file
+Biostrings::writeXStringSet(tx, file = here("salmon_files", "gencode.v32.transcripts.fa"))
 ```
 
 ### tx2gene
@@ -191,7 +215,6 @@ For the mRNA and pre-mRNA pipeline, we will build an index with both mRNA and pr
 
 Source: generate_spliced_unspliced_fa.R in https://github.com/csoneson/rna_velocity_quant/.
 
-
 ```{r}
 suppressPackageStartupMessages({
   library(here)
@@ -218,7 +241,7 @@ genome <- Biostrings::readDNAStringSet(genome_fasta)
 names(genome) <- sapply(strsplit(names(genome), " "), .subset, 1) # creates chr1, etc
 
 # Extract transcript (tx) and pre-mRNA (premrna) sequences (takes a few minutes)
-tx <- extractTxSeqs(gtf = gtf_file, genome = genome, type = "spliced") # you might want to use the transcripts FASTA directly here?
+tx <- extractTxSeqs(gtf = gtf_file, genome = genome, type = "spliced")
 premrna <- extractTxSeqs(gtf = gtf_file, genome = genome, type = "unspliced")
 names(premrna) <- paste0(names(premrna), "_unspliced")
 
@@ -489,7 +512,7 @@ You can check to make sure salmon has been upgraded correctly using `salmon -h` 
 OK, we are ready to use salmon. 
 The `-t` argument is the input transcripts file. 
 The `-i` argument is the index file to create. 
-The `-t` argument is the decoy sequence. 
+The `-d` argument is the decoy sequence. 
 The `--keepDuplicates` argument forces all duplicate transcripts (for example, multiple unspliced transcript of the same gene that are identical for example) that appear in the input will be retained and quantified separately. 
 If you keep the duplicates they will be assigned identical expression levels since salmon can’t tell them apart. 
 When you aggregate on the gene level, this will not make a difference any more. 
