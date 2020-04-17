@@ -2,7 +2,7 @@
 #$ -cwd
 #$ -o log/
 #$ -e log/
-#$ -l mem_free=15G,h_vmem=20G
+#$ -l mem_free=30G,h_vmem=30G
 
 # create salmon index (this process takes ~2-3 hours)
 # make sure you are using the right transcriptome (for mRNA, pre-mRNA, intron, or some combination)
