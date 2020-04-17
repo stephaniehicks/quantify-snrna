@@ -278,7 +278,7 @@ write.table(t2g %>% dplyr::select(transcript_id, gene_id),
 
 ```{bash}
 # The genome targets (decoys) should come after the transcriptome targets in the reference
-gzip gencode.v32.preandmrna.fa # Note: This will take a while (> 10 minutes)
+gzip gencode.v32.preandmrna.fa # Note: This will take a while (~ 1 hour)
 cat gencode.v32.preandmrna.fa.gz GRCh38.primary_assembly.genome.fa.gz > gentrome_preandmrna.fa.gz
 ```
 
