@@ -80,7 +80,7 @@ We will do quantification with Salmon:
 We need to download 3 files:
 
 1. `GRCh38.primary_assembly.genome.fa.gz` - nucleotide (DNA) sequences of the **GRCH38 primary genome assembly** (chromosomes and scaffolds -- i.e. unplaced scaffolds?)
-2. `gencode.v32.transcripts.fa.gz` - nucleotide (DNA) sequences of **all transcripts** on reference chromosomes (Note: We are going to extract the transcript sequences from \#1, so this will on longer be used.)
+2. `gencode.v32.transcripts.fa.gz` - nucleotide (DNA) sequences of **all transcripts** on reference chromosomes (Note: We are going to extract the transcript sequences using \#1 and \#3, so this will on longer be used.)
 3. `gencode.v32.annotation.gtf.gz` - gene annotation on the reference chromosomes (i.e. for humans, these are chromosomes 1 to 22, X, and Y), i.e. locations of genes and other information about the genes, gene structure
   * Gene transfer format (GTF) is a file format used to hold information about gene structure. It is a tab-delimited text format based on the general feature format (GFF), but contains some additional conventions specific to gene information.
 
@@ -98,12 +98,12 @@ if(!file.exists(here("salmon_files", "GRCh38.primary_assembly.genome.fa.gz"))){
 }
 
 # download GENCODE transcripts fasta file
-if(!file.exists(here("salmon_files", "gencode.v32.transcripts.fa.gz"))){
-  tar_gz_file <- "ftp://ftp.ebi.ac.uk/pub/databases/gencode/Gencode_human/release_32/gencode.v32.transcripts.fa.gz"
-  download.file(tar_gz_file, 
-                destfile = here("salmon_files", "gencode.v32.transcripts.fa.gz"), 
-                method = "wget")
-}
+# if(!file.exists(here("salmon_files", "gencode.v32.transcripts.fa.gz"))){
+#   tar_gz_file <- "ftp://ftp.ebi.ac.uk/pub/databases/gencode/Gencode_human/release_32/gencode.v32.transcripts.fa.gz"
+#   download.file(tar_gz_file, 
+#                 destfile = here("salmon_files", "gencode.v32.transcripts.fa.gz"), 
+#                 method = "wget")
+# }
 
 # download GENCODE gtf file
 if(!file.exists(here("salmon_files", "gencode.v32.annotation.gtf.gz"))){
@@ -206,7 +206,8 @@ sed -i.bak -e 's/>//g' decoys.txt
 
 ```{bash}
 # 2. Along with the list of decoys salmon also needs the concatenated transcriptome and genome reference file for index. NOTE: the genome targets (decoys) should come after the transcriptome targets in the reference
-cat gencode.v32.transcripts.fa GRCh38.primary_assembly.genome.fa.gz > gentrome_transcripts.fa.gz
+gzip gencode.v32.transcripts.fa
+cat gencode.v32.transcripts.fa.gz GRCh38.primary_assembly.genome.fa.gz > gentrome_transcripts.fa.gz
 ```
 
 ## mRNA and pre-mRNA ("preandmrna") pipeline
@@ -273,11 +274,12 @@ write.table(t2g %>% dplyr::select(transcript_id, gene_id),
 
 1. `decoys.txt` was already generated in the mRNA only pipeline
 
-2. `gentrome_preandmrna.fa.gz` is a concatenated FASTA transcriptome, will be used in the `-t` parameter in `build-index-salmon.sh`
+2. `gentrome_preandmrna.fa.gz` is a concatenated FASTA transcriptome, will be used in the `-t` parameter in `build-index-salmon.sh`ls -
 
 ```{bash}
 # The genome targets (decoys) should come after the transcriptome targets in the reference
-cat gencode.v32.preandmrna.fa GRCh38.primary_assembly.genome.fa.gz > gentrome_preandmrna.fa.gz
+gzip gencode.v32.preandmrna.fa # Note: This will take a while (> 10 minutes)
+cat gencode.v32.preandmrna.fa.gz GRCh38.primary_assembly.genome.fa.gz > gentrome_preandmrna.fa.gz
 ```
 
 ### old code
