@@ -21,12 +21,12 @@ samp=`basename ${fn}`
 samp=${samp::-2}
 echo "Processing sample ${samp}"
 # premRNA index
-# salmon quant -i $d/salmon_files/gencode.v32_salmon-index-v1.0.0-premRNA -l A \
+# salmon quant -i $d/salmon_files/gencode.v32_salmon-index-v1.0.0-preandmrna -l A \
 #         -1 ${fn}1.fastq.gz \
 #         -2 ${fn}2.fastq.gz \
-#         -p 4 --validateMappings -o $d/salmon_quants_premrna/${samp}_quant
+#         -p 4 --validateMappings -o $d/salmon_quants_preandmrna/${samp}_quant
 # mRNA index
- salmon quant -i $d/salmon_files/gencode.v32_salmon-index-v1.0.0-mrna -l A \
+ salmon quant -i $d/salmon_files/gencode.v32_salmon-index-v1.0.0-transcripts -l A \
           -1 ${fn}1.fastq.gz \
           -2 ${fn}2.fastq.gz \
-          -p 4 --validateMappings -o $d/salmon_quants_mrna/${samp}_quant
+          -p 4 --validateMappings -o $d/salmon_quants_transcripts/${samp}_quant
