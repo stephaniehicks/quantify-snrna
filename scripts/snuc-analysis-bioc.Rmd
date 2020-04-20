@@ -22,7 +22,7 @@ R
 
 ```{r eval = F}
 library(here)
-dataset = "transcripts" # options = "transcripts", "preandmrna"
+dataset = "preandmrna" # options = "transcripts", "preandmrna"
 ```
 
 # FASTQ read length distribution
@@ -96,7 +96,7 @@ se_file_name = here(paste0("salmon_quants_", dataset), paste0("se_", dataset, ".
 # coldata = coldata[1:2, ] # for testing
 if(!file.exists(se_file_name)){
   # Create SummarizedExperiment object
-  if(dataset == "premrna")
+  if(dataset == "preandmrna")
     se <- tximeta(coldata, skipMeta = TRUE) # Takes a couple of minutes, file size = 800 MB
   else if (dataset == "transcripts")
     se <- tximeta(coldata, type = "salmon") # run this line if you used mRNA transcripts in your index only, it will automatically detect the right transcriptome
@@ -198,7 +198,7 @@ library(ggplot2)
 library(dplyr)
 library(tidyr)
 library(SingleCellExperiment)
-dataset = "mrna" # options = "premrna_mrna", "mrna", or "premrna"
+dataset = "mrna" # options = "premrna_mrna", "mrna", or "preandmrna"
 ```
 
 ## Convert read counts to pseudo-UMIs
@@ -263,7 +263,7 @@ if(dataset == "transcripts"){
   matched_index = match(rownames(dat_umi), mrna_gene_matching_dt$transcript)
   dat_gene = rowsum(dat_umi, group = mrna_gene_matching_dt$genes[matched_index], reorder = FALSE)
   dim(dat_gene) # 52142 x 1018 for mRNA
-} else if(dataset == "premrna") {
+} else if(dataset == "preandmrna") {
   # Get genes for every premrna transcript
   # 171987 in intersection of premRNA and mRNA transcripts
   # 20472 mRNA transcripts did not have an premRNA counterpart
