@@ -26,7 +26,7 @@ echo "Processing sample ${samp}"
 #         -2 ${fn}2.fastq.gz \
 #         -p 4 --validateMappings -o $d/salmon_quants_preandmrna/${samp}_quant
 # mRNA index
- salmon quant -i $d/salmon_files/gencode.v32_salmon-index-v1.0.0-transcripts -l A \
+ salmon quant -i $d/salmon_files/gencode.v32_salmon-index-v1.0.0-preandmrna -l A \
           -1 ${fn}1.fastq.gz \
           -2 ${fn}2.fastq.gz \
-          -p 4 --validateMappings -o $d/salmon_quants_transcripts/${samp}_quant
+          -p 4 --validateMappings -o $d/salmon_quants_preandmrna/${samp}_quant
