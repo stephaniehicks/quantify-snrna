@@ -22,10 +22,12 @@ R
 
 ```{r eval = F}
 library(here)
-dataset = "mrna" # options = "premrna_mrna", "mrna", or "premrna"
+dataset = "transcripts" # options = "transcripts", "preandmrna"
 ```
 
 # FASTQ read length distribution
+
+The average read length from 1 FASTQ file is 25 bp.
 
 ```{bash eval = F}
 cat BT1179Nuc-P4-H12_R2.fastq.gz | awk '{if(NR%4==2) print length($1)}' | sort -n | uniq -c > read_length_BT1179Nuc.txt
@@ -35,7 +37,6 @@ cat BT1179Nuc-P4-H12_R2.fastq.gz | awk '{if(NR%4==2) print length($1)}' | sort -
 reads <- read.csv(here("sample_data", "read_length_BT1179Nuc.txt"), sep="", header=FALSE)
 plot(reads$V2,reads$V1,type="l",xlab="read length",ylab="occurences",col="blue")
 ```
-
 
 # Create SummarizedExperiment object
 
@@ -97,7 +98,7 @@ if(!file.exists(se_file_name)){
   # Create SummarizedExperiment object
   if(dataset == "premrna")
     se <- tximeta(coldata, skipMeta = TRUE) # Takes a couple of minutes, file size = 800 MB
-  else if (dataset == "mrna")
+  else if (dataset == "transcripts")
     se <- tximeta(coldata, type = "salmon") # run this line if you used mRNA transcripts in your index only, it will automatically detect the right transcriptome
   # se <- tximeta(coldata, ignoreAfterBar = TRUE)
   saveRDS(se, se_file_name)
@@ -258,7 +259,7 @@ row_ranges = rowRanges(se_mrna)
 genes = unlist(elementMetadata(row_ranges)$gene_id)
 mrna_gene_matching_dt = tibble(transcript = transcripts_mrna, genes)
 
-if(dataset == "mrna"){
+if(dataset == "transcripts"){
   matched_index = match(rownames(dat_umi), mrna_gene_matching_dt$transcript)
   dat_gene = rowsum(dat_umi, group = mrna_gene_matching_dt$genes[matched_index], reorder = FALSE)
   dim(dat_gene) # 52142 x 1018 for mRNA
