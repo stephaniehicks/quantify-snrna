@@ -22,7 +22,7 @@ R
 
 ```{r eval = F}
 library(here)
-dataset = "preandmrna" # options = "transcripts", "preandmrna"
+dataset = "transcripts" # options = "transcripts", "preandmrna" (might need more memory for preandmrna)
 ```
 
 # FASTQ read length distribution
@@ -38,10 +38,11 @@ reads <- read.csv(here("sample_data", "read_length_BT1179Nuc.txt"), sep="", head
 plot(reads$V2,reads$V1,type="l",xlab="read length",ylab="occurences",col="blue")
 ```
 
-# Create SummarizedExperiment object
+# Read in quant files
 
-First, we create a table with information about where each file (quantified counts from salmon) is. 
-This will be used to create a `SummarizedExperiment` object.
+## SE object
+
+We read in the quantification files using `tximeta` and save the SummarizedExperiment object.
 
 * https://github.com/csoneson/rna_velocity_quant/blob/488b9f6c479201c99b588586e27b31a26faacaba/scripts/sce_helpers.R 
 
@@ -49,6 +50,8 @@ This will be used to create a `SummarizedExperiment` object.
 # list tumor names
 tumor_names <- list.files(here("sample_data"))[
                   !grepl("*.txt", list.files(here("sample_data")))]
+
+# Create paths for tximeta 
 
 unique_sf_paths <- NULL
 for(tum in tumor_names){
@@ -99,64 +102,61 @@ if(!file.exists(se_file_name)){
   if(dataset == "preandmrna")
     se <- tximeta(coldata, skipMeta = TRUE) # Takes a couple of minutes, file size = 800 MB
   else if (dataset == "transcripts")
-    se <- tximeta(coldata, type = "salmon") # run this line if you used mRNA transcripts in your index only, it will automatically detect the right transcriptome
+    se <- tximeta(coldata, type = "salmon")
   # se <- tximeta(coldata, ignoreAfterBar = TRUE)
   saveRDS(se, se_file_name)
 } else {
   se = readRDS(se_file_name) # Takes a couple of seconds
 }
-```
 
-```{r eval = F}
-suppressPackageStartupMessages({
-  library(SummarizedExperiment)
-  library(DESeq2)
-  library(scater)
-})
-
+# Check SummarizedExperiment object
 colData(se)
 assayNames(se)
-rowRanges(se)
-
-dat = assay(se, "counts")
+rowRanges(se) # empty
 ```
 
-# Create SingleCellExperiment object
+
+## SCE object
+
+We add tx2gene to rowData and convert the SummarizedExperiment object to a SingleCellExperiment object.
 
 A SingleCellExperiment class is derived from the SummarizedExperiment class. The most important change is the addition of a new slot called `reducedDims`. Read more [here](https://osca.bioconductor.org/data-infrastructure.html#a-brief-recap-from-se-to-sce).
 
 ```{r eval = F}
-# BiocManager::install('SingleCellExperiment')
-library(SingleCellExperiment)
-```
+suppressPackageStartupMessages({
+  library(SummarizedExperiment)
+  library(SingleCellExperiment)
+  library(DESeq2)
+  library(scater)
+})
 
-```{r eval = F}
-sce = SingleCellExperiment(assays = list(counts = dat))
+# Read in SE file
+se_file_name = here(paste0("salmon_quants_", dataset), paste0("se_", dataset, ".rds"))
+se = readRDS(se_file_name) # Takes a couple of seconds
 
+# Add rowData manually (gene names)
+library(readr)
+if(dataset == "transcripts"){
+  tx2gene = read_tsv(here("salmon_files", "gencode.v32.annotation.tx2gene.txt"))
+} else if(dataset == "preandmrna"){
+  tx2gene = read_tsv(here("salmon_files", "gencode.v32.preandmrna.tx2gene.txt"))
+}
+
+match_rows = match(rownames(se), tx2gene$transcript_id)
+tx2gene = tx2gene[match_rows, ]
+rowData(se) = tx2gene
+
+# Coercion from SummarizedExperiment
+sce = as(se, "SingleCellExperiment")
 # you can access counts by assay(sce, "counts") or counts(sce)
 # you can add a new entry to assays slot by assay(sce, "counts_new") = dat_new
+
+# Save SCE file
+sce_file_name = here(paste0("salmon_quants_", dataset), paste0("sce_", dataset, ".rds"))
+saveRDS(sce, sce_file_name)
 ```
 
-## Add gene names (hgnc symbol)
-
-```{r eval = F}
-# This will take a long time (> 45 min); should probably separate out as a script
-tic()
-sce <- getBMFeatureAnnos(sce, 
-            ids = rownames(sce),
-            filters = "ensembl_gene_id", 
-            attributes = c("ensembl_gene_id", "hgnc_symbol",
-                           "gene_biotype"),
-            biomart = "ENSEMBL_MART_ENSEMBL", 
-            dataset = "hsapiens_gene_ensembl",
-            host = "www.ensembl.org")
-toc()
-rowData(sce)$gene_name_unique <- 
-  uniquifyFeatureNames(rowData(sce)$gene_name_ensembl, 
-                     rowData(sce)$hgnc_symbol)
-```
-
-## Quality Control
+# Quality Control
 
 There are a couple of [QC metrics](https://osca.bioconductor.org/quality-control.html#choice-of-qc-metrics) to identify low-quality cells:
 
@@ -168,6 +168,10 @@ I will only do (1) for now.
 
 ```{r eval = F}
 library(scater)
+
+# Read in SCE object
+sce_file_name = here(paste0("salmon_quants_", dataset), paste0("sce_", dataset, ".rds"))
+sce = readRDS(sce_file_name) # Takes a couple of seconds
 
 # Compute quality control metrics:
 # sum is the total count for each cell
@@ -198,7 +202,7 @@ library(ggplot2)
 library(dplyr)
 library(tidyr)
 library(SingleCellExperiment)
-dataset = "mrna" # options = "premrna_mrna", "mrna", or "preandmrna"
+dataset = "transcripts" # options = "preandmrna", "transcripts"
 ```
 
 ## Convert read counts to pseudo-UMIs
