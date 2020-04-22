@@ -180,7 +180,7 @@ df <- data.frame(gtftx, stringsAsFactors = FALSE) %>%
 # Write table as txt and rds
 write.table(df, file = here("salmon_files", "gencode.v32.annotation.tx2gene.txt"), 
             sep = "\t", quote = FALSE, row.names = FALSE, 
-            col.names = FALSE)
+            col.names = TRUE)
 saveRDS(df, file = here("salmon_files", "gencode.v32.annotation.tx2gene.rds"))
 ```
 
@@ -266,7 +266,7 @@ t2g <- rbind(t2g, t2gpre)
 # Write table as txt
 write.table(t2g %>% dplyr::select(transcript_id, gene_id), 
             file = here("salmon_files", "gencode.v32.preandmrna.tx2gene.txt"), 
-            row.names = FALSE, col.names = FALSE, 
+            row.names = FALSE, col.names = TRUE, 
             sep = "\t", quote = FALSE)
 ```
 
