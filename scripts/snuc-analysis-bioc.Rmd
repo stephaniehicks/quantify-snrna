@@ -22,7 +22,7 @@ R
 
 ```{r eval = F}
 library(here)
-dataset = "transcripts" # options = "transcripts", "preandmrna" (might need more memory for preandmrna)
+dataset = "preandmrna" # options = "transcripts", "preandmrna" (might need more memory for preandmrna)
 ```
 
 # FASTQ read length distribution
