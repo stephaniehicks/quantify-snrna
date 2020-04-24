@@ -258,13 +258,11 @@ Biostrings::writeXStringSet(preandmrna, file = here("salmon_files", "gencode.v32
 ```{r}
 # Generate tx2gene table for mRNA and pre-mRNA transcripts
 t2g <- readRDS(here("salmon_files", "gencode.v32.annotation.tx2gene.rds"))
-t2gpre <- t2g %>% dplyr::mutate(transcript_id = paste0(transcript_id, "_unspliced"),
-                                gene_id = paste0(gene_id, "_unspliced"),
-                                gene_name = paste0(gene_name, "_unspliced"))
+t2gpre <- t2g %>% dplyr::mutate(transcript_id = paste0(transcript_id, "_unspliced"))
 t2g <- rbind(t2g, t2gpre)
 
 # Write table as txt
-write.table(t2g %>% dplyr::select(transcript_id, gene_id), 
+write.table(t2g, 
             file = here("salmon_files", "gencode.v32.preandmrna.tx2gene.txt"), 
             row.names = FALSE, col.names = TRUE, 
             sep = "\t", quote = FALSE)
