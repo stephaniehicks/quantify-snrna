@@ -294,23 +294,113 @@ saveRDS(sce_gene, gene_file_name)
 
 ```{r}
 library(here)
-library(ggplot2)
-library(dplyr)
-library(tidyr)
+library(tidyverse)
 library(SingleCellExperiment)
 library(scattermore)
 library(tictoc)
-
-sce_prem = readRDS(here(paste0("salmon_quants_premrna"), "sce_gene_premrna.rds"))
-sce_mrna = readRDS(here(paste0("salmon_quants_mrna"), "sce_gene_mrna.rds"))
-
-dat_prem = counts(sce_prem)
-dat_mrna = counts(sce_mrna)
 ```
+
+## Number of counts
+
+Plot number of counts mapping to unspliced ("pre-mRNA") vs spliced ("mRNA") under different pipelines.
+
+```{r}
+sce_preandmrna = readRDS(here(paste0("salmon_quants_preandmrna"), "sce_preandmrna.rds"))
+sce_transcripts = readRDS(here(paste0("salmon_quants_transcripts"), "sce_transcripts.rds"))
+```
+
+```{r}
+# Counts matrix for preandmrna pipeline
+counts_preandmrna = counts(sce_preandmrna)
+dim(counts_preandmrna) # 423709 x 1152
+# Counts matrix for transcripts pipeline
+counts_transcripts = counts(sce_transcripts)
+dim(counts_transcripts) # 226608 x 1152
+
+# Number of reads mapped to unspliced ("pre-mRNA") for preandmrna pipeline
+sum_preandmrna_unspliced = colSums(counts_preandmrna[grep("unspliced", rownames(counts_preandmrna)), ])
+# Number of reads mapped to spliced ("mRNA") for preandmrna pipeline
+sum_preandmrna_spliced = colSums(counts_preandmrna[-grep("unspliced", rownames(counts_preandmrna)), ])
+# Number of reads mapped to spliced ("mRNA") for transcripts pipeline
+sum_transcripts_spliced = colSums(counts_transcripts)
+```
+
+```{r}
+# Create summary table
+sum_counts_tb = tibble(sample = colnames(counts_preandmrna),
+                       preandmrna_unspliced = sum_preandmrna_unspliced,
+                       preandmrna_spliced = sum_preandmrna_spliced,
+                       transcripts_spliced = sum_transcripts_spliced) %>%
+  mutate(preandmrna_both = preandmrna_unspliced + preandmrna_spliced)
+
+sum_counts_tb = sum_counts_tb %>% 
+  pivot_longer(-sample, names_to = c("source")) %>%
+  mutate(pipeline = ifelse(grepl("preandmrna", source), "preandmrna", "transcripts"))
+saveRDS(sum_counts_tb, file = here("data", "sum_counts_tb.rds"))
+```
+
+```{r}
+# All reads and samples
+sum_counts_tb = readRDS(here("data", "sum_counts_tb.rds"))
+sum_counts_tb %>%
+  filter(source != "preandmrna_both") %>%
+  ggplot(aes(x = source, y = value, color = pipeline)) +
+  geom_boxplot() +
+  labs(title = "Number of reads mapped to spliced vs unspliced") +
+  theme_bw()
+
+sum_counts_tb %>%
+  filter(source %in% c("preandmrna_both", "transcripts_spliced")) %>%
+  ggplot(aes(x = source, y = value, color = pipeline)) +
+  geom_boxplot() +
+  labs(title = "Number of reads mapped overall under different pipelines") +
+  theme_bw()
+```
+
+```{r}
+# preandmrna_spliced vs transcripts_spliced
+sum_counts_tb %>%
+  select(-pipeline) %>%
+  pivot_wider(names_from = "source", values_from = "value") %>%
+  ggplot(aes(x = transcripts_spliced, y = preandmrna_spliced)) +
+  geom_point(size = 0.5) +
+  geom_abline(intercept = 0, slope = 1) +
+  labs(title = "Number of reads mapped to spliced transcripts under different pipelines",
+       subtitle = "Each point is a different sample") +
+  theme_bw()
+
+# preandmrna_both vs transcripts_spliced
+sum_counts_tb %>%
+  select(-pipeline) %>%
+  pivot_wider(names_from = "source", values_from = "value") %>%
+  ggplot(aes(x = transcripts_spliced, y = preandmrna_both)) +
+  geom_point(size = 0.5) +
+  geom_abline(intercept = 0, slope = 1) +
+  labs(title = "Number of reads mapped overall under different pipelines",
+       subtitle = "Each point is a different sample") +
+  theme_bw()
+```
+
+```{r}
+# Grouped by patient
+sum_counts_tb %>%
+  mutate(patient = gsub("-.*", "", sample)) %>%
+  ggplot(aes(x = source, y = value, color = pipeline)) +
+  geom_boxplot() +
+  facet_wrap(~ patient, nrow = 1) +
+  labs(title = "All reads and samples, grouped by patient") +
+  theme_bw() +
+  theme(axis.text.x = element_text(angle = 90, hjust = 1))
+```
+
+
 
 ## Compare pre-mRNA vs mRNA counts
 
 ```{r}
+dat_prem = counts(sce_prem)
+dat_mrna = counts(sce_mrna)
+
 # Normalize by library size
 dat_prem_normalized = prop.table(dat_prem, 2)
 dat_mrna_normalized = prop.table(dat_mrna, 2)
