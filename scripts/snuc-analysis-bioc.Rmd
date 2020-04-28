@@ -246,49 +246,6 @@ if(file.exists(umi_file_name)){
 }
 ```
 
-## Aggregate counts at gene level
-
-```{r eval = F}
-umi_file_name = here(paste0("salmon_quants_", dataset), paste0("sce_umi_", dataset, ".rds"))
-sce_umi = readRDS(umi_file_name)
-dat_umi = counts(sce_umi)
-
-# Counts by transcript
-dim(dat_umi) # 192459 x 1018 for mRNA, 186368 x 1090 for premRNA
-
-# Read in mrna data to look up genes
-se_mrna = readRDS(here(paste0("salmon_quants_mrna"), paste0("se_mrna.rds")))
-transcripts_mrna = rownames(assay(se_mrna, "counts"))
-row_ranges = rowRanges(se_mrna)
-genes = unlist(elementMetadata(row_ranges)$gene_id)
-mrna_gene_matching_dt = tibble(transcript = transcripts_mrna, genes)
-
-if(dataset == "transcripts"){
-  matched_index = match(rownames(dat_umi), mrna_gene_matching_dt$transcript)
-  dat_gene = rowsum(dat_umi, group = mrna_gene_matching_dt$genes[matched_index], reorder = FALSE)
-  dim(dat_gene) # 52142 x 1018 for mRNA
-} else if(dataset == "preandmrna") {
-  # Get genes for every premrna transcript
-  # 171987 in intersection of premRNA and mRNA transcripts
-  # 20472 mRNA transcripts did not have an premRNA counterpart
-  # 14381 premRNA transcripts did not have a mRNA counterpart
-  # Note some transcripts were dropped in the pseudo-UMI conversion step (when removing transcripts with zero counts). If including those,
-  # 221685 in intersection
-  # 4923 mRNA transcripts did not have a premRNA counterpart
-  # 303 premRNA transcripts did not have a mRNA counterpart
-  transcripts_premrna = rownames(dat_umi)
-  transcripts_premrna_converted = gsub(".{8}$", "" , transcripts_premrna)
-  matched_index = match(transcripts_premrna_converted, mrna_gene_matching_dt$transcript)
-  dat_gene = rowsum(dat_umi, group = mrna_gene_matching_dt$genes[matched_index], reorder = FALSE)
-  # Remove counts for unmatched transcripts
-  dat_gene = dat_gene[!is.na(rownames(dat_gene)), ]
-  dim(dat_gene) # 53006 x 1090
-}
-
-gene_file_name = here(paste0("salmon_quants_", dataset), paste0("sce_gene_", dataset, ".rds"))
-sce_gene = SingleCellExperiment(assays = list(counts = dat_gene))
-saveRDS(sce_gene, gene_file_name)
-```
 
 # Exploratory Plots
 
@@ -304,12 +261,12 @@ library(tictoc)
 
 Plot number of counts mapping to unspliced ("pre-mRNA") vs spliced ("mRNA") under different pipelines.
 
-```{r}
-sce_preandmrna = readRDS(here(paste0("salmon_quants_preandmrna"), "sce_preandmrna.rds"))
-sce_transcripts = readRDS(here(paste0("salmon_quants_transcripts"), "sce_transcripts.rds"))
+```{r eval = F}
+sce_preandmrna = readRDS(here("salmon_quants_preandmrna", "sce_preandmrna.rds"))
+sce_transcripts = readRDS(here("salmon_quants_transcripts", "sce_transcripts.rds"))
 ```
 
-```{r}
+```{r eval = F}
 # Counts matrix for preandmrna pipeline
 counts_preandmrna = counts(sce_preandmrna)
 dim(counts_preandmrna) # 423709 x 1152
@@ -325,7 +282,7 @@ sum_preandmrna_spliced = colSums(counts_preandmrna[-grep("unspliced", rownames(c
 sum_transcripts_spliced = colSums(counts_transcripts)
 ```
 
-```{r}
+```{r eval = F}
 # Create summary table
 sum_counts_tb = tibble(sample = colnames(counts_preandmrna),
                        preandmrna_unspliced = sum_preandmrna_unspliced,
@@ -346,14 +303,16 @@ sum_counts_tb %>%
   filter(source != "preandmrna_both") %>%
   ggplot(aes(x = source, y = value, color = pipeline)) +
   geom_boxplot() +
-  labs(title = "Number of reads mapped to spliced vs unspliced") +
+  labs(title = "Number of reads mapped to spliced vs unspliced",
+       y = "Number of reads") +
   theme_bw()
 
 sum_counts_tb %>%
   filter(source %in% c("preandmrna_both", "transcripts_spliced")) %>%
   ggplot(aes(x = source, y = value, color = pipeline)) +
   geom_boxplot() +
-  labs(title = "Number of reads mapped overall under different pipelines") +
+  labs(title = "Number of reads mapped overall under different pipelines",
+       y = "Number of reads") +
   theme_bw()
 ```
 
@@ -366,7 +325,7 @@ sum_counts_tb %>%
   geom_point(size = 0.5) +
   geom_abline(intercept = 0, slope = 1) +
   labs(title = "Number of reads mapped to spliced transcripts under different pipelines",
-       subtitle = "Each point is a different sample") +
+       subtitle = "Each point is a different sample (cell)") +
   theme_bw()
 
 # preandmrna_both vs transcripts_spliced
@@ -377,7 +336,7 @@ sum_counts_tb %>%
   geom_point(size = 0.5) +
   geom_abline(intercept = 0, slope = 1) +
   labs(title = "Number of reads mapped overall under different pipelines",
-       subtitle = "Each point is a different sample") +
+       subtitle = "Each point is a different sample (cell)") +
   theme_bw()
 ```
 
@@ -393,126 +352,151 @@ sum_counts_tb %>%
   theme(axis.text.x = element_text(angle = 90, hjust = 1))
 ```
 
+## MA plot
 
+### Aggregate counts at gene level
 
-## Compare pre-mRNA vs mRNA counts
-
-```{r}
-dat_prem = counts(sce_prem)
-dat_mrna = counts(sce_mrna)
-
-# Normalize by library size
-dat_prem_normalized = prop.table(dat_prem, 2)
-dat_mrna_normalized = prop.table(dat_mrna, 2)
+```{r eval = F}
+library(here)
+library(tidyverse)
+library(SingleCellExperiment)
+library(scattermore)
+library(tictoc)
 ```
 
-### Log-log counts
-
-```{r}
-dat_prem_rowmeans = tibble(genes = rownames(dat_prem_normalized),
-                           mean_prem = rowMeans(dat_prem_normalized))
-dat_mrna_rowmeans = tibble(genes = rownames(dat_mrna_normalized),
-                           mean_mrna = rowMeans(dat_mrna_normalized))
-dat_rowmeans = full_join(dat_prem_rowmeans, dat_mrna_rowmeans, by = "genes")
+```{r eval = F}
+sce_preandmrna = readRDS(here("salmon_quants_preandmrna", "sce_preandmrna.rds"))
+sce_transcripts = readRDS(here("salmon_quants_transcripts", "sce_transcripts.rds"))
 ```
 
-```{r}
-tic()
-dat_rowmeans %>%
-  ggplot(aes(x = log(mean_mrna),
-             y = log(mean_prem))) + 
-  geom_point(alpha = 0.1) +
-  geom_abline(intercept = 0, slope = 1, color = "red") +
-  labs(x = "Log(average gene expression with mRNA)",
-       y = "Log(average gene expression with pre-mRNA)") +
-  theme_bw()
-toc() # 2.5 sec
+```{r eval = F}
+# Counts matrix for preandmrna pipeline
+counts_preandmrna = counts(sce_preandmrna)
+dim(counts_preandmrna) # 423709 x 1152
 
-# Smoothscatter
-tic()
-smoothScatter(x = log(dat_rowmeans$mean_mrna),
-              y = log(dat_rowmeans$mean_prem),
-              xlab = "Log(average gene expression with mRNA)",
-              ylab = "Log(average gene expression with pre-mRNA)")
-toc() # 1 sec
-
-# Scattermoreplot version
-tic()
-d = dat_rowmeans %>%
-  mutate(log_mean_prem = log(mean_prem),
-         log_mean_mrna = log(mean_mrna)) %>%
-  select(log_mean_prem, log_mean_mrna)
-  
-d = d[complete.cases(d), ] %>% as.matrix()
-scattermoreplot(d,
-                main='Scattermore version')
-toc() # 0.5 sec
+# Counts matrix for transcripts pipeline
+counts_transcripts = counts(sce_transcripts)
+dim(counts_transcripts) # 226608 x 1152
 ```
 
-### MA plot
+```{r eval = F}
+# Sum over gene for preandmrna pipeline
+counts_bygene_preandmrna = cbind(counts_preandmrna, 
+                                  rowData(sce_preandmrna) %>%
+                                    as_tibble() %>%
+                                    select(gene_id, gene_type)) %>%
+  group_by(gene_id, gene_type) %>%
+  summarize_all(sum) %>%
+  ungroup()
 
-MA plot is a plot of log-intensity ratios (M) vs log-intensity averages (A)
+saveRDS(counts_bygene_preandmrna, here("salmon_quants_preandmrna", "counts_bygene_preandmrna.rds"))
+
+# Sum over gene for transcripts pipeline
+counts_bygene_transcripts = cbind(counts_transcripts, 
+                                  rowData(sce_transcripts) %>%
+                                    as_tibble() %>%
+                                    select(gene_id, gene_type)) %>%
+  group_by(gene_id, gene_type) %>%
+  summarize_all(sum) %>%
+  ungroup()
+
+saveRDS(counts_bygene_transcripts, here("salmon_quants_transcripts", "counts_bygene_transcripts.rds"))
+```
+
+### Plot
 
 ```{r}
-dat_rowmeans = dat_rowmeans %>%
-  mutate(m = log(mean_prem) - log(mean_mrna),
-         a = (log(mean_prem) + log(mean_mrna)/2))
+counts_bygene_preandmrna = readRDS(here("salmon_quants_preandmrna", "counts_bygene_preandmrna.rds"))
+dim(counts_bygene_preandmrna)
+counts_bygene_transcripts = readRDS(here("salmon_quants_transcripts", "counts_bygene_transcripts.rds"))
+dim(counts_bygene_transcripts)
+```
 
-# ggplot geom_point
-dat_rowmeans %>%
+Plot for one cell only
+
+```{r}
+# Bind columns
+counts_bygene_onecell_preandmrna = counts_bygene_preandmrna %>%
+  select(c("gene_id", "gene_type", "BT1179Nuc-P1-A01")) %>%
+  rename("BT1179Nuc-P1-A01-preandmrna" = "BT1179Nuc-P1-A01")
+
+counts_bygene_onecell_transcripts = counts_bygene_transcripts %>%
+  select(c("gene_id", "gene_type", "BT1179Nuc-P1-A01")) %>%
+  rename("BT1179Nuc-P1-A01-transcripts" = "BT1179Nuc-P1-A01")
+
+counts_bygene_onecell = counts_bygene_onecell_preandmrna %>%
+  inner_join(., counts_bygene_onecell_transcripts, by = c("gene_id", "gene_type"))
+
+# Table of most frequent gene types
+counts_bygene_onecell %>% 
+  group_by(gene_type) %>% summarize(sum = sum(`BT1179Nuc-P1-A01-preandmrna`)) %>% 
+  arrange(-sum)
+
+# Plot
+counts_bygene_onecell %>%
+  mutate(m = log(`BT1179Nuc-P1-A01-preandmrna`) - log(`BT1179Nuc-P1-A01-transcripts`),
+         a = (log(`BT1179Nuc-P1-A01-preandmrna`) + log(`BT1179Nuc-P1-A01-transcripts`)/2)) %>%
+  mutate(gene_type_color = ifelse(gene_type %in% c("protein_coding", "lncRNA",
+                                                   "transcribed_unprocessed_pseudogene"),
+                                  gene_type, "all_other_types")) %>%
   ggplot(aes(x = a,
              y = m)) + 
-  geom_point(alpha = 0.1) +
-  geom_smooth() +
+  #stat_density2d(aes(fill = ..density..^0.3), geom = "tile", contour = FALSE, n = 200) +
+  #scale_fill_continuous(low = "white", high = "#1C5E7E") + 
   geom_hline(yintercept = 0, color = "red") +
+  geom_smooth() +
+  geom_point(alpha = 0.3) +
+  facet_wrap(~ gene_type_color) +
   labs(x = "A",
        y = "M") +
   theme_bw()
+```
 
-# ggplot smoothscatter version
-dat_rowmeans %>%
+Plot for average across all cells
+
+```{r}
+# Bind columns
+counts_bygene_avg_preandmrna = counts_bygene_preandmrna %>%
+  mutate_at(vars(-c("gene_id", "gene_type")), ~(./sum(.))) %>% # normalize by library size
+  mutate(avg_preandmrna = rowMeans(counts_bygene_preandmrna %>% select(-c("gene_id", "gene_type")))) %>%
+  select(c("gene_id", "gene_type", "avg_preandmrna"))
+
+counts_bygene_avg_transcripts = counts_bygene_transcripts %>%
+  mutate_at(vars(-c("gene_id", "gene_type")), ~(./sum(.))) %>% # normalize by library size
+  mutate(avg_transcripts = rowMeans(counts_bygene_transcripts %>% select(-c("gene_id", "gene_type")))) %>%
+  select(c("gene_id", "gene_type", "avg_transcripts"))
+
+counts_bygene_avg = counts_bygene_avg_preandmrna %>%
+  inner_join(., counts_bygene_avg_transcripts, by = c("gene_id", "gene_type"))
+
+# Table of most frequent gene types
+counts_bygene_avg %>% 
+  group_by(gene_type) %>% summarize(sum = sum(avg_preandmrna)) %>% 
+  arrange(-sum)
+
+# Plot
+counts_bygene_avg %>%
+  mutate(m = log(`avg_preandmrna`) - log(`avg_transcripts`),
+         a = (log(`avg_preandmrna`) + log(`avg_transcripts`)/2)) %>%
+  mutate(gene_type_color = ifelse(gene_type %in% c("protein_coding", "lncRNA",
+                                                   "transcribed_unprocessed_pseudogene"),
+                                  gene_type, "all_other_types")) %>%
   ggplot(aes(x = a,
              y = m)) + 
-  stat_density2d(aes(fill = ..density..^0.3), geom = "tile", contour = FALSE, n = 200) +
-  scale_fill_continuous(low = "white", high = "#1C5E7E") + 
+  #stat_density2d(aes(fill = ..density..^0.3), geom = "tile", contour = FALSE, n = 200) +
+  #scale_fill_continuous(low = "white", high = "#1C5E7E") + 
   geom_hline(yintercept = 0, color = "red") +
   geom_smooth() +
+  geom_point(alpha = 0.01) +
+  facet_wrap(~ gene_type_color) +
   labs(x = "A",
        y = "M") +
   theme_bw()
 
 # smoothscatter version
-smoothScatter(x = dat_rowmeans$a, y = dat_rowmeans$m,
-              xlab = "A",
-              ylab = "M")
-```
-
-Plot for one cell only.
-
-```{r}
-dat_prem_subset = as_tibble(dat_prem_normalized[, 1:5]) %>%
-  rename_all(function(x) paste0(x, "_premrna")) %>%
-  mutate(genes = rownames(dat_prem_normalized))
-dat_mrna_subset = as_tibble(dat_mrna_normalized[, 1:5]) %>%
-  rename_all(function(x) paste0(x, "_mrna")) %>%
-  mutate(genes = rownames(dat_mrna_normalized))
-dat_subset = full_join(dat_prem_subset, dat_mrna_subset, by = "genes")
-```
-
-```{r}
-dat_subset %>%
-  mutate(m = log(`BT1179Nuc-P1-A01_premrna`) - log(`BT1179Nuc-P1-A01_mrna`),
-         a = (log(`BT1179Nuc-P1-A01_premrna`) + log(`BT1179Nuc-P1-A01_mrna`)/2)) %>%
-  ggplot(aes(x = a,
-             y = m)) + 
-  stat_density2d(aes(fill = ..density..^0.3), geom = "tile", contour = FALSE, n = 200) +
-  scale_fill_continuous(low = "white", high = "#1C5E7E") + 
-  geom_hline(yintercept = 0, color = "red") +
-  geom_smooth() +
-  geom_point(alpha = 0.1) +
-  labs(x = "A",
-       y = "M") +
-  theme_bw()
+# smoothScatter(x = dat_rowmeans$a, y = dat_rowmeans$m,
+#               xlab = "A",
+#               ylab = "M")
 ```
 
 ## Comparison to parametric distributions
