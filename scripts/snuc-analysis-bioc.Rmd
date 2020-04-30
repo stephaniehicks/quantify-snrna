@@ -156,7 +156,7 @@ sce_file_name = here(paste0("salmon_quants_", dataset), paste0("sce_", dataset, 
 saveRDS(sce, sce_file_name)
 ```
 
-# Quality Control
+# [Unrevised] Quality Control
 
 There are a couple of [QC metrics](https://osca.bioconductor.org/quality-control.html#choice-of-qc-metrics) to identify low-quality cells:
 
@@ -194,7 +194,7 @@ saveRDS(sce_filtered, filtered_file_name)
 
 Diagnostic plots: https://osca.bioconductor.org/quality-control.html#quality-control-plots 
 
-# Transform read counts
+# [Unrevised] Transform read counts
 
 ```{r eval = F}
 library(here)
@@ -296,7 +296,7 @@ sum_counts_tb = sum_counts_tb %>%
 saveRDS(sum_counts_tb, file = here("data", "sum_counts_tb.rds"))
 ```
 
-```{r}
+```{r, fig.width = 7, fig.height = 7}
 # All reads and samples
 sum_counts_tb = readRDS(here("data", "sum_counts_tb.rds"))
 sum_counts_tb %>%
@@ -316,27 +316,29 @@ sum_counts_tb %>%
   theme_bw()
 ```
 
-```{r}
+```{r, fig.width = 7, fig.height = 7}
 # preandmrna_spliced vs transcripts_spliced
 sum_counts_tb %>%
+  mutate(patient = gsub("-.*", "", sample)) %>%
   select(-pipeline) %>%
   pivot_wider(names_from = "source", values_from = "value") %>%
-  ggplot(aes(x = transcripts_spliced, y = preandmrna_spliced)) +
+  ggplot(aes(x = transcripts_spliced, y = preandmrna_spliced, color = patient)) +
   geom_point(size = 0.5) +
   geom_abline(intercept = 0, slope = 1) +
   labs(title = "Number of reads mapped to spliced transcripts under different pipelines",
-       subtitle = "Each point is a different sample (cell)") +
+       subtitle = "Each point is a different cell") +
   theme_bw()
 
 # preandmrna_both vs transcripts_spliced
 sum_counts_tb %>%
+  mutate(patient = gsub("-.*", "", sample)) %>%
   select(-pipeline) %>%
   pivot_wider(names_from = "source", values_from = "value") %>%
-  ggplot(aes(x = transcripts_spliced, y = preandmrna_both)) +
+  ggplot(aes(x = transcripts_spliced, y = preandmrna_both, color = patient)) +
   geom_point(size = 0.5) +
   geom_abline(intercept = 0, slope = 1) +
   labs(title = "Number of reads mapped overall under different pipelines",
-       subtitle = "Each point is a different sample (cell)") +
+       subtitle = "Each point is a different cell") +
   theme_bw()
 ```
 
@@ -418,19 +420,19 @@ Plot for one cell only
 # Bind columns
 counts_bygene_onecell_preandmrna = counts_bygene_preandmrna %>%
   select(c("gene_id", "gene_type", "BT1179Nuc-P1-A01")) %>%
-  rename("BT1179Nuc-P1-A01-preandmrna" = "BT1179Nuc-P1-A01")
+  dplyr::rename("BT1179Nuc-P1-A01-preandmrna" = "BT1179Nuc-P1-A01")
 
 counts_bygene_onecell_transcripts = counts_bygene_transcripts %>%
   select(c("gene_id", "gene_type", "BT1179Nuc-P1-A01")) %>%
-  rename("BT1179Nuc-P1-A01-transcripts" = "BT1179Nuc-P1-A01")
+  dplyr::rename("BT1179Nuc-P1-A01-transcripts" = "BT1179Nuc-P1-A01")
 
 counts_bygene_onecell = counts_bygene_onecell_preandmrna %>%
   inner_join(., counts_bygene_onecell_transcripts, by = c("gene_id", "gene_type"))
 
 # Table of most frequent gene types
 counts_bygene_onecell %>% 
-  group_by(gene_type) %>% summarize(sum = sum(`BT1179Nuc-P1-A01-preandmrna`)) %>% 
-  arrange(-sum)
+  group_by(gene_type) %>% summarize(num_reads_mapped = sum(`BT1179Nuc-P1-A01-preandmrna`)) %>% 
+  arrange(-num_reads_mapped)
 
 # Plot
 counts_bygene_onecell %>%
@@ -499,7 +501,7 @@ counts_bygene_avg %>%
 #               ylab = "M")
 ```
 
-## Comparison to parametric distributions
+## [Unrevised] Comparison to parametric distributions
 
 ### pre-mRNA
 
@@ -628,140 +630,100 @@ library(BiocSingular)
 # library(factoextra)
 library(tictoc)
 library(glmpca)
-source(here("scripts", "functions_genefilter.R"))
+# source(here("scripts", "functions_genefilter.R"))
 ```
 
-### pre-mRNA
+
+
+### preandmrna pipeline
 
 ```{r}
-sce = sce_prem
-dat = dat_prem
-```
+# Turn counts by gene into sce
+counts = counts_bygene_preandmrna %>% select(-c("gene_id", "gene_type")) %>% as.matrix()
+sce_bygene_preandmrna = SingleCellExperiment(assays = list(counts = counts),
+                                             rowData = counts_bygene_preandmrna %>% select(-c("gene_id", "gene_type")))
 
-```{r}
 # Normalize and take log
-clust = quickCluster(sce)
-table(clust)
-sce = computeSumFactors(sce, clusters = clust)
-sce = logNormCounts(sce)
-```
+clust = quickCluster(sce_bygene_preandmrna)
+sce_bygene_preandmrna = computeSumFactors(sce_bygene_preandmrna, clusters = clust)
+sce_bygene_preandmrna = logNormCounts(sce_bygene_preandmrna)
 
-```{r}
-# Filter out highly variant genes
-# filterHVG(sce)
-```
-
-
-```{r}
 set.seed(1)
 tic("approx PCA")
-sce = runPCA(sce, exprs_values = "logcounts", ntop = ncol(sce), BSPARAM = IrlbaParam())
-pc = list(x = reducedDim(sce, "PCA"))
+sce_bygene_preandmrna = runPCA(sce_bygene_preandmrna, exprs_values = "logcounts", ntop = ncol(sce_bygene_preandmrna), BSPARAM = IrlbaParam())
+pc_bygene_preandmrna = list(x = reducedDim(sce_bygene_preandmrna, "PCA"))
 toc()
 
-# set.seed(1)
-# Run random PCA (2 minutes)
-# tic("random PCA")
-# pc = runPCA(t(X), rank = 5, BSPARAM = RandomParam())
-# toc()
-
-# Run PCA with prcomp (~10 minutes)
-# X = t(X)
-# nonzero_var_cols = which(apply(X, 2, var) != 0) # Remove columns (transcripts) with zero variance
-# X = X[, nonzero_var_cols]
-# pc = prcomp(X, center = T, scale = F)
-# % variance explained by each PC
-# fviz_eig(pc)
-```
-
-```{r}
-tumor_labels = gsub("-.*$", "", colnames(sce))
-
 # Plot PC
-data.frame(PC1 = pc$x[,1], PC2 = pc$x[,2], color = tumor_labels) %>%
-  ggplot(aes(PC1, PC2, color = color)) +
+pc = pc_bygene_preandmrna
+tumor_labels = gsub("-.*$", "", colnames(sce_bygene_preandmrna))
+
+data.frame(PC1 = pc$x[,1], PC2 = pc$x[,2], patient = tumor_labels) %>%
+  ggplot(aes(PC1, PC2, color = patient)) +
   geom_point(alpha = 0.5) +
   theme_bw()
 
-data.frame(PC1 = pc$x[,1], PC3 = pc$x[,3], color = tumor_labels) %>%
-  ggplot(aes(PC1, PC3, color = color)) +
+data.frame(PC1 = pc$x[,1], PC3 = pc$x[,3], patient = tumor_labels) %>%
+  ggplot(aes(PC1, PC3, color = patient)) +
   geom_point(alpha = 0.5) +
   theme_bw()
 
-data.frame(PC2 = pc$x[,2], PC3 = pc$x[,3], color = tumor_labels) %>%
-  ggplot(aes(PC2, PC3, color = color)) +
+data.frame(PC2 = pc$x[,2], PC3 = pc$x[,3], patient = tumor_labels) %>%
+  ggplot(aes(PC2, PC3, color = patient)) +
   geom_point(alpha = 0.5) +
   theme_bw()
 
-data.frame(PC4 = pc$x[,4], PC5 = pc$x[,5], color = tumor_labels) %>%
-  ggplot(aes(PC4, PC5, color = color)) +
+data.frame(PC4 = pc$x[,4], PC5 = pc$x[,5], patient = tumor_labels) %>%
+  ggplot(aes(PC4, PC5, color = patient)) +
   geom_point(alpha = 0.5) +
   theme_bw()
 ```
 
-### mRNA
+### transcripts pipeline
 
 ```{r}
-sce = sce_mrna
-dat = dat_mrna
-```
+# Turn counts by gene into sce
+counts = counts_bygene_transcripts %>% select(-c("gene_id", "gene_type")) %>% as.matrix()
+counts = counts[, colSums(counts) != 0] # temporary quality control
+sce_bygene_transcripts = SingleCellExperiment(assays = list(counts = counts),
+                                              rowData = counts_bygene_transcripts %>% select(-c("gene_id", "gene_type")))
 
-```{r}
 # Normalize and take log
-clust = quickCluster(sce)
-table(clust)
-sce = computeSumFactors(sce, clusters = clust)
-sce = logNormCounts(sce)
-```
+clust = quickCluster(sce_bygene_transcripts)
+sce_bygene_transcripts = computeSumFactors(sce_bygene_transcripts, clusters = clust)
+sce_bygene_transcripts = logNormCounts(sce_bygene_transcripts)
 
-```{r}
 set.seed(1)
 tic("approx PCA")
-sce = runPCA(sce, exprs_values = "logcounts", BSPARAM = IrlbaParam())
-pc = list(x = reducedDim(sce, "PCA"))
+sce_bygene_transcripts = runPCA(sce_bygene_transcripts, exprs_values = "logcounts", ntop = ncol(sce_bygene_transcripts), BSPARAM = IrlbaParam())
+pc_bygene_transcripts = list(x = reducedDim(sce_bygene_transcripts, "PCA"))
 toc()
 
-# set.seed(1)
-# Run random PCA (2 minutes)
-# tic("random PCA")
-# pc = runPCA(t(X), rank = 5, BSPARAM = RandomParam())
-# toc()
-
-# Run PCA with prcomp (~10 minutes)
-# X = t(X)
-# nonzero_var_cols = which(apply(X, 2, var) != 0) # Remove columns (transcripts) with zero variance
-# X = X[, nonzero_var_cols]
-# pc = prcomp(X, center = T, scale = F)
-# % variance explained by each PC
-# fviz_eig(pc)
-```
-
-```{r}
-tumor_labels = gsub("-.*$", "", colnames(sce))
-
 # Plot PC
-data.frame(PC1 = pc$x[,1], PC2 = pc$x[,2], color = tumor_labels) %>%
-  ggplot(aes(PC1, PC2, color = color)) +
+tumor_labels = gsub("-.*$", "", colnames(sce_bygene_transcripts))
+pc = pc_bygene_transcripts
+data.frame(PC1 = pc$x[,1], PC2 = pc$x[,2], patient = tumor_labels) %>%
+  ggplot(aes(PC1, PC2, color = patient)) +
   geom_point(alpha = 0.5) +
   theme_bw()
 
-data.frame(PC1 = pc$x[,1], PC3 = pc$x[,3], color = tumor_labels) %>%
-  ggplot(aes(PC1, PC3, color = color)) +
+data.frame(PC1 = pc$x[,1], PC3 = pc$x[,3], patient = tumor_labels) %>%
+  ggplot(aes(PC1, PC3, color = patient)) +
   geom_point(alpha = 0.5) +
   theme_bw()
 
-data.frame(PC2 = pc$x[,2], PC3 = pc$x[,3], color = tumor_labels) %>%
-  ggplot(aes(PC2, PC3, color = color)) +
+data.frame(PC2 = pc$x[,2], PC3 = pc$x[,3], patient = tumor_labels) %>%
+  ggplot(aes(PC2, PC3, color = patient)) +
   geom_point(alpha = 0.5) +
   theme_bw()
 
-data.frame(PC4 = pc$x[,4], PC5 = pc$x[,5], color = tumor_labels) %>%
-  ggplot(aes(PC4, PC5, color = color)) +
+data.frame(PC4 = pc$x[,4], PC5 = pc$x[,5], patient = tumor_labels) %>%
+  ggplot(aes(PC4, PC5, color = patient)) +
   geom_point(alpha = 0.5) +
   theme_bw()
 ```
 
-## GLM-PCA
+## [Unrevised] GLM-PCA
 
 ### pre-mRNA
 
