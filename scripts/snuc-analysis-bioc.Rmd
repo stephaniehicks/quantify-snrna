@@ -322,7 +322,7 @@ sum_counts_tb %>%
   mutate(patient = gsub("-.*", "", sample)) %>%
   select(-pipeline) %>%
   pivot_wider(names_from = "source", values_from = "value") %>%
-  ggplot(aes(x = transcripts_spliced, y = preandmrna_spliced, color = patient)) +
+  ggplot(aes(x = log(transcripts_spliced), y = log(preandmrna_spliced), color = patient)) +
   geom_point(size = 0.5) +
   geom_abline(intercept = 0, slope = 1) +
   labs(title = "Number of reads mapped to spliced transcripts under different pipelines",
@@ -334,7 +334,7 @@ sum_counts_tb %>%
   mutate(patient = gsub("-.*", "", sample)) %>%
   select(-pipeline) %>%
   pivot_wider(names_from = "source", values_from = "value") %>%
-  ggplot(aes(x = transcripts_spliced, y = preandmrna_both, color = patient)) +
+  ggplot(aes(x = log(transcripts_spliced), y = log(preandmrna_both), color = patient)) +
   geom_point(size = 0.5) +
   geom_abline(intercept = 0, slope = 1) +
   labs(title = "Number of reads mapped overall under different pipelines",
@@ -657,7 +657,36 @@ toc()
 # Plot PC
 pc = pc_bygene_preandmrna
 tumor_labels = gsub("-.*$", "", colnames(sce_bygene_preandmrna))
+lib_counts = colSums(counts(sce_bygene_preandmrna))
+prop_zero = colMeans(!counts(sce_bygene_preandmrna))
 
+# By library counts
+data.frame(PC1 = pc$x[,1], PC2 = pc$x[,2], lib_counts = lib_counts^(1/2)) %>%
+  ggplot(aes(PC1, PC2, color = lib_counts)) +
+  scale_colour_gradientn(colours = terrain.colors(10)) +
+  geom_point(alpha = 0.5) +
+  theme_bw()
+
+data.frame(PC1 = pc$x[,1], PC3 = pc$x[,3], lib_counts = lib_counts^(1/2)) %>%
+  ggplot(aes(PC1, PC3, color = lib_counts)) +
+  scale_colour_gradientn(colours = terrain.colors(10)) +
+  geom_point(alpha = 0.5) +
+  theme_bw()
+
+# By proportion of zeroes (genes with no reads mapped)
+data.frame(PC1 = pc$x[,1], PC2 = pc$x[,2], prop_zero = prop_zero) %>%
+  ggplot(aes(PC1, PC2, color = prop_zero)) +
+  scale_colour_gradientn(colours = terrain.colors(10)) +
+  geom_point(alpha = 0.5) +
+  theme_bw()
+
+data.frame(PC1 = pc$x[,1], PC3 = pc$x[,3], prop_zero = prop_zero) %>%
+  ggplot(aes(PC1, PC3, color = prop_zero)) +
+  scale_colour_gradientn(colours = terrain.colors(10)) +
+  geom_point(alpha = 0.5) +
+  theme_bw()
+
+# By patient
 data.frame(PC1 = pc$x[,1], PC2 = pc$x[,2], patient = tumor_labels) %>%
   ggplot(aes(PC1, PC2, color = patient)) +
   geom_point(alpha = 0.5) +
@@ -665,16 +694,6 @@ data.frame(PC1 = pc$x[,1], PC2 = pc$x[,2], patient = tumor_labels) %>%
 
 data.frame(PC1 = pc$x[,1], PC3 = pc$x[,3], patient = tumor_labels) %>%
   ggplot(aes(PC1, PC3, color = patient)) +
-  geom_point(alpha = 0.5) +
-  theme_bw()
-
-data.frame(PC2 = pc$x[,2], PC3 = pc$x[,3], patient = tumor_labels) %>%
-  ggplot(aes(PC2, PC3, color = patient)) +
-  geom_point(alpha = 0.5) +
-  theme_bw()
-
-data.frame(PC4 = pc$x[,4], PC5 = pc$x[,5], patient = tumor_labels) %>%
-  ggplot(aes(PC4, PC5, color = patient)) +
   geom_point(alpha = 0.5) +
   theme_bw()
 ```
@@ -701,7 +720,38 @@ toc()
 
 # Plot PC
 tumor_labels = gsub("-.*$", "", colnames(sce_bygene_transcripts))
+lib_counts = colSums(counts(sce_bygene_transcripts))
+prop_zero = colMeans(!counts(sce_bygene_transcripts))
 pc = pc_bygene_transcripts
+
+
+# By library counts
+data.frame(PC1 = pc$x[,1], PC2 = pc$x[,2], lib_counts = lib_counts^(1/2)) %>%
+  ggplot(aes(PC1, PC2, color = lib_counts)) +
+  scale_colour_gradientn(colours = terrain.colors(10)) +
+  geom_point(alpha = 0.5) +
+  theme_bw()
+
+data.frame(PC1 = pc$x[,1], PC3 = pc$x[,3], lib_counts = lib_counts^(1/2)) %>%
+  ggplot(aes(PC1, PC3, color = lib_counts)) +
+  scale_colour_gradientn(colours = terrain.colors(10)) +
+  geom_point(alpha = 0.5) +
+  theme_bw()
+
+# By proportion of zeroes (genes with no reads mapped)
+data.frame(PC1 = pc$x[,1], PC2 = pc$x[,2], prop_zero = prop_zero) %>%
+  ggplot(aes(PC1, PC2, color = prop_zero)) +
+  scale_colour_gradientn(colours = terrain.colors(10)) +
+  geom_point(alpha = 0.5) +
+  theme_bw()
+
+data.frame(PC1 = pc$x[,1], PC3 = pc$x[,3], prop_zero = prop_zero) %>%
+  ggplot(aes(PC1, PC3, color = prop_zero)) +
+  scale_colour_gradientn(colours = terrain.colors(10)) +
+  geom_point(alpha = 0.5) +
+  theme_bw()
+
+# By patient
 data.frame(PC1 = pc$x[,1], PC2 = pc$x[,2], patient = tumor_labels) %>%
   ggplot(aes(PC1, PC2, color = patient)) +
   geom_point(alpha = 0.5) +
@@ -709,16 +759,6 @@ data.frame(PC1 = pc$x[,1], PC2 = pc$x[,2], patient = tumor_labels) %>%
 
 data.frame(PC1 = pc$x[,1], PC3 = pc$x[,3], patient = tumor_labels) %>%
   ggplot(aes(PC1, PC3, color = patient)) +
-  geom_point(alpha = 0.5) +
-  theme_bw()
-
-data.frame(PC2 = pc$x[,2], PC3 = pc$x[,3], patient = tumor_labels) %>%
-  ggplot(aes(PC2, PC3, color = patient)) +
-  geom_point(alpha = 0.5) +
-  theme_bw()
-
-data.frame(PC4 = pc$x[,4], PC5 = pc$x[,5], patient = tumor_labels) %>%
-  ggplot(aes(PC4, PC5, color = patient)) +
   geom_point(alpha = 0.5) +
   theme_bw()
 ```
