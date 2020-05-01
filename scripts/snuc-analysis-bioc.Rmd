@@ -621,7 +621,7 @@ prob_out_mrna$plot +
   labs(title = "mRNA")
 ```
 
-## PCA
+## PCA & Clustering
 
 ```{r}
 library(scran)
@@ -633,13 +633,15 @@ library(glmpca)
 # source(here("scripts", "functions_genefilter.R"))
 ```
 
-
-
 ### preandmrna pipeline
+
+#### BT1179Nuc 
+
+Doing PCA for the cells from one patient only.
 
 ```{r}
 # Turn counts by gene into sce
-counts = counts_bygene_preandmrna %>% select(-c("gene_id", "gene_type")) %>% as.matrix()
+counts = counts_bygene_preandmrna %>% select(starts_with("BT1179Nuc")) %>% as.matrix()
 sce_bygene_preandmrna = SingleCellExperiment(assays = list(counts = counts),
                                              rowData = counts_bygene_preandmrna %>% select(-c("gene_id", "gene_type")))
 
@@ -657,31 +659,31 @@ toc()
 # Plot PC
 pc = pc_bygene_preandmrna
 tumor_labels = gsub("-.*$", "", colnames(sce_bygene_preandmrna))
-lib_counts = colSums(counts(sce_bygene_preandmrna))
-prop_zero = colMeans(!counts(sce_bygene_preandmrna))
+lib_size = colSums(counts(sce_bygene_preandmrna))
+prop_mapped = 1 - colMeans(!counts(sce_bygene_preandmrna))
 
 # By library counts
-data.frame(PC1 = pc$x[,1], PC2 = pc$x[,2], lib_counts = lib_counts^(1/2)) %>%
-  ggplot(aes(PC1, PC2, color = lib_counts)) +
-  scale_colour_gradientn(colours = terrain.colors(10)) +
+data.frame(PC1 = pc$x[,1], PC2 = pc$x[,2], lib_size = lib_size) %>%
+  ggplot(aes(PC1, PC2, color = lib_size)) +
+  scale_colour_gradientn(colours = terrain.colors(10), trans = "sqrt") +
   geom_point(alpha = 0.5) +
   theme_bw()
 
-data.frame(PC1 = pc$x[,1], PC3 = pc$x[,3], lib_counts = lib_counts^(1/2)) %>%
-  ggplot(aes(PC1, PC3, color = lib_counts)) +
-  scale_colour_gradientn(colours = terrain.colors(10)) +
+data.frame(PC1 = pc$x[,1], PC3 = pc$x[,3], lib_size = lib_size) %>%
+  ggplot(aes(PC1, PC3, color = lib_size)) +
+  scale_colour_gradientn(colours = terrain.colors(10), trans = "sqrt") +
   geom_point(alpha = 0.5) +
   theme_bw()
 
 # By proportion of zeroes (genes with no reads mapped)
-data.frame(PC1 = pc$x[,1], PC2 = pc$x[,2], prop_zero = prop_zero) %>%
-  ggplot(aes(PC1, PC2, color = prop_zero)) +
+data.frame(PC1 = pc$x[,1], PC2 = pc$x[,2], prop_mapped = prop_mapped) %>%
+  ggplot(aes(PC1, PC2, color = prop_mapped)) +
   scale_colour_gradientn(colours = terrain.colors(10)) +
   geom_point(alpha = 0.5) +
   theme_bw()
 
-data.frame(PC1 = pc$x[,1], PC3 = pc$x[,3], prop_zero = prop_zero) %>%
-  ggplot(aes(PC1, PC3, color = prop_zero)) +
+data.frame(PC1 = pc$x[,1], PC3 = pc$x[,3], prop_mapped = prop_mapped) %>%
+  ggplot(aes(PC1, PC3, color = prop_mapped)) +
   scale_colour_gradientn(colours = terrain.colors(10)) +
   geom_point(alpha = 0.5) +
   theme_bw()
@@ -698,11 +700,24 @@ data.frame(PC1 = pc$x[,1], PC3 = pc$x[,3], patient = tumor_labels) %>%
   theme_bw()
 ```
 
+
+```{r, fig.height = 5, fig.width = 5}
+# K-means clustering
+set.seed(1)
+clust.kmeans <- kmeans(reducedDim(sce_bygene_preandmrna, "PCA"), centers = 5)
+
+colLabels(sce_bygene_preandmrna) <- factor(clust.kmeans$cluster)
+plotReducedDim(sce_bygene_preandmrna, "PCA", colour_by="label")
+```
+
+
 ### transcripts pipeline
+
+#### BT1179Nuc
 
 ```{r}
 # Turn counts by gene into sce
-counts = counts_bygene_transcripts %>% select(-c("gene_id", "gene_type")) %>% as.matrix()
+counts = counts_bygene_transcripts %>% select(starts_with("BT1179Nuc")) %>% as.matrix()
 counts = counts[, colSums(counts) != 0] # temporary quality control
 sce_bygene_transcripts = SingleCellExperiment(assays = list(counts = counts),
                                               rowData = counts_bygene_transcripts %>% select(-c("gene_id", "gene_type")))
@@ -719,34 +734,33 @@ pc_bygene_transcripts = list(x = reducedDim(sce_bygene_transcripts, "PCA"))
 toc()
 
 # Plot PC
-tumor_labels = gsub("-.*$", "", colnames(sce_bygene_transcripts))
-lib_counts = colSums(counts(sce_bygene_transcripts))
-prop_zero = colMeans(!counts(sce_bygene_transcripts))
 pc = pc_bygene_transcripts
-
+tumor_labels = gsub("-.*$", "", colnames(sce_bygene_transcripts))
+lib_size = colSums(counts(sce_bygene_transcripts))
+prop_mapped = 1 - colMeans(!counts(sce_bygene_transcripts))
 
 # By library counts
-data.frame(PC1 = pc$x[,1], PC2 = pc$x[,2], lib_counts = lib_counts^(1/2)) %>%
-  ggplot(aes(PC1, PC2, color = lib_counts)) +
-  scale_colour_gradientn(colours = terrain.colors(10)) +
+data.frame(PC1 = pc$x[,1], PC2 = pc$x[,2], lib_size = lib_size) %>%
+  ggplot(aes(PC1, PC2, color = lib_size)) +
+  scale_colour_gradientn(colours = terrain.colors(10), trans = "sqrt") +
   geom_point(alpha = 0.5) +
   theme_bw()
 
-data.frame(PC1 = pc$x[,1], PC3 = pc$x[,3], lib_counts = lib_counts^(1/2)) %>%
-  ggplot(aes(PC1, PC3, color = lib_counts)) +
-  scale_colour_gradientn(colours = terrain.colors(10)) +
+data.frame(PC1 = pc$x[,1], PC3 = pc$x[,3], lib_size = lib_size) %>%
+  ggplot(aes(PC1, PC3, color = lib_size)) +
+  scale_colour_gradientn(colours = terrain.colors(10), trans = "sqrt") +
   geom_point(alpha = 0.5) +
   theme_bw()
 
 # By proportion of zeroes (genes with no reads mapped)
-data.frame(PC1 = pc$x[,1], PC2 = pc$x[,2], prop_zero = prop_zero) %>%
-  ggplot(aes(PC1, PC2, color = prop_zero)) +
+data.frame(PC1 = pc$x[,1], PC2 = pc$x[,2], prop_mapped = prop_mapped) %>%
+  ggplot(aes(PC1, PC2, color = prop_mapped)) +
   scale_colour_gradientn(colours = terrain.colors(10)) +
   geom_point(alpha = 0.5) +
   theme_bw()
 
-data.frame(PC1 = pc$x[,1], PC3 = pc$x[,3], prop_zero = prop_zero) %>%
-  ggplot(aes(PC1, PC3, color = prop_zero)) +
+data.frame(PC1 = pc$x[,1], PC3 = pc$x[,3], prop_mapped = prop_mapped) %>%
+  ggplot(aes(PC1, PC3, color = prop_mapped)) +
   scale_colour_gradientn(colours = terrain.colors(10)) +
   geom_point(alpha = 0.5) +
   theme_bw()
@@ -762,6 +776,16 @@ data.frame(PC1 = pc$x[,1], PC3 = pc$x[,3], patient = tumor_labels) %>%
   geom_point(alpha = 0.5) +
   theme_bw()
 ```
+
+```{r, fig.height = 5, fig.width = 5}
+# K-means clustering
+set.seed(1)
+clust.kmeans <- kmeans(reducedDim(sce_bygene_transcripts, "PCA"), centers = 5)
+
+colLabels(sce_bygene_transcripts) <- factor(clust.kmeans$cluster)
+plotReducedDim(sce_bygene_transcripts, "PCA", colour_by="label")
+```
+
 
 ## [Unrevised] GLM-PCA
 
@@ -803,3 +827,10 @@ data.frame(PC2 = glmpc$factors[,2], PC3 = glmpc$factors[,3], color = tumor_label
 ```
 
 ## Clustering
+
+https://osca.bioconductor.org/clustering.html#k-means-clustering
+
+```{r}
+
+```
+
