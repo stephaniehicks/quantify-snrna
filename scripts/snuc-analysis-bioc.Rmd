@@ -714,7 +714,7 @@ data.frame(PC1 = pc$x[,1], PC3 = pc$x[,3], patient = tumor_labels) %>%
 ```
 
 
-```{r, fig.height = 5, fig.width = 5}
+```{r, fig.height = 5, fig.width = 5, eval = F}
 # K-means clustering
 set.seed(1)
 
@@ -728,6 +728,15 @@ plot(sse)
 
 clust.kmeans <- kmeans(reducedDim(sce_bygene_preandmrna, "PCA"), centers = 6)
 colLabels(sce_bygene_preandmrna) <- factor(clust.kmeans$cluster)
+plotReducedDim(sce_bygene_preandmrna, "PCA", colour_by="label")
+```
+
+```{r, fig.height = 5, fig.width = 5}
+# Graph-based clustering
+g <- buildSNNGraph(sce_bygene_preandmrna, k=10, use.dimred = 'PCA')
+clust <- igraph::cluster_walktrap(g)$membership
+
+colLabels(sce_bygene_preandmrna) <- factor(clust)
 plotReducedDim(sce_bygene_preandmrna, "PCA", colour_by="label")
 ```
 
@@ -814,6 +823,24 @@ plot(sse)
 clust.kmeans <- kmeans(reducedDim(sce_bygene_transcripts, "PCA"), centers = 6)
 colLabels(sce_bygene_transcripts) <- factor(clust.kmeans$cluster)
 plotReducedDim(sce_bygene_transcripts, "PCA", colour_by="label")
+```
+
+```{r, fig.height = 5, fig.width = 5, eval = F}
+# Graph-based clustering
+g <- buildSNNGraph(sce_bygene_transcripts, k=10, use.dimred = 'PCA')
+clust <- igraph::cluster_walktrap(g)$membership
+
+colLabels(sce_bygene_transcripts) <- factor(clust)
+plotReducedDim(sce_bygene_transcripts, "PCA", colour_by="label")
+```
+
+#### Compare clusters to preandmrna pipeline
+
+```{r}
+clusters_tb = tibble(name = rownames(colData(sce_bygene_preandmrna)),
+       preandmrna_cluster = colData(sce_bygene_preandmrna)$label,
+       transcripts_cluster = colData(sce_bygene_transcripts)$label)
+xtabs(~preandmrna_cluster + transcripts_cluster, data = clusters_tb)
 ```
 
 
