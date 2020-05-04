@@ -682,8 +682,8 @@ data.frame(PC1 = pc$x[,1], PC2 = pc$x[,2], lib_size = lib_size) %>%
   geom_point(alpha = 0.5) +
   theme_bw()
 
-data.frame(PC1 = pc$x[,1], PC3 = pc$x[,3], lib_size = lib_size) %>%
-  ggplot(aes(PC1, PC3, color = lib_size)) +
+data.frame(PC2 = pc$x[,2], PC3 = pc$x[,3], lib_size = lib_size) %>%
+  ggplot(aes(PC2, PC3, color = lib_size)) +
   scale_colour_gradientn(colours = terrain.colors(10), trans = "sqrt") +
   geom_point(alpha = 0.5) +
   theme_bw()
@@ -695,8 +695,8 @@ data.frame(PC1 = pc$x[,1], PC2 = pc$x[,2], prop_mapped = prop_mapped) %>%
   geom_point(alpha = 0.5) +
   theme_bw()
 
-data.frame(PC1 = pc$x[,1], PC3 = pc$x[,3], prop_mapped = prop_mapped) %>%
-  ggplot(aes(PC1, PC3, color = prop_mapped)) +
+data.frame(PC2 = pc$x[,2], PC3 = pc$x[,3], prop_mapped = prop_mapped) %>%
+  ggplot(aes(PC2, PC3, color = prop_mapped)) +
   scale_colour_gradientn(colours = terrain.colors(10)) +
   geom_point(alpha = 0.5) +
   theme_bw()
@@ -717,8 +717,16 @@ data.frame(PC1 = pc$x[,1], PC3 = pc$x[,3], patient = tumor_labels) %>%
 ```{r, fig.height = 5, fig.width = 5}
 # K-means clustering
 set.seed(1)
-clust.kmeans <- kmeans(reducedDim(sce_bygene_preandmrna, "PCA"), centers = 5)
 
+# Elbow plot with SSE
+sse = c()
+for(k in 1:10){
+  clust.kmeans <- kmeans(reducedDim(sce_bygene_preandmrna, "PCA"), centers = k)
+  sse = c(sse, clust.kmeans$tot.withinss)
+}
+plot(sse)
+
+clust.kmeans <- kmeans(reducedDim(sce_bygene_preandmrna, "PCA"), centers = 6)
 colLabels(sce_bygene_preandmrna) <- factor(clust.kmeans$cluster)
 plotReducedDim(sce_bygene_preandmrna, "PCA", colour_by="label")
 ```
@@ -759,8 +767,8 @@ data.frame(PC1 = pc$x[,1], PC2 = pc$x[,2], lib_size = lib_size) %>%
   geom_point(alpha = 0.5) +
   theme_bw()
 
-data.frame(PC1 = pc$x[,1], PC3 = pc$x[,3], lib_size = lib_size) %>%
-  ggplot(aes(PC1, PC3, color = lib_size)) +
+data.frame(PC2 = pc$x[,2], PC3 = pc$x[,3], lib_size = lib_size) %>%
+  ggplot(aes(PC2, PC3, color = lib_size)) +
   scale_colour_gradientn(colours = terrain.colors(10), trans = "sqrt") +
   geom_point(alpha = 0.5) +
   theme_bw()
@@ -772,8 +780,8 @@ data.frame(PC1 = pc$x[,1], PC2 = pc$x[,2], prop_mapped = prop_mapped) %>%
   geom_point(alpha = 0.5) +
   theme_bw()
 
-data.frame(PC1 = pc$x[,1], PC3 = pc$x[,3], prop_mapped = prop_mapped) %>%
-  ggplot(aes(PC1, PC3, color = prop_mapped)) +
+data.frame(PC2 = pc$x[,2], PC3 = pc$x[,3], prop_mapped = prop_mapped) %>%
+  ggplot(aes(PC2, PC3, color = prop_mapped)) +
   scale_colour_gradientn(colours = terrain.colors(10)) +
   geom_point(alpha = 0.5) +
   theme_bw()
@@ -793,8 +801,17 @@ data.frame(PC1 = pc$x[,1], PC3 = pc$x[,3], patient = tumor_labels) %>%
 ```{r, fig.height = 5, fig.width = 5}
 # K-means clustering
 set.seed(1)
-clust.kmeans <- kmeans(reducedDim(sce_bygene_transcripts, "PCA"), centers = 5)
 
+# Elbow plot with SSE
+sse = c()
+for(k in 1:10){
+  clust.kmeans <- kmeans(reducedDim(sce_bygene_transcripts, "PCA"), centers = k)
+  sse = c(sse, clust.kmeans$tot.withinss)
+}
+plot(sse)
+
+# Plot k-means
+clust.kmeans <- kmeans(reducedDim(sce_bygene_transcripts, "PCA"), centers = 6)
 colLabels(sce_bygene_transcripts) <- factor(clust.kmeans$cluster)
 plotReducedDim(sce_bygene_transcripts, "PCA", colour_by="label")
 ```
