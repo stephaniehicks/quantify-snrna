@@ -299,18 +299,31 @@ saveRDS(sum_counts_tb, file = here("data", "sum_counts_tb.rds"))
 ```{r, fig.width = 7, fig.height = 7}
 # All reads and samples
 sum_counts_tb = readRDS(here("data", "sum_counts_tb.rds"))
-sum_counts_tb %>%
-  filter(source != "preandmrna_both") %>%
-  ggplot(aes(x = source, y = value, color = pipeline)) +
-  geom_boxplot() +
+sum_counts_1_tb = sum_counts_tb %>%
+  filter(source != "preandmrna_both")
+sum_counts_1_tb_medians = sum_counts_1_tb %>%
+  group_by(source) %>%
+  summarize(medians = median(value))
+
+sum_counts_1_tb %>%
+  ggplot(aes(x = source, y = value)) +
+  geom_boxplot(aes(color = pipeline)) +
+  geom_text(data = sum_counts_1_tb_medians, aes(x = source, y = medians, label = round(medians)), 
+              position = position_dodge(width = 0.8), size = 3, vjust = -0.5) +
   labs(title = "Number of reads mapped to spliced vs unspliced",
        y = "Number of reads") +
   theme_bw()
 
-sum_counts_tb %>%
-  filter(source %in% c("preandmrna_both", "transcripts_spliced")) %>%
-  ggplot(aes(x = source, y = value, color = pipeline)) +
-  geom_boxplot() +
+sum_counts_2_tb = sum_counts_tb %>%
+  filter(source %in% c("preandmrna_both", "transcripts_spliced"))
+sum_counts_2_tb_medians = sum_counts_2_tb %>%
+  group_by(source) %>%
+  summarize(medians = median(value))
+sum_counts_2_tb %>%
+  ggplot(aes(x = source, y = value)) +
+  geom_boxplot(aes(color = pipeline)) +
+  geom_text(data = sum_counts_2_tb_medians, aes(x = source, y = medians, label = round(medians)), 
+              position = position_dodge(width = 0.8), size = 3, vjust = -0.5) +
   labs(title = "Number of reads mapped overall under different pipelines",
        y = "Number of reads") +
   theme_bw()
