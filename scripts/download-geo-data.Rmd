@@ -1,0 +1,51 @@
+---
+title: "download data from GEO"
+author: "Albert Kuo"
+date: "5/22/2020"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+# Packages
+library(here)
+# BiocManager::install("GEOquery")
+library(GEOquery)
+library(tidyverse)
+```
+
+# Download data
+
+Information about the paper whose data we are downloading:
+
+* https://www.nature.com/articles/s41587-020-0465-8
+* Systematic comparison of single-cell and single-nucleus RNA-sequencing methods
+* Ding	2020
+* Mouse cortex	~7000?
+* UMIs and reads
+* RNA-seq data generated in this project are available from the Gene Expression Omnibus with accession number **GSE132044** and the Single Cell Portal with accession numbers SCP424, SCP425 and SCP426. https://singlecell.broadinstitute.org/single_cell/study/SCP425/single-cell-comparison-cortex-data#study-summary
+
+
+```{r}
+gse <- GEOquery::getGEO("GSE132044")
+sapply(gse, dim) # Number of rows per entry
+
+gse2 <- gse[[2]]
+pdata2 <- Biobase::pData(gse2) # Get phenotype table
+
+pdata2 %>%
+  select(title, organism_ch1, source_name_ch1, description, description.1, starts_with("characteristics"))
+table(pdata2$description)
+table(pdata2$source_name_ch1)
+table(pdata2$organism_ch1)
+table(pdata2$characteristics_ch1.3)
+```
+
+1. human PBMC, scRNA-seq
+2. mouse cortex, scRNA-seq (my guess is that this is a mislabeling, it should be single-nucleus)
+3. human cell line and PBMC, bulk RNA-seq
+4. mouse cell line and cortex, bulk RNA-seq
+5. mixture of human and murine cell line, scRNA-seq
