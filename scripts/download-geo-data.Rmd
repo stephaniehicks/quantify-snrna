@@ -37,11 +37,15 @@ gse2 <- gse[[2]]
 pdata2 <- Biobase::pData(gse2) # Get phenotype table
 
 pdata2 %>%
-  select(title, organism_ch1, source_name_ch1, description, description.1, starts_with("characteristics"))
+  select(title, organism_ch1, source_name_ch1, description, description.1, starts_with("characteristics")) %>% 
+  head(n=6)
 table(pdata2$description)
 table(pdata2$source_name_ch1)
 table(pdata2$organism_ch1)
 table(pdata2$characteristics_ch1.3)
+
+
+pdata2$Experiment <- sapply(stringr::str_split(pdata2$relation.1, "="), tail, 1)
 ```
 
 1. human PBMC, scRNA-seq
@@ -49,3 +53,79 @@ table(pdata2$characteristics_ch1.3)
 3. human cell line and PBMC, bulk RNA-seq
 4. mouse cell line and cortex, bulk RNA-seq
 5. mixture of human and murine cell line, scRNA-seq
+
+
+#### To download the `SRR` files
+
+Go here: https://www.ncbi.nlm.nih.gov/bioproject/PRJNA545730. 
+Then click on `SRA Experiments`. Click `Send to`. Choose `File`. 
+Change Format to `RunInfo`. Click `Create File`. 
+
+This will download a file called `SraRunInfo.csv`. Read this file in. 
+
+```{r}
+sra <- readr::read_csv(here("files", "SraRunInfo.csv"))
+tmp <- left_join(pdata2, sra, by = "Experiment")
+readr::write_csv(tmp$Run, path = )
+write.table(tmp$Run, file = here("files", "SRR_files.txt"), 
+            quote= FALSE,row.names = FALSE, col.names = FALSE)
+```
+
+#### To install the SRA tool kit
+
+Two relevant pages to install SRA toolkit
+
+1. https://www.ncbi.nlm.nih.gov/sra/docs/sradownload/
+2. https://ncbi.github.io/sra-tools/install_config.html
+
+The second one is relevant on where you want the data downloaded as a default. 
+
+```{bash}
+cd src 
+wget "http://ftp-trace.ncbi.nlm.nih.gov/sra/sdk/current/sratoolkit.current-centos_linux64.tar.gz"
+tar -xzf sratoolkit.current-centos_linux64.tar.gz
+```
+
+
+#### Download the `.sra` files
+
+Following the 2nd link, I changed default location to download data to be at 
+`/fastscratch/myscratch/shicks1`. 
+
+```{bash}
+cd /fastscratch/myscratch/shicks1
+prefetch SRR9167437
+prefetch SRX5943586
+# or 
+prefetch --option-file SRR_files.txt
+```
+
+where `SRR_files.txt` is defined above or the first few lines look like this: 
+
+SRR9169228
+SRR9169229
+SRR9169230
+SRR9169231
+
+
+#### Extracting `.fastq` files
+
+Finally, the the `fasterq-dump` function converts the prefetched `.sra` files
+from compressed SRA format to fastq
+
+```{bash}
+cd sra
+fasterq-dump --split-files SRR9167437.sra
+```
+
+note you can also use the the gnu command `parallel` to parallelize this 
+process. We specify the number of threads to send the individual 
+commands to using the parameter `-j` and here we specify 25 threads. 
+
+**Note:** you have to ask for these many cores with a `.sh` script. 
+
+```{bash}
+cat SRR_files.txt | parallel -j 25 fasterq-dump {}.sra 
+```
+
+
