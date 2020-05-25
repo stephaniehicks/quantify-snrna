@@ -65,7 +65,7 @@ This will download a file called `SraRunInfo.csv`. Read this file in.
 
 ```{r}
 sra <- readr::read_csv(here("files", "SraRunInfo.csv"))
-tmp <- left_join(pdata2, sra, by = "Experiment")
+tmp <- left_join(pdata2, sra, by = "Experiment") # Only the second entry (mouse cortex)
 readr::write_csv(tmp$Run, path = )
 write.table(tmp$Run, file = here("files", "SRR_files.txt"), 
             quote= FALSE,row.names = FALSE, col.names = FALSE)
@@ -88,6 +88,20 @@ tar -xzf sratoolkit.current-centos_linux64.tar.gz
 
 You will need to add the Toolkit functions to your PATH variable (https://github.com/ncbi/sra-tools/wiki/02.-Installing-SRA-Toolkit). This can be done by adding ~/.../sratoolkit.2.10.6-centos_linux64/bin to the PATH variable in ~/.bash_profile. Check that it worked with `which fastq-dump`.
 
+To test that the toolkit is working:
+
+```{bash}
+prefetch SRR390728 
+fastq-dump --stdout -X 2 SRR390728 # Note: They only included this line in the documentation, but it appears necessary to prefetch first
+```
+
+In theory, you can skip prefetch and use fasterq-dump by omitting the file extension .sra, but this does not work for their example SRR390728 for some reason. However, it works for the example SRR390728.
+
+```{bash}
+fasterq-dump --split-files SRR390728 
+```
+
+
 #### Download the `.sra` files
 
 Following the 2nd link, I changed default location to download data to be at 
@@ -95,8 +109,7 @@ Following the 2nd link, I changed default location to download data to be at
 
 ```{bash}
 cd /fastscratch/myscratch/shicks1
-prefetch SRR9167437
-prefetch SRX5943586
+prefetch SRR9169228
 # or 
 prefetch --option-file SRR_files.txt
 ```
