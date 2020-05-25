@@ -76,7 +76,7 @@ write.table(tmp$Run, file = here("files", "SRR_files.txt"),
 Two relevant pages to install SRA toolkit
 
 1. https://www.ncbi.nlm.nih.gov/sra/docs/sradownload/
-2. https://ncbi.github.io/sra-tools/install_config.html
+2. https://github.com/ncbi/sra-tools/wiki/05.-Toolkit-Configuration (old version is https://ncbi.github.io/sra-tools/install_config.html )
 
 The second one is relevant on where you want the data downloaded as a default. 
 
@@ -86,6 +86,7 @@ wget "http://ftp-trace.ncbi.nlm.nih.gov/sra/sdk/current/sratoolkit.current-cento
 tar -xzf sratoolkit.current-centos_linux64.tar.gz
 ```
 
+You will need to add the Toolkit functions to your PATH variable (https://github.com/ncbi/sra-tools/wiki/02.-Installing-SRA-Toolkit). This can be done by adding ~/.../sratoolkit.2.10.6-centos_linux64/bin to the PATH variable in ~/.bash_profile. Check that it worked with `which fastq-dump`.
 
 #### Download the `.sra` files
 
