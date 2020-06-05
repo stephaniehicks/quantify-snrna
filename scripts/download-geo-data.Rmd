@@ -93,7 +93,7 @@ prefetch SRR390728
 fastq-dump --stdout -X 2 SRR390728 # Note: They only included this line in the documentation, but it appears necessary to prefetch first
 ```
 
-In theory, you can skip prefetch and use fasterq-dump by omitting the file extension .sra, but this does not work for their example SRR390728 for some reason. However, it works for the example SRR390728.
+In theory, you can skip prefetch and use fasterq-dump by omitting the file extension .sra, but this does not work for their example SRR390728 for some reason.
 
 ```{bash}
 fasterq-dump --split-files SRR390728 
@@ -125,6 +125,10 @@ SRR9169231
 
 Finally, the the `fasterq-dump` function converts the prefetched `.sra` files
 from compressed SRA format to fastq.
+
+References:
+1. https://github.com/ncbi/sra-tools/wiki/HowTo:-fasterq-dump
+2. https://trace.ncbi.nlm.nih.gov/Traces/sra/sra.cgi?view=toolkit_doc&f=fastq-dump
 
 Run the sh script `convert-geo-data.sh`.
 
