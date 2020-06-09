@@ -112,6 +112,24 @@ if(!file.exists(here("salmon_files", "gencode.v32.annotation.gtf.gz"))){
                 destfile = here("salmon_files", "gencode.v32.annotation.gtf.gz"), 
                 method = "wget")
 }
+
+
+## Mouse cortex equivalents
+# download GENCODE primary assembly fasta file
+if(!file.exists(here("salmon_files", "GRCm38.primary_assembly.genome.fa.gz"))){
+  tar_gz_file <- "ftp://ftp.ebi.ac.uk/pub/databases/gencode/Gencode_mouse/release_M25/GRCm38.primary_assembly.genome.fa.gz"
+  download.file(tar_gz_file, 
+                destfile = here("salmon_files", "GRCm38.primary_assembly.genome.fa.gz"), 
+                method = "wget")
+}
+
+# download GENCODE gtf file
+if(!file.exists(here("salmon_files", "gencode.vM25.annotation.gtf.gz"))){
+  tar_gz_file <- "ftp://ftp.ebi.ac.uk/pub/databases/gencode/Gencode_mouse/release_M25/gencode.vM25.annotation.gtf.gz"
+  download.file(tar_gz_file, 
+                destfile = here("salmon_files", "gencode.vM25.annotation.gtf.gz"), 
+                method = "wget")
+}
 ```
 
 ## mRNA only ("transcripts") pipeline
@@ -136,10 +154,10 @@ Note: We used to use the downloaded FASTA file from GENCODE. However, extracting
 
 ```{r}
 # Gtf path
-gtf_file <- here("salmon_files", "gencode.v32.annotation.gtf.gz")
+gtf_file <- here("salmon_files", "gencode.vM25.annotation.gtf.gz") # human file is gencode.v32.annotation.gtf.gz
 
 # Read genomic (DNA) sequence from FASTA file
-genome_fasta <- here("salmon_files", "GRCh38.primary_assembly.genome.fa.gz")
+genome_fasta <- here("salmon_files", "GRCm38.primary_assembly.genome.fa.gz") # human file is GRCh38.primary_assembly.genome.fa.gz
 genome <- Biostrings::readDNAStringSet(genome_fasta)
 names(genome) <- sapply(strsplit(names(genome), " "), .subset, 1) # creates chr1, etc
 
@@ -147,7 +165,7 @@ names(genome) <- sapply(strsplit(names(genome), " "), .subset, 1) # creates chr1
 tx <- extractTxSeqs(gtf = gtf_file, genome = genome, type = "spliced")
 
 # Write FASTA file
-Biostrings::writeXStringSet(tx, file = here("salmon_files", "gencode.v32.transcripts.fa"))
+Biostrings::writeXStringSet(tx, file = here("salmon_files", "gencode.v32.transcripts.mouse.fa"))
 ```
 
 ### tx2gene
@@ -164,7 +182,7 @@ suppressPackageStartupMessages({
 })
 
 # Read gtf
-gtf <- rtracklayer::import(here("salmon_files", "gencode.v32.annotation.gtf.gz"))
+gtf <- rtracklayer::import(here("salmon_files", "gencode.vM25.annotation.gtf.gz")) # human file is gencode.v32.annotation.gtf.gz
 gtftx <- subset(gtf, type == "transcript")
 gtfex <- subset(gtf, type == "exon")
 
@@ -178,13 +196,13 @@ df <- data.frame(gtftx, stringsAsFactors = FALSE) %>%
                    by = "transcript_id")
 
 # Write table as txt and rds
-write.table(df, file = here("salmon_files", "gencode.v32.annotation.tx2gene.txt"), 
+write.table(df %>% dplyr::select(transcript_id, gene_id), file = here("salmon_files", "gencode.v32.annotation.tx2gene.mouse.txt"), 
             sep = "\t", quote = FALSE, row.names = FALSE, 
             col.names = FALSE)
-saveRDS(df, file = here("salmon_files", "gencode.v32.annotation.tx2gene.rds"))
+saveRDS(df, file = here("salmon_files", "gencode.v32.annotation.tx2gene.mouse.rds"))
 ```
 
-### decoys
+### decoys (only for Salmon)
 
 The decoy sequence is going to be the whole genome sequence (`GRCh38.primary_assembly.genome.fa.gz`) for all 3 pipelines. You can read more about decoy sequences in Salmon below:
 
@@ -268,7 +286,7 @@ write.table(t2g,
             sep = "\t", quote = FALSE)
 ```
 
-### decoys
+### decoys (only for Salmon)
 
 1. `decoys.txt` was already generated in the mRNA only pipeline
 
