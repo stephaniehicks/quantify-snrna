@@ -202,7 +202,7 @@ write.table(df %>% dplyr::select(transcript_id, gene_id), file = here("salmon_fi
 saveRDS(df, file = here("salmon_files", "gencode.v32.annotation.tx2gene.mouse.rds"))
 ```
 
-### decoys (only for Salmon)
+### decoys
 
 The decoy sequence is going to be the whole genome sequence (`GRCh38.primary_assembly.genome.fa.gz`) for all 3 pipelines. You can read more about decoy sequences in Salmon below:
 
@@ -218,14 +218,14 @@ To use a decoy, we need to create two files:
 
 ```{bash}
 # 1. Salmon indexing requires the names of the genome targets, which is extractable by using the grep command:
-grep "^>" <(gunzip -c GRCh38.primary_assembly.genome.fa.gz) | cut -d " " -f 1 > decoys.txt
-sed -i.bak -e 's/>//g' decoys.txt
+grep "^>" <(gunzip -c GRCm38.primary_assembly.genome.fa.gz) | cut -d " " -f 1 > decoys_mouse.txt
+sed -i.bak -e 's/>//g' decoys_mouse.txt
 ```
 
 ```{bash}
 # 2. Along with the list of decoys salmon also needs the concatenated transcriptome and genome reference file for index. NOTE: the genome targets (decoys) should come after the transcriptome targets in the reference
-gzip gencode.v32.transcripts.fa
-cat gencode.v32.transcripts.fa.gz GRCh38.primary_assembly.genome.fa.gz > gentrome_transcripts.fa.gz
+gzip gencode.v32.transcripts.mouse.fa
+cat gencode.v32.transcripts.mouse.fa.gz GRCm38.primary_assembly.genome.fa.gz > gentrome_transcripts_mouse.fa.gz
 ```
 
 ## mRNA and pre-mRNA ("preandmrna") pipeline
@@ -286,7 +286,7 @@ write.table(t2g,
             sep = "\t", quote = FALSE)
 ```
 
-### decoys (only for Salmon)
+### decoys
 
 1. `decoys.txt` was already generated in the mRNA only pipeline
 
