@@ -136,7 +136,7 @@ cd /fastscratch/myscratch/shicks1
 prefetch SRR9169228
 ```
 
-Or run the shell script `01-01-download-geo-data.sh`.
+Or run the shell script `download-geo-data.sh`.
 
 ```{bash}
 prefetch --option-file SRR_files_10x.txt
@@ -160,7 +160,7 @@ References:
 1. https://github.com/ncbi/sra-tools/wiki/HowTo:-fasterq-dump
 2. https://trace.ncbi.nlm.nih.gov/Traces/sra/sra.cgi?view=toolkit_doc&f=fastq-dump
 
-Run the shell script `01-02-extract-fastq.sh`.
+Run the shell script `extract-fastq.sh`.
 
 However, if you want to try and run it interactively, use this: 
 
