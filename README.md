@@ -15,6 +15,15 @@
     - create `SummarizedExperiment` object with the `tximeta` R/Bioconductor package
     - convert to a `SingleCellExperiment` object
     - quality control and preprocessing using `scater`
+    
+3. `/mouse_cortex/` contains code to download and process data from this [paper](https://www.nature.com/articles/s41587-020-0465-8): 
+
+    - `/mouse_cortex/download-geo-data.Rmd`: Download the SRA files from GEO
+    - `/mouse_cortex/download-geo-data.sh`: shell script to prefetch SRA files
+    - `/mouse_cortex/extract-fastq.sh`: shell script to convert SRA to fastq
+    - `/mouse_cortex/quantify-salmon.Rmd`: quantification with alevin from salmon
+    - `/mouse_cortex/build-index-salmon.sh`: shell script to build salmon index
+    - /mouse_cortex/run-alevin.sh`: shell script to run alevin
 
 ## Authors
 
