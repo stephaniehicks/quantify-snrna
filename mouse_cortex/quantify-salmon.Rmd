@@ -180,15 +180,15 @@ cat gencode.vM25.transcripts.fa.gz GRCm38.primary_assembly.genome.fa.gz > gentro
 ## Install and build salmon index 
 
 This part will have to be done for each user. 
-I installed the salmon 1.0.0 binary in my home directory here `/users/shicks1/src/`. 
+I installed the salmon 1.2.1 binary in my home directory here `/users/shicks1/src/`. 
 
-To install salmon v1.0.0: 
+To install salmon v1.2.1: 
 ```{bash}
 cd /users/shicks1/src/
 
-wget https://github.com/COMBINE-lab/salmon/releases/download/v1.0.0/salmon-1.0.0_linux_x86_64.tar.gz
-tar xzvf salmon-1.0.0_linux_x86_64.tar.gz
-rm salmon-1.0.0_linux_x86_64.tar.gz
+wget https://github.com/COMBINE-lab/salmon/releases/download/v1.2.1/salmon-1.2.1_linux_x86_64.tar.gz
+tar xzvf salmon-1.2.1_linux_x86_64.tar.gz
+rm salmon-1.2.1_linux_x86_64.tar.gz
 ```
 
 Also, make sure this is in the `.bash_profile` file
@@ -209,12 +209,12 @@ Therefore, I do not keep the duplicates as we are interested in gene level aggre
 The `--gencode` flag will handle the composite fasta headers in GENCODE transcript fasta files and split the transcript name at the first '|' character. 
 The `--threads` argument says how many threads to use when building the index. 
 
-There is a script `build-index-salmon.sh` in the `/scripts` folder that was used to run this code with 4 cores. The index is built from the combined FASTA file.
+There is a script `build-index-salmon.sh` in the `/mouse_cortex` folder that was used to run this code with 4 cores. The index is built from the combined FASTA file.
 
 ## Run salmon 
 
 We will now use the index created by `build-index-salmon.sh`.
-See the `scripts/run-salmon.sh` file or the `scripts/run-salmon-parallel.sh` file in the terminal. They do the same thing, but the latter will run salmon in parallel and be much faster.
+See the `mouse_cortex/run-alevin.sh` file. 
 
 ## Set up the tximeta package 
 
