@@ -218,7 +218,7 @@ See the `mouse_cortex/run-alevin.sh` file.
 
 ```{bash}
 salmon alevin --libType ISR \
-      --index $d/salmon_files/mouse/salmon_transcripts_index \
+      --index $d/salmon_files/mouse/salmon_index_gentrome_decoys_k25 \
       -1 $f/SRR9169228_1.fastq \
       -2 $f/SRR9169228_2.fastq \
       --tgMap $d/salmon_files/mouse/gencode.v32.annotation.tx2gene.mouse.txt \
@@ -245,7 +245,7 @@ suppressPackageStartupMessages({
 })
 
 # create linkedTranscriptome for mRNA (only) decoys pipeline
-index_dir <- here("salmon_files", "mouse", "salmon_transcripts_index")
+index_dir <- here("salmon_files", "mouse", "salmon_index_gentrome_decoys_k25")
 fasta_path <-  here("salmon_files", "mouse", "gencode.vM25.transcripts.fa.gz")
 gtf_path <-  here("salmon_files", "mouse", "gencode.vM25.annotation.gtf.gz") 
 
@@ -275,7 +275,7 @@ bfc <- BiocFileCache(bfcloc)
 bfcinfo(bfc)
 
 # if not, load linkedTxome json file
-json_file <- here("salmon_files", "mouse", "salmon_transcripts_index.json")
+json_file <- here("salmon_files", "mouse", "salmon_index_gentrome_decoys_k25.json")
 loadLinkedTxome(json_file)
 ```
 
@@ -295,4 +295,48 @@ assayNames(se)
 rowRanges(se)
 ```
 
+
+### trying to fit Poisson-Gamma models with `glmGamPoi`
+```{r}
+library(glmGamPoi)
+library(tidyverse)
+
+non_empty_rows <- which(rowSums(assay(se, "counts")) > 1)
+se_subset <- se[non_empty_rows, ]
+se_subset
+assay(se_subset, "counts") <- as.matrix(assay(se_subset, "counts"))
+
+fit_pois <- glmGamPoi::glm_gp(se_subset, design = ~ 1, size_factors = FALSE, 
+                         overdispersion = FALSE)
+fit_pois
+names(fit_pois)
+
+tmp_pois <- data.frame("mean_fit" = rowMeans(fit_pois$Mu), 
+           "variance_pois_fit" = rowMeans(fit_pois$Mu), 
+           "variance_emp" = genefilter::rowVars(assay(se_subset, "counts"))) %>% 
+  tidyr::pivot_longer(cols = -mean_fit, names_to = "var_type", values_to = "var_value")
+
+tmp_pois %>%
+  ggplot(aes(x = mean_fit, y = var_value, color = var_type)) + 
+  geom_point() + 
+  scale_x_log10() + scale_y_log10()
+
+
+
+
+fit_nb <- glmGamPoi::glm_gp(se_subset, design = ~ 1, size_factors = FALSE, 
+                         overdispersion = TRUE)
+fit_nb
+names(fit_nb)
+
+tmp_nb <- data.frame("mean_fit" = rowMeans(fit_nb$Mu), 
+           "variance_NB_fit" = rowMeans(fit_nb$Mu) + rowMeans(fit_nb$Mu)^2 * fit_nb$overdispersions, 
+           "variance_emp" = genefilter::rowVars(assay(se_subset, "counts"))) %>% 
+  tidyr::pivot_longer(cols = -mean_fit, names_to = "var_type", values_to = "var_value")
+
+tmp_nb %>%
+  ggplot(aes(x = mean_fit, y = var_value, color = var_type)) + 
+  geom_point() + 
+  scale_x_log10() + scale_y_log10()
+```
 

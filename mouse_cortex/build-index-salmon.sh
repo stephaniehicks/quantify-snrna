@@ -7,7 +7,7 @@
 # create salmon index (this process takes ~2-3 hours)
 salmon index -t /fastscratch/myscratch/shicks1/alsf-filbin/salmon_files/mouse/gentrome_transcripts.fa.gz \
                 -d /fastscratch/myscratch/shicks1/alsf-filbin/salmon_files/mouse/decoys.txt \
-                -i /fastscratch/myscratch/shicks1/alsf-filbin/salmon_files/mouse/salmon_index_gentrome_decoys \
+                -i /fastscratch/myscratch/shicks1/alsf-filbin/salmon_files/mouse/salmon_index_gentrome_decoys_k31 \
                 --gencode --threads 4
 
 

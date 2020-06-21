@@ -11,7 +11,7 @@ f=/fastscratch/myscratch/shicks1/sra
 # d=/fastscratch/myscratch/akuo/alsf-filbin
 
 salmon alevin --libType ISR \
-      --index $d/salmon_files/mouse/salmon_transcripts_index \
+      --index $d/salmon_files/mouse/salmon_index_gentrome_decoys_k25 \
       -1 $f/SRR9169228_1.fastq \
       -2 $f/SRR9169228_2.fastq \
       --tgMap $d/salmon_files/mouse/gencode.v32.annotation.tx2gene.mouse.txt \
