@@ -175,9 +175,9 @@ cat gencode.vM25.transcripts.fa.gz GRCm38.primary_assembly.genome.fa.gz > gentro
 ```
 
 
+## Run salmon alevin
 
-
-## Install and build salmon index 
+### Install and build salmon index 
 
 This part will have to be done for each user. 
 I installed the salmon 1.2.1 binary in my home directory here `/users/shicks1/src/`. 
@@ -211,12 +211,25 @@ The `--threads` argument says how many threads to use when building the index.
 
 There is a script `build-index-salmon.sh` in the `/mouse_cortex` folder that was used to run this code with 4 cores. The index is built from the combined FASTA file.
 
-## Run salmon 
+### Quantification with salmon alevin
 
 We will now use the index created by `build-index-salmon.sh`.
-See the `mouse_cortex/run-alevin.sh` file. 
+See the `mouse_cortex/run-alevin.sh` file.
 
-## Set up the tximeta package 
+```{bash}
+salmon alevin --libType ISR \
+      --index $d/salmon_files/mouse/salmon_transcripts_index \
+      -1 $f/SRR9169228_1.fastq \
+      -2 $f/SRR9169228_2.fastq \
+      --tgMap $d/salmon_files/mouse/gencode.v32.annotation.tx2gene.mouse.txt \
+      --chromium \
+      --threads 10 \
+      --output $d/mouse_cortex/salmon_quants/ \
+      --dumpFeatures --dumpBfh
+```
+
+
+### Set up the tximeta package 
 
 Next, we use the `tximeta` package to create a SummarizedExperiment object.
 If we try to run `tximeta(coldata)`, that will fail because `tximeta` won't be able to detect automatically what the reference transcriptome is. 
@@ -231,22 +244,55 @@ suppressPackageStartupMessages({
   library(tximeta)
 })
 
-# create linkedTranscriptome for combined list of pre-mRNA and mRNA
-index_dir <- here("salmon_files", "gencode.v32_salmon-index-v1.0.0")
-fasta_path <-  here("salmon_files", "gencode.v32.preandmrna.fa.gz")
-gtf_path <-  here("salmon_files", "gencode.v32.preandmrnaaannotation.gtf") 
+# create linkedTranscriptome for mRNA (only) decoys pipeline
+index_dir <- here("salmon_files", "mouse", "salmon_transcripts_index")
+fasta_path <-  here("salmon_files", "mouse", "gencode.vM25.transcripts.fa.gz")
+gtf_path <-  here("salmon_files", "mouse", "gencode.vM25.annotation.gtf.gz") 
 
-# create linkedTranscriptome for pre-mRNA only
-index_dir <- here("salmon_files", "gencode.v32_salmon-index-v1.0.0-premRNA")
-fasta_path <-  here("salmon_files", "GRCh38.premRNA.fa.gz")
-gtf_path <-  here("salmon_files", "gencode.v32.premrnaannotation.gtf") 
-
-json_file <- here("salmon_files", paste0(basename(index_dir), ".json"))
+json_file <- here("salmon_files", "mouse", paste0(basename(index_dir), ".json"))
 makeLinkedTxome(indexDir=index_dir,
-                source="other", organism="Homo sapiens",
-                release="other", genome="GRCh38",
+                source="other", organism="mouse",
+                release="other", genome="GRCm38",
                 fasta=fasta_path, gtf=gtf_path,
                 jsonFile=json_file) # this command will add the index to the cache automatically
+```
+
+
+## Create SummarizedExperiment object
+
+We also need to use the linkedTxome object to use `tximeta` properly, i.e. `rowRanges(se)` won't be `NULL` and tximeta will be able to match the transcripts to the genes for us. **Note: still doesn't work**
+
+```{r eval = F}
+suppressPackageStartupMessages({
+  library(tximeta)
+  library(BiocFileCache)
+  library(SummarizedExperiment)
+})
+
+# check if linkedTxome is already in the cache
+bfcloc <- getTximetaBFC()
+bfc <- BiocFileCache(bfcloc)
+bfcinfo(bfc)
+
+# if not, load linkedTxome json file
+json_file <- here("salmon_files", "mouse", "salmon_transcripts_index.json")
+loadLinkedTxome(json_file)
+```
+
+```{r eval = F}
+sampleid = "SRR9169228"
+se <- tximeta(coldata = data.frame(names = sampleid,
+                             files = here("mouse_cortex", "salmon_quants", 
+                                          "alevin", "quants_mat.gz"),
+                             stringsAsFactors = FALSE), 
+              type = "alevin", 
+              tx2gene = here("salmon_files", "mouse", 
+                             "gencode.v32.annotation.tx2gene.mouse.txt"))
+
+# Check SummarizedExperiment object
+colData(se)
+assayNames(se)
+rowRanges(se)
 ```
 
 

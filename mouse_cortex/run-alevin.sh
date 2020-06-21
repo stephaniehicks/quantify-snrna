@@ -10,16 +10,15 @@ d=/fastscratch/myscratch/shicks1/alsf-filbin
 f=/fastscratch/myscratch/shicks1/sra
 # d=/fastscratch/myscratch/akuo/alsf-filbin
 
-salmon alevin -l ISR \ 
-      -1 $f/SRR9169228_1.fastq \ 
-      -2 $f/SRR9169228_2.fastq \ 
-      --chromium  \ 
-      -i $d/salmon_files/mouse/salmon_transcripts_index \ 
-      -p 10 \ 
-      -o $d/mouse_cortex/salmon_quants/ \ 
-      --tgMap $d/salmon_files/mouse/gencode.v32.annotation.tx2gene.mouse.txt 
-      
-
+salmon alevin --libType ISR \
+      --index $d/salmon_files/mouse/salmon_transcripts_index \
+      -1 $f/SRR9169228_1.fastq \
+      -2 $f/SRR9169228_2.fastq \
+      --tgMap $d/salmon_files/mouse/gencode.v32.annotation.tx2gene.mouse.txt \
+      --chromium \
+      --threads 10 \
+      --output $d/mouse_cortex/salmon_quants/ \
+      --dumpFeatures --dumpBfh
 
 # for fn in `cat $d/sample_data/unique_cell_paths.txt`; 
 # do 
