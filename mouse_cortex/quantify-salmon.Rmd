@@ -216,19 +216,6 @@ There is a script `build-index-salmon.sh` in the `/mouse_cortex` folder that was
 We will now use the index created by `build-index-salmon.sh`.
 See the `mouse_cortex/run-alevin.sh` file.
 
-```{bash}
-salmon alevin --libType ISR \
-      --index $d/salmon_files/mouse/salmon_index_gentrome_decoys_k25 \
-      -1 $f/SRR9169228_1.fastq \
-      -2 $f/SRR9169228_2.fastq \
-      --tgMap $d/salmon_files/mouse/gencode.v32.annotation.tx2gene.mouse.txt \
-      --chromium \
-      --threads 10 \
-      --output $d/mouse_cortex/salmon_quants/ \
-      --dumpFeatures --dumpBfh
-```
-
-
 ### Set up the tximeta package 
 
 Next, we use the `tximeta` package to create a SummarizedExperiment object.
