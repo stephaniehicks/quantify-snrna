@@ -1,9 +1,9 @@
-#$ -pe local 10
+#$ -pe local 1
 #$ -R y
 #$ -cwd
 #$ -o log/
 #$ -e log/
-#$ -l mem_free=5G,h_vmem=10G
+#$ -l mem_free=30G,h_vmem=30G
 
 # set project directory path
 #d=/fastscratch/myscratch/shicks1/alsf-filbin
@@ -11,18 +11,20 @@
 d=/fastscratch/myscratch/akuo/alsf-filbin/mouse_cortex
 
 # Albert's
-for sample in `cat $d/files/SRR_files_10x.txt`;
-do
+# for sample in `cat $d/files/SRR_files_10x.txt`;
+# do
+sample=SRR9169236
 salmon alevin --libType ISR \
-      --index $d/salmon_files/gencode.v32_salmon-index-v1.0.0-transcripts-mouse \
-      -1 $d/sample_data/geo/sra/$sample.sra_1.fastq \
-      -2 $d/sample_data/geo/sra/$sample.sra_2.fastq \
-      --tgMap $d/salmon_files/gencode.v32.annotation.tx2gene.mouse.txt \
+      --index $d/salmon_files/gencode.vM25_salmon-index-v1.0.0-transcripts-mouse \
+      -1 $d/sample_data/geo/sra/${sample}.sra_1.fastq \
+      -2 $d/sample_data/geo/sra/${sample}.sra_2.fastq \
+      --tgMap $d/salmon_files/gencode.vM25.annotation.tx2gene.mouse.txt \
       --chromium \
       --threads 10 \
-      --output $d/salmon_quants/transcripts_pipeline/$sample_quant \
+      --output $d/salmon_quants/transcripts_pipeline/${sample}_quant \
       --dumpFeatures --dumpBfh
-done
+# done
+
 
 
 # Stephanie's
