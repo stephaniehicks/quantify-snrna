@@ -252,10 +252,10 @@ We make a combined FASTA file with both mRNA and pre-mRNA sequences (`gencode.v3
 
 ```{r}
 # Gtf path
-gtf_file <- here("salmon_files", "gencode.v32.annotation.gtf.gz")
+gtf_file <- here("salmon_files", "gencode.vM25.annotation.gtf.gz") # human file is gencode.v32.annotation.gtf.gz
 
 # Read genomic (DNA) sequence from FASTA file
-genome_fasta <- here("salmon_files", "GRCh38.primary_assembly.genome.fa.gz")
+genome_fasta <- here("salmon_files", "GRCm38.primary_assembly.genome.fa.gz") # human file is GRCh38.primary_assembly.genome.fa.gz
 genome <- Biostrings::readDNAStringSet(genome_fasta)
 names(genome) <- sapply(strsplit(names(genome), " "), .subset, 1) # creates chr1, etc
 
@@ -268,20 +268,20 @@ names(premrna) <- paste0(names(premrna), "_unspliced")
 preandmrna <- c(tx, premrna)
 
 # Write FASTA file (9 GB)
-Biostrings::writeXStringSet(preandmrna, file = here("salmon_files", "gencode.v32.preandmrna.fa"))
+Biostrings::writeXStringSet(preandmrna, file = here("salmon_files", "gencode.v32.preandmrna.mouse.fa"))
 ```
 
 ### tx2gene
 
 ```{r}
 # Generate tx2gene table for mRNA and pre-mRNA transcripts
-t2g <- readRDS(here("salmon_files", "gencode.v32.annotation.tx2gene.rds"))
+t2g <- readRDS(here("salmon_files", "gencode.v32.annotation.tx2gene.mouse.rds"))
 t2gpre <- t2g %>% dplyr::mutate(transcript_id = paste0(transcript_id, "_unspliced"))
 t2g <- rbind(t2g, t2gpre)
 
 # Write table as txt
-write.table(t2g, 
-            file = here("salmon_files", "gencode.v32.preandmrna.tx2gene.txt"), 
+write.table(t2g %>% dplyr::select(transcript_id, gene_id), 
+            file = here("salmon_files", "gencode.v32.preandmrna.tx2gene.mouse.txt"), 
             row.names = FALSE, col.names = FALSE, 
             sep = "\t", quote = FALSE)
 ```
@@ -294,8 +294,8 @@ write.table(t2g,
 
 ```{bash}
 # The genome targets (decoys) should come after the transcriptome targets in the reference
-gzip gencode.v32.preandmrna.fa # Note: This will take a while (~ 1 hour)
-cat gencode.v32.preandmrna.fa.gz GRCh38.primary_assembly.genome.fa.gz > gentrome_preandmrna.fa.gz
+gzip gencode.v32.preandmrna.mouse.fa # Note: This will take a while (~ 1 hour)
+cat gencode.v32.preandmrna.mouse.fa.gz GRCm38.primary_assembly.genome.fa.gz > gentrome_preandmrna_mouse.fa.gz
 ```
 
 ### old code
