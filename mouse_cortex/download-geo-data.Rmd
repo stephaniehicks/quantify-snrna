@@ -55,17 +55,17 @@ Change Format to `RunInfo`. Click `Create File`.
 This will download a file called `SraRunInfo.csv`. Read this file in. 
 
 ```{r, eval=FALSE}
-sra <- readr::read_csv(here("00-files", "SraRunInfo.csv"))
+sra <- readr::read_csv(here("files", "SraRunInfo.csv"))
 pdata <- dplyr::left_join(pdata, sra, by = "Experiment")
 
 # save phenotype table
-readr::write_csv(pdata, path = here("00-files", "pdata.csv"))
+readr::write_csv(pdata, path = here("files", "pdata.csv"))
 ```
 
 #### Create subsets of the table
 
 ```{r}
-pdata <- readr::read_csv(file = here("00-files", "pdata.csv"))
+pdata <- readr::read_csv(file = here("files", "pdata.csv"))
 
 pdata %>%
   select(Experiment, title, organism_ch1, source_name_ch1, description, 
@@ -175,6 +175,7 @@ However, if you want to try and run it interactively, use this:
 ```{bash}
 cd sra
 fastq-dump --split-files --gzip SRR9169228
+fasterq-dump --split-files --include-technical SRR9169228.sra
 ```
 
 Pulling from the [Reference 1](https://github.com/ncbi/sra-tools/wiki/HowTo:-fasterq-dump), 
