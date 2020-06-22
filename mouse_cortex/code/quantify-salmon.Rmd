@@ -51,8 +51,8 @@ We will do quantification with alevin from Salmon:
 We need to download 3 files (mouse):
 
 1. `GRCm38.primary_assembly.genome.fa.gz` - nucleotide (DNA) sequences of the **GRCm38 primary genome assembly** (chromosomes and scaffolds -- i.e. unplaced scaffolds?)
-2. `gencode.v32.transcripts.fa.gz` - nucleotide (DNA) sequences of **all transcripts** on reference chromosomes (Note: We are going to extract the transcript sequences using \#1 and \#3, so this will on longer be used.)
-3. `gencode.v32.annotation.gtf.gz` - gene annotation on the reference chromosomes (i.e. for humans, these are chromosomes 1 to 22, X, and Y), i.e. locations of genes and other information about the genes, gene structure
+2. `gencode.vM25.transcripts.fa.gz` - nucleotide (DNA) sequences of **all transcripts** on reference chromosomes (Note: We are going to extract the transcript sequences using \#1 and \#3, so this will on longer be used.)
+3. `gencode.vM25.annotation.gtf.gz` - gene annotation on the reference chromosomes (i.e. for humans, these are chromosomes 1 to 22, X, and Y), i.e. locations of genes and other information about the genes, gene structure
   * Gene transfer format (GTF) is a file format used to hold information about gene structure. It is a tab-delimited text format based on the general feature format (GFF), but contains some additional conventions specific to gene information.
 
 Source: https://www.gencodegenes.org/human/
@@ -142,10 +142,10 @@ df <- data.frame(gtftx, stringsAsFactors = FALSE) %>%
 
 # Write table as txt and rds
 write.table(df %>% dplyr::select(transcript_id, gene_id), 
-            file = here("salmon_files", "mouse", "gencode.v32.annotation.tx2gene.mouse.txt"), 
+            file = here("salmon_files", "mouse", "gencode.vM25.annotation.tx2gene.mouse.txt"), 
             sep = "\t", quote = FALSE, row.names = FALSE, 
             col.names = FALSE)
-saveRDS(df, file = here("salmon_files", "mouse", "gencode.v32.annotation.tx2gene.mouse.rds"))
+saveRDS(df, file = here("salmon_files", "mouse", "gencode.vM25.annotation.tx2gene.mouse.rds"))
 ```
 
 ### decoys (only for Salmon)
@@ -170,7 +170,7 @@ sed -i.bak -e 's/>//g' decoys.txt
 
 ```{bash}
 # 2. Along with the list of decoys salmon also needs the concatenated transcriptome and genome reference file for index. NOTE: the genome targets (decoys) should come after the transcriptome targets in the reference
-cat gencode.vM25.transcripts.fa.gz GRCm38.primary_assembly.genome.fa.gz > gentrome_transcripts.fa.gz
+cat gencode.vM25.transcripts.fa.gz GRCm38.primary_assembly.genome.fa.gz > gentrome_transcripts_mouse.fa.gz
 ```
 
 ## mRNA and pre-mRNA ("preandmrna") pipeline
@@ -193,7 +193,7 @@ source(here("mouse_cortex", "code", "quantify-salmon-helpers.R"))
 
 ### FASTA file 
 
-We make a combined FASTA file with both mRNA and pre-mRNA sequences (`gencode.v32.preandmrna.fa`).
+We make a combined FASTA file with both mRNA and pre-mRNA sequences (`gencode.vM25.preandmrna.fa`).
 
 ```{r}
 # Gtf path
@@ -213,20 +213,20 @@ names(premrna) <- paste0(names(premrna), "_unspliced")
 preandmrna <- c(tx, premrna)
 
 # Write FASTA file (9 GB)
-Biostrings::writeXStringSet(preandmrna, file = here("salmon_files", "gencode.v32.preandmrna.mouse.fa"))
+Biostrings::writeXStringSet(preandmrna, file = here("salmon_files", "gencode.vM25.preandmrna.mouse.fa"))
 ```
 
 ### tx2gene
 
 ```{r}
 # Generate tx2gene table for mRNA and pre-mRNA transcripts
-t2g <- readRDS(here("salmon_files", "gencode.v32.annotation.tx2gene.mouse.rds"))
+t2g <- readRDS(here("salmon_files", "gencode.vM25.annotation.tx2gene.mouse.rds"))
 t2gpre <- t2g %>% dplyr::mutate(transcript_id = paste0(transcript_id, "_unspliced"))
 t2g <- rbind(t2g, t2gpre)
 
 # Write table as txt
 write.table(t2g %>% dplyr::select(transcript_id, gene_id), 
-            file = here("salmon_files", "gencode.v32.preandmrna.tx2gene.mouse.txt"), 
+            file = here("salmon_files", "gencode.vM25.preandmrna.tx2gene.mouse.txt"), 
             row.names = FALSE, col.names = FALSE, 
             sep = "\t", quote = FALSE)
 ```
@@ -235,12 +235,12 @@ write.table(t2g %>% dplyr::select(transcript_id, gene_id),
 
 1. `decoys.txt` was already generated in the mRNA only pipeline
 
-2. `gentrome_preandmrna.fa.gz` is a concatenated FASTA transcriptome, will be used in the `-t` parameter in `build-index-salmon.sh`ls -
+2. `gentrome_preandmrna.fa.gz` is a concatenated FASTA transcriptome, will be used in the `-t` parameter in `build-index-salmon.sh`
 
 ```{bash}
 # The genome targets (decoys) should come after the transcriptome targets in the reference
-gzip gencode.v32.preandmrna.mouse.fa # Note: This will take a while (~ 1 hour)
-cat gencode.v32.preandmrna.mouse.fa.gz GRCm38.primary_assembly.genome.fa.gz > gentrome_preandmrna_mouse.fa.gz
+gzip gencode.vM25.preandmrna.mouse.fa # Note: This will take a while (~ 1 hour)
+cat gencode.vM25.preandmrna.mouse.fa.gz GRCm38.primary_assembly.genome.fa.gz > gentrome_preandmrna_mouse.fa.gz
 ```
 
 ## Run salmon alevin
@@ -282,7 +282,7 @@ There is a script `build-index-salmon.sh` in the `/mouse_cortex` folder that was
 ### Quantification with salmon alevin
 
 We will now use the index created by `build-index-salmon.sh`.
-See the `mouse_cortex/run-alevin.sh` file.
+See the `mouse_cortex/code/run-alevin.sh` file.
 
 ### Set up the tximeta package 
 
@@ -300,11 +300,14 @@ suppressPackageStartupMessages({
 })
 
 # create linkedTranscriptome for mRNA (only) decoys pipeline
-index_dir <- here("salmon_files", "mouse", "salmon_index_gentrome_decoys_k25")
-fasta_path <-  here("salmon_files", "mouse", "gencode.vM25.transcripts.fa.gz")
-gtf_path <-  here("salmon_files", "mouse", "gencode.vM25.annotation.gtf.gz") 
-
-json_file <- here("salmon_files", "mouse", paste0(basename(index_dir), ".json"))
+# index_dir <- here("salmon_files", "mouse", "salmon_index_gentrome_decoys_k25")
+index_dir = here("mouse_cortex", "salmon_files", "gencode.vM25_salmon-index-v1.0.0-transcripts-mouse")
+# fasta_path <-  here("salmon_files", "mouse", "gencode.vM25.transcripts.fa.gz")
+fasta_path = here("mouse_cortex", "salmon_files", "gencode.vM25.transcripts.mouse.fa.gz")
+# gtf_path <-  here("salmon_files", "mouse", "gencode.vM25.annotation.gtf.gz") 
+gtf_path = here("mouse_cortex", "salmon_files", "gencode.vM25.annotation.gtf.gz") 
+# json_file <- here("salmon_files", "mouse", paste0(basename(index_dir), ".json"))
+json_file = here("mouse_cortex", "salmon_files", paste0(basename(index_dir), ".json"))
 makeLinkedTxome(indexDir=index_dir,
                 source="other", organism="mouse",
                 release="other", genome="GRCm38",
@@ -315,7 +318,7 @@ makeLinkedTxome(indexDir=index_dir,
 
 ## Create SummarizedExperiment object
 
-We also need to use the linkedTxome object to use `tximeta` properly, i.e. `rowRanges(se)` won't be `NULL` and tximeta will be able to match the transcripts to the genes for us. **Note: still doesn't work**
+We also need to use the linkedTxome object to use `tximeta` properly, i.e. `rowRanges(se)` won't be `NULL` and tximeta will be able to match the transcripts to the genes for us. 
 
 ```{r eval = F}
 suppressPackageStartupMessages({
@@ -330,19 +333,24 @@ bfc <- BiocFileCache(bfcloc)
 bfcinfo(bfc)
 
 # if not, load linkedTxome json file
-json_file <- here("salmon_files", "mouse", "salmon_index_gentrome_decoys_k25.json")
+# json_file <- here("salmon_files", "mouse", "salmon_index_gentrome_decoys_k25.json")
+json_file = here("mouse_cortex", "salmon_files", "gencode.v32_salmon-index-v1.0.0-transcripts-mouse")
 loadLinkedTxome(json_file)
 ```
 
 ```{r eval = F}
-sampleid = "SRR9169228"
-se <- tximeta(coldata = data.frame(names = sampleid,
-                             files = here("mouse_cortex", "salmon_quants", 
-                                          "alevin", "quants_mat.gz"),
-                             stringsAsFactors = FALSE), 
-              type = "alevin", 
-              tx2gene = here("salmon_files", "mouse", 
-                             "gencode.v32.annotation.tx2gene.mouse.txt"))
+# sampleid = "SRR9169228"
+# se <- tximeta(coldata = data.frame(names = sampleid,
+#                              files = here("mouse_cortex", "salmon_quants", 
+#                                           "alevin", "quants_mat.gz"),
+#                              stringsAsFactors = FALSE), 
+#               type = "alevin", 
+#               tx2gene = here("salmon_files", "mouse", 
+#                              "gencode.v32.annotation.tx2gene.mouse.txt"))
+se = tximeta(coldata = data.frame(names = "SRR9169236",
+                                  files = here("alevin_output", "alevin", "quants_mat.gz"),
+                                  stringsAsFactors = FALSE),
+             type = "alevin")
 
 # Check SummarizedExperiment object
 colData(se)
@@ -350,8 +358,15 @@ assayNames(se)
 rowRanges(se)
 ```
 
+## Exploratory Analysis
+
+```{r}
+
+```
+
 
 ### trying to fit Poisson-Gamma models with `glmGamPoi`
+
 ```{r}
 library(glmGamPoi)
 library(tidyverse)
