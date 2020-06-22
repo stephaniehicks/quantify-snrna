@@ -26,8 +26,7 @@ Information about the paper whose data we are downloading:
 * Ding	2020
 * Mouse cortex	~7000?
 * UMIs and reads
-* RNA-seq data generated in this project are available from the Gene Expression Omnibus with accession number **GSE132044** and the Single Cell Portal with accession numbers SCP424, SCP425 and SCP426. https://singlecell.broadinstitute.org/single_cell/study/SCP425/single-cell-comparison-cortex-data#study-summary
-
+* RNA-seq data generated in this project are available from the Gene Expression Omnibus with accession number **GSE132044** (raw data on SRA https://www.ncbi.nlm.nih.gov/bioproject/PRJNA545730 ) and the Single Cell Portal with accession numbers SCP424, SCP425 and SCP426. https://singlecell.broadinstitute.org/single_cell/study/SCP425/single-cell-comparison-cortex-data#study-summary
 
 ```{r}
 gse <- GEOquery::getGEO("GSE132044")
@@ -65,6 +64,11 @@ This will download a file called `SraRunInfo.csv`. Read this file in.
 ```{r}
 sra <- readr::read_csv(here("files", "SraRunInfo.csv"))
 tmp <- left_join(pdata2, sra, by = "Experiment") # Only the second entry (mouse cortex)
+sra_meta <- tmp %>% 
+  select(Run, Experiment, title, geo_accession, type, source_name_ch1, organism_ch1, starts_with("characteristics"), molecule_ch1, taxid_ch1, description, description.1,
+         platform_id, instrument_model, library_selection, library_source, library_strategy,
+         `library construction:ch1`, `age:ch1`, `Sex:ch1`, `strain:ch1`, spots, bases, spots_with_mates, avgLength, size_MB, AssemblyName, SRAStudy, BioProject)
+write_csv(sra_meta, path = here("files", "SRA_geo_metadata.csv"))
 write.table(tmp$Run, file = here("files", "SRR_files.txt"), 
             quote= FALSE,row.names = FALSE, col.names = FALSE)
 ```
