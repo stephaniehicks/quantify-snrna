@@ -1,0 +1,16 @@
+https://sra-download.ncbi.nlm.nih.gov/traces/sra70/SRR/008954/SRR9169228
+https://sra-download.ncbi.nlm.nih.gov/traces/sra54/SRR/008954/SRR9169229
+https://sra-downloadb.be-md.ncbi.nlm.nih.gov/sos2/sra-pub-run-15/SRR9169230/SRR9169230.1
+https://sra-download.ncbi.nlm.nih.gov/traces/sra73/SRR/008954/SRR9169231
+https://sra-downloadb.be-md.ncbi.nlm.nih.gov/sos2/sra-pub-run-15/SRR9169233/SRR9169233.1
+https://sra-download.ncbi.nlm.nih.gov/traces/sra19/SRR/008954/SRR9169234
+https://sra-downloadb.be-md.ncbi.nlm.nih.gov/sos2/sra-pub-run-15/SRR9169235/SRR9169235.1
+https://sra-download.ncbi.nlm.nih.gov/traces/sra73/SRR/008954/SRR9169236
+https://sra-download.ncbi.nlm.nih.gov/traces/sra54/SRR/008955/SRR9170683
+https://sra-download.ncbi.nlm.nih.gov/traces/sra19/SRR/008955/SRR9170684
+https://sra-downloadb.be-md.ncbi.nlm.nih.gov/sos2/sra-pub-run-15/SRR9170686/SRR9170686.1
+https://sra-downloadb.be-md.ncbi.nlm.nih.gov/sos2/sra-pub-run-15/SRR9170687/SRR9170687.1
+https://sra-download.ncbi.nlm.nih.gov/traces/sra34/SRR/008955/SRR9170691
+https://sra-download.ncbi.nlm.nih.gov/traces/sra39/SRR/008955/SRR9170692
+https://sra-downloadb.be-md.ncbi.nlm.nih.gov/sos2/sra-pub-run-15/SRR9170693/SRR9170693.1
+https://sra-downloadb.be-md.ncbi.nlm.nih.gov/sos2/sra-pub-run-15/SRR9170886/SRR9170886.1
