@@ -126,7 +126,7 @@ suppressPackageStartupMessages({
 })
 
 # Read gtf
-gtf <- rtracklayer::import(here("salmon_files", "mouse",
+gtf <- rtracklayer::import(here("mouse_cortex", "salmon_files",
                                 "gencode.vM25.annotation.gtf.gz")) 
 gtftx <- subset(gtf, type == "transcript")
 gtfex <- subset(gtf, type == "exon")
@@ -142,10 +142,10 @@ df <- data.frame(gtftx, stringsAsFactors = FALSE) %>%
 
 # Write table as txt and rds
 write.table(df %>% dplyr::select(transcript_id, gene_id), 
-            file = here("salmon_files", "mouse", "gencode.vM25.annotation.tx2gene.mouse.txt"), 
+            file = here("mouse_cortex", "salmon_files", "gencode.vM25.annotation.tx2gene.mouse.txt"), 
             sep = "\t", quote = FALSE, row.names = FALSE, 
             col.names = FALSE)
-saveRDS(df, file = here("salmon_files", "mouse", "gencode.vM25.annotation.tx2gene.mouse.rds"))
+saveRDS(df, file = here("mouse_cortex", "salmon_files", "gencode.vM25.annotation.tx2gene.mouse.rds"))
 ```
 
 ### decoys (only for Salmon)
@@ -197,10 +197,10 @@ We make a combined FASTA file with both mRNA and pre-mRNA sequences (`gencode.vM
 
 ```{r}
 # Gtf path
-gtf_file <- here("salmon_files", "gencode.vM25.annotation.gtf.gz") # human file is gencode.v32.annotation.gtf.gz
+gtf_file <- here("mouse_cortex", "salmon_files", "gencode.vM25.annotation.gtf.gz")
 
 # Read genomic (DNA) sequence from FASTA file
-genome_fasta <- here("salmon_files", "GRCm38.primary_assembly.genome.fa.gz") # human file is GRCh38.primary_assembly.genome.fa.gz
+genome_fasta <- here("mouse_cortex", "salmon_files", "GRCm38.primary_assembly.genome.fa.gz") 
 genome <- Biostrings::readDNAStringSet(genome_fasta)
 names(genome) <- sapply(strsplit(names(genome), " "), .subset, 1) # creates chr1, etc
 
@@ -212,21 +212,21 @@ names(premrna) <- paste0(names(premrna), "_unspliced")
 # Combine mRNA and pre-mRNA sequences
 preandmrna <- c(tx, premrna)
 
-# Write FASTA file (9 GB)
-Biostrings::writeXStringSet(preandmrna, file = here("salmon_files", "gencode.vM25.preandmrna.mouse.fa"))
+# Write FASTA file
+Biostrings::writeXStringSet(preandmrna, file = here("mouse_cortex", "salmon_files", "gencode.vM25.preandmrna.mouse.fa"))
 ```
 
 ### tx2gene
 
 ```{r}
 # Generate tx2gene table for mRNA and pre-mRNA transcripts
-t2g <- readRDS(here("salmon_files", "gencode.vM25.annotation.tx2gene.mouse.rds"))
+t2g <- readRDS(here("mouse_cortex", "salmon_files", "gencode.vM25.annotation.tx2gene.mouse.rds"))
 t2gpre <- t2g %>% dplyr::mutate(transcript_id = paste0(transcript_id, "_unspliced"))
 t2g <- rbind(t2g, t2gpre)
 
 # Write table as txt
 write.table(t2g %>% dplyr::select(transcript_id, gene_id), 
-            file = here("salmon_files", "gencode.vM25.preandmrna.tx2gene.mouse.txt"), 
+            file = here("mouse_cortex", "salmon_files", "gencode.vM25.preandmrna.tx2gene.mouse.txt"), 
             row.names = FALSE, col.names = FALSE, 
             sep = "\t", quote = FALSE)
 ```
