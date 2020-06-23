@@ -4,15 +4,16 @@
 #$ -e log/
 #$ -l mem_free=5G,h_vmem=10G,h_fsize=30G
 
-# create salmon index (this process takes ~2-3 hours)
-# salmon index -t /fastscratch/myscratch/akuo/alsf-filbin/mouse_cortex/salmon_files/gentrome_transcripts.fa.gz \
-#              -d /fastscratch/myscratch/akuo/alsf-filbin/mouse_cortex/salmon_files/decoys_mouse.txt \
-#              -i /fastscratch/myscratch/akuo/alsf-filbin/mouse_cortex/salmon_files/gencode.vM25_salmon-index-v1.0.0-transcripts-mouse \
-#              --gencode --threads 4
-
-salmon index -t /fastscratch/myscratch/akuo/alsf-filbin/mouse_cortex/salmon_files/gencode.vM25.transcripts.fa.gz \
-             -i /fastscratch/myscratch/akuo/alsf-filbin/mouse_cortex/salmon_files/gencode.vM25_salmon-index-v1.0.0-transcripts-mouse-nodecoys \
+# create salmon index (this process takes ~2-3 hours for humans)
+salmon index -t /fastscratch/myscratch/akuo/alsf-filbin/mouse_cortex/salmon_files/gentrome_preandmrna_mouse.fa.gz \
+             -d /fastscratch/myscratch/akuo/alsf-filbin/mouse_cortex/salmon_files/decoys_mouse.txt \
+             -i /fastscratch/myscratch/akuo/alsf-filbin/mouse_cortex/salmon_files/gencode.vM25_salmon-index-v1.0.0-preandmrna-mouse \
              --gencode --threads 4
+
+# create salmon index without decoys
+# salmon index -t /fastscratch/myscratch/akuo/alsf-filbin/mouse_cortex/salmon_files/gencode.vM25.transcripts.fa.gz \
+#              -i /fastscratch/myscratch/akuo/alsf-filbin/mouse_cortex/salmon_files/gencode.vM25_salmon-index-v1.0.0-transcripts-mouse-nodecoys \
+#              --gencode --threads 4
 
 
 
