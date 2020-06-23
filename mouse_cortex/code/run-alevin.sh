@@ -11,9 +11,9 @@
 d=/fastscratch/myscratch/akuo/alsf-filbin/mouse_cortex
 
 # Albert's
-# for sample in `cat $d/files/SRR_files_10x.txt`;
-# do
-sample=SRR9169236
+for sample in `cat $d/files/SRR_files_10x.txt`;
+do
+# sample=SRR9169236
 salmon alevin --libType ISR \
       --index $d/salmon_files/gencode.vM25_salmon-index-v1.0.0-transcripts-mouse \
       -1 $d/sample_data/geo/sra/${sample}.sra_1.fastq \
@@ -23,7 +23,7 @@ salmon alevin --libType ISR \
       --threads 10 \
       --output $d/salmon_quants/transcripts_pipeline/${sample}_quant \
       --dumpFeatures --dumpBfh
-# done
+done
 
 
 
