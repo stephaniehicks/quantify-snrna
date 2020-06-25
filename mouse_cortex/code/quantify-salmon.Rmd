@@ -300,13 +300,20 @@ suppressPackageStartupMessages({
 })
 
 # create linkedTranscriptome for mRNA (only) decoys pipeline
-# index_dir <- here("salmon_files", "mouse", "salmon_index_gentrome_decoys_k25")
 index_dir = here("mouse_cortex", "salmon_files", "gencode.vM25_salmon-index-v1.0.0-transcripts-mouse")
-# fasta_path <-  here("salmon_files", "mouse", "gencode.vM25.transcripts.fa.gz")
 fasta_path = here("mouse_cortex", "salmon_files", "gencode.vM25.transcripts.mouse.fa.gz")
-# gtf_path <-  here("salmon_files", "mouse", "gencode.vM25.annotation.gtf.gz") 
 gtf_path = here("mouse_cortex", "salmon_files", "gencode.vM25.annotation.gtf.gz") 
-# json_file <- here("salmon_files", "mouse", paste0(basename(index_dir), ".json"))
+json_file = here("mouse_cortex", "salmon_files", paste0(basename(index_dir), ".json"))
+makeLinkedTxome(indexDir=index_dir,
+                source="other", organism="mouse",
+                release="other", genome="GRCm38",
+                fasta=fasta_path, gtf=gtf_path,
+                jsonFile=json_file) # this command will add the index to the cache automatically
+
+# created linkedTranscriptome for preandmrna decoys pipline
+index_dir = here("mouse_cortex", "salmon_files", "gencode.vM25_salmon-index-v1.0.0-preandmrna-mouse")
+fasta_path = here("mouse_cortex", "salmon_files", "gencode.vM25.preandmrna.mouse.fa.gz")
+gtf_path = here("mouse_cortex", "salmon_files", "gencode.vM25.preandmrna.annotation.gtf.gz") 
 json_file = here("mouse_cortex", "salmon_files", paste0(basename(index_dir), ".json"))
 makeLinkedTxome(indexDir=index_dir,
                 source="other", organism="mouse",
@@ -317,8 +324,6 @@ makeLinkedTxome(indexDir=index_dir,
 
 
 ## Create SummarizedExperiment object
-
-We also need to use the linkedTxome object to use `tximeta` properly, i.e. `rowRanges(se)` won't be `NULL` and tximeta will be able to match the transcripts to the genes for us. 
 
 ```{r eval = F}
 suppressPackageStartupMessages({
@@ -338,17 +343,17 @@ json_file = here("mouse_cortex", "salmon_files", "gencode.v32_salmon-index-v1.0.
 loadLinkedTxome(json_file)
 ```
 
+
 ```{r eval = F}
-# sampleid = "SRR9169228"
-# se <- tximeta(coldata = data.frame(names = sampleid,
-#                              files = here("mouse_cortex", "salmon_quants", 
-#                                           "alevin", "quants_mat.gz"),
-#                              stringsAsFactors = FALSE), 
-#               type = "alevin", 
-#               tx2gene = here("salmon_files", "mouse", 
-#                              "gencode.v32.annotation.tx2gene.mouse.txt"))
-se = tximeta(coldata = data.frame(names = "SRR9169236",
-                                  files = here("alevin_output", "alevin", "quants_mat.gz"),
+# Note: alevin import currently only supports a single experiment
+pipeline = "transcripts" # "transcripts" or "preandmrna"
+run_names = gsub("_quant", "", basename(list.dirs(here("mouse_cortex", "salmon_quants", paste0(pipeline, "_pipeline")), recursive = F)))
+run_names = run_names[!grepl("nodecoys", run_names)]
+file_paths = here("mouse_cortex", "salmon_quants", paste0(pipeline, "_pipeline"), paste0(run_names, "_quant"), "alevin", "quants_mat.gz") 
+
+i = 1
+se = tximeta(coldata = data.frame(names = run_names[i],
+                                  files = file_paths[i],
                                   stringsAsFactors = FALSE),
              type = "alevin")
 
@@ -356,6 +361,9 @@ se = tximeta(coldata = data.frame(names = "SRR9169236",
 colData(se)
 assayNames(se)
 rowRanges(se)
+
+# Save SummarizedExperiment object
+saveRDS(se, here("mouse_cortex", "salmon_quants", paste0("se_", run_names[i], "_", pipeline, ".rds")))
 ```
 
 ## Exploratory Analysis
@@ -390,9 +398,6 @@ tmp_pois %>%
   ggplot(aes(x = mean_fit, y = var_value, color = var_type)) + 
   geom_point() + 
   scale_x_log10() + scale_y_log10()
-
-
-
 
 fit_nb <- glmGamPoi::glm_gp(se_subset, design = ~ 1, size_factors = FALSE, 
                          overdispersion = TRUE)
