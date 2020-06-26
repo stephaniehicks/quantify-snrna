@@ -213,7 +213,7 @@ names(premrna) <- paste0(names(premrna), "_unspliced")
 preandmrna <- c(tx, premrna)
 
 # Write FASTA file
-Biostrings::writeXStringSet(preandmrna, file = here("mouse_cortex", "salmon_files", "gencode.vM25.preandmrna.mouse.fa"))
+Biostrings::writeXStringSet(preandmrna, file = here("mouse_cortex", "salmon_files", "gencode.vM25.preandmrna.mouse.fa.gz"), compress = T) # Compresses fa while saving, rather than compress later
 ```
 
 ### tx2gene
@@ -239,8 +239,107 @@ write.table(t2g %>% dplyr::select(transcript_id, gene_id),
 
 ```{bash}
 # The genome targets (decoys) should come after the transcriptome targets in the reference
-gzip gencode.vM25.preandmrna.mouse.fa # Note: This will take a while (~ 1 hour)
 cat gencode.vM25.preandmrna.mouse.fa.gz GRCm38.primary_assembly.genome.fa.gz > gentrome_preandmrna_mouse.fa.gz
+```
+
+## mRNA and intron ("introncollapse" or "intronseparate") pipeline
+
+For the mRNA and intron pipeline, we will build an index with both mRNA and intron sequences. 
+
+Source: generate_cdna_intron_fa_prepref.R in https://github.com/csoneson/rna_velocity_quant/.
+
+```{r}
+suppressPackageStartupMessages({
+  library(here)
+  library(dplyr)
+  library(Biostrings)
+  library(rtracklayer)
+  library(GenomicFeatures)
+  library(BSgenome)
+})
+source(here("mouse_cortex", "code", "quantify-salmon-helpers.R"))
+```
+
+### FASTA file 
+
+We make a combined FASTA file with both mRNA and intron sequences (`gencode.vM25.introncollapse.fa`).
+
+```{r}
+# Gtf path
+gtf_file <- here("mouse_cortex", "salmon_files", "gencode.vM25.annotation.gtf.gz")
+
+# Read genomic (DNA) sequence from FASTA file
+genome_fasta <- here("mouse_cortex", "salmon_files", "GRCm38.primary_assembly.genome.fa.gz") 
+genome <- Biostrings::readDNAStringSet(genome_fasta)
+names(genome) <- sapply(strsplit(names(genome), " "), .subset, 1) # creates chr1, etc
+
+# Extract transcript (tx) and intron sequences (takes a few minutes)
+tx <- extractTxSeqs(gtf = gtf_file, genome = genome, type = "spliced")
+isoform_action = "collapse"
+flanklength = 90 # default in script
+intr <- extractIntronSeqs(gtf = gtf_file, genome = genome, type = isoform_action, 
+                          flanklength = flanklength,
+                          joinOverlappingIntrons = FALSE)
+
+# Combine mRNA and pre-mRNA sequences
+intronandmrna <- c(tx, intr)
+
+# Write FASTA file
+Biostrings::writeXStringSet(intronandmrna, file = here("mouse_cortex", "salmon_files",
+                                                       paste0("gencode.vM25.intron", isoform_action, ".mouse.fa.gz")), compress = TRUE)
+```
+
+### tx2gene
+
+Source: generate_cdna_intron_fa_prepref.R in https://github.com/csoneson/rna_velocity_quant/.
+
+```{r}
+suppressPackageStartupMessages({
+  library(rtracklayer)
+  library(dplyr)
+  library(here)
+})
+
+# Generate transcript/intron-to-gene mapping
+gtfdf <- as.data.frame(rtracklayer::import(here("mouse_cortex", "salmon_files",
+                                "gencode.vM25.annotation.gtf.gz")))
+t2gtx <- gtfdf %>% dplyr::filter(type == "transcript") %>%
+  dplyr::select(transcript_id, gene_id) %>%
+  dplyr::distinct()
+
+if (isoform_action == "collapse") {
+  ## Intron names already contain gene name
+  t2gin <- data.frame(intr = names(intr),
+                      gene = gsub("\\-I[0-9]*$", "", names(intr)),
+                      stringsAsFactors = FALSE)
+} else if (isoform_action == "separate") {
+  ## Intron names contain transcript name
+  t2gin <- data.frame(intr = names(intr),
+                      transcript_id = gsub("\\-I[0-9]*$", "", names(intr)),
+                      stringsAsFactors = FALSE) %>%
+    dplyr::left_join(t2gtx, by = "transcript_id") %>%
+    dplyr::select(intr, gene_id)
+} else {
+  stop("Unknown isoform_action")
+}
+colnames(t2gin) <- colnames(t2gtx)
+t2g <- rbind(t2gtx, t2gin)
+
+# Write table as txt
+write.table(t2g, file = here("mouse_cortex", "salmon_files", paste0("gencode.vM25.intron", isoform_action, ".tx2gene.mouse.txt")), 
+            row.names = FALSE, col.names = FALSE, quote = FALSE, sep = "\t")
+```
+
+### decoys
+
+1. `decoys.txt` was already generated in the mRNA only pipeline
+
+2. `gentrome_introncollapse.fa.gz` is a concatenated FASTA transcriptome, will be used in the `-t` parameter in `build-index-salmon.sh`
+
+```{bash}
+# The genome targets (decoys) should come after the transcriptome targets in the reference
+cat gencode.vM25.introncollapse.mouse.fa.gz GRCm38.primary_assembly.genome.fa.gz > gentrome_introncollapse_mouse.fa.gz
+cat gencode.vM25.intronseparate.mouse.fa.gz GRCm38.primary_assembly.genome.fa.gz > gentrome_intronseparate_mouse.fa.gz
 ```
 
 ## Run salmon alevin
