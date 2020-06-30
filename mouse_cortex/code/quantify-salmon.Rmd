@@ -494,7 +494,7 @@ sce = as(se_subset[, !reasons$discard], "SingleCellExperiment")
 sce
 ```
 
-### Clustering
+### PCA
 
 ```{r}
 # Normalize and take log
@@ -509,8 +509,43 @@ toc()
 
 # PCA colored by library size
 colData(sce)$size = colSums(counts(sce))
-plotReducedDim(sce, "PCA", colour_by="size")
+plotReducedDim(sce, "PCA", colour_by = "size")
 ```
+
+### singleR
+
+Use singleR to map cells to cell type based on correlation in expression to mouse bulk RNA-seq data.
+
+Vignettes:
+
+* https://www.bioconductor.org/packages/release/bioc/vignettes/SingleR/inst/doc/SingleR.html
+* https://bioconductor.org/packages/devel/data/experiment/vignettes/celldex/inst/doc/userguide.html#23_Mouse_RNA-seq
+
+```{r}
+library(SingleR)
+
+# Built-in reference mouse dataset
+mouse_se = MouseRNAseqData() # inclusion in singleR is deprecated, obtain from celldex
+
+# Convert gene names
+test_counts = assay(sce, "logcounts")
+tx2gene = readRDS(here("mouse_cortex", "salmon_files", "gencode.vM25.annotation.tx2gene.mouse.rds"))
+match_rows = match(rownames(test_counts), tx2gene$gene_id)
+rownames(test_counts) = tx2gene$gene_name[match_rows]
+
+pred_celltypes = SingleR(test = test_counts, 
+                         ref = mouse_se,
+                         labels = mouse_se$label.main)
+colData(sce)$singleR_labels = pred_celltypes$labels
+colData(sce)$singleR_labels_pruned = pred_celltypes$pruned.labels
+```
+
+```{r}
+# PCA colored by singleR labels
+plotReducedDim(sce, "PCA", colour_by = "singleR_labels_pruned")
+```
+
+### Clustering
 
 ```{r}
 # K-means clustering
@@ -525,8 +560,8 @@ for(k in 1:10){
 plot(sse)
 
 clust.kmeans <- kmeans(reducedDim(sce, "PCA"), centers = 6)
-colLabels(sce) <- factor(clust.kmeans$cluster)
-plotReducedDim(sce, "PCA", colour_by="label")
+colData(sce)$labels_kmeans <- factor(clust.kmeans$cluster)
+plotReducedDim(sce, "PCA", colour_by = "labels_kmeans")
 ```
 
 ```{r}
@@ -534,9 +569,12 @@ plotReducedDim(sce, "PCA", colour_by="label")
 g <- buildSNNGraph(sce, k=10, use.dimred = 'PCA')
 clust <- igraph::cluster_walktrap(g)$membership
 
-colLabels(sce) <- factor(clust)
-plotReducedDim(sce, "PCA", colour_by="label")
+colData(sce)$labels_gb <- factor(clust)
+plotReducedDim(sce, "PCA", colour_by="labels_gb")
 ```
+
+
+
 
 ### trying to fit Poisson-Gamma models with `glmGamPoi`
 
@@ -544,7 +582,9 @@ plotReducedDim(sce, "PCA", colour_by="label")
 library(glmGamPoi)
 library(tidyverse)
 
+# Subset to cluster
 counts_sub = as.matrix(assay(sce, "counts")[, colData(sce)$label == 1])
+counts_sub = counts_sub[rowSums(counts_sub) != 0, ]
 
 # Poisson
 fit_pois <- glmGamPoi::glm_gp(counts_sub, design = ~ 1, size_factors = FALSE, 
