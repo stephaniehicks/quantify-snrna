@@ -512,7 +512,8 @@ colData(sce)$size = colSums(counts(sce))
 plotReducedDim(sce, "PCA", colour_by = "size")
 ```
 
-### singleR
+### Cell types 
+#### singleR
 
 Use singleR to map cells to cell type based on correlation in expression to mouse bulk RNA-seq data.
 
@@ -545,7 +546,27 @@ colData(sce)$singleR_labels_pruned = pred_celltypes$pruned.labels
 plotReducedDim(sce, "PCA", colour_by = "singleR_labels_pruned")
 ```
 
-### Clustering
+#### Ding
+
+> We used marker genes for each cell type to compute a score for each cell and automatically assign cell types to clusters.
+
+```{r}
+meta_ding = read_tsv(here("mouse_cortex", "files", "meta_combined.txt"))
+meta_ding_10x = meta_ding %>%
+  filter(Method == "10x Chromium") %>%
+  mutate(cell_barcode = gsub("Cortex.*10xChromium", "", NAME))
+match_cols = match(colnames(sce), meta_ding_10x$cell_barcode)
+colData(sce)$ding_labels = meta_ding_10x$CellType[match_cols]
+```
+
+```{r}
+# PCA colored by Ding's labels
+plotReducedDim(sce, "PCA", colour_by = "ding_labels")
+```
+
+
+
+#### Clustering
 
 ```{r}
 # K-means clustering
