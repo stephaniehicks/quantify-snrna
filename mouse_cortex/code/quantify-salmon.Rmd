@@ -468,9 +468,75 @@ saveRDS(se, here("mouse_cortex", "salmon_quants", paste0("se_", run_names[i], "_
 ## Exploratory Analysis
 
 ```{r}
-
+library(here)
+library(scran)
+library(scater)
+library(tictoc)
+library(BiocSingular)
+se = readRDS(here("mouse_cortex", "salmon_quants", "se_SRR9169228_transcripts.rds"))
+se
 ```
 
+### Quality control
+
+```{r}
+# Remove empty rows
+non_empty_rows <- which(rowSums(assay(se, "counts")) > 1)
+se_subset <- se[non_empty_rows, ]
+
+# Remove low-quality cells
+df = perCellQCMetrics(se_subset)
+reasons = quickPerCellQC(df) # DataFrame of logical values
+colSums(as.matrix(reasons))
+
+# Convert to SingleCellExperiment
+sce = as(se_subset[, !reasons$discard], "SingleCellExperiment")
+sce
+```
+
+### Clustering
+
+```{r}
+# Normalize and take log
+clust = quickCluster(sce)
+sce = computeSumFactors(sce, clusters = clust)
+sce = logNormCounts(sce)
+
+set.seed(1)
+tic("approx PCA")
+sce = runPCA(sce, exprs_values = "logcounts", ntop = ncol(sce), BSPARAM = RandomParam())
+toc()
+
+# PCA colored by library size
+colData(sce)$size = colSums(counts(sce))
+plotReducedDim(sce, "PCA", colour_by="size")
+```
+
+```{r}
+# K-means clustering
+set.seed(1)
+
+# Elbow plot with SSE
+sse = c()
+for(k in 1:10){
+  clust.kmeans <- kmeans(reducedDim(sce, "PCA"), centers = k)
+  sse = c(sse, clust.kmeans$tot.withinss)
+}
+plot(sse)
+
+clust.kmeans <- kmeans(reducedDim(sce, "PCA"), centers = 6)
+colLabels(sce) <- factor(clust.kmeans$cluster)
+plotReducedDim(sce, "PCA", colour_by="label")
+```
+
+```{r}
+# Graph-based clustering
+g <- buildSNNGraph(sce, k=10, use.dimred = 'PCA')
+clust <- igraph::cluster_walktrap(g)$membership
+
+colLabels(sce) <- factor(clust)
+plotReducedDim(sce, "PCA", colour_by="label")
+```
 
 ### trying to fit Poisson-Gamma models with `glmGamPoi`
 
@@ -478,39 +544,40 @@ saveRDS(se, here("mouse_cortex", "salmon_quants", paste0("se_", run_names[i], "_
 library(glmGamPoi)
 library(tidyverse)
 
-non_empty_rows <- which(rowSums(assay(se, "counts")) > 1)
-se_subset <- se[non_empty_rows, ]
-se_subset
-assay(se_subset, "counts") <- as.matrix(assay(se_subset, "counts"))
+counts_sub = as.matrix(assay(sce, "counts")[, colData(sce)$label == 1])
 
-fit_pois <- glmGamPoi::glm_gp(se_subset, design = ~ 1, size_factors = FALSE, 
+# Poisson
+fit_pois <- glmGamPoi::glm_gp(counts_sub, design = ~ 1, size_factors = FALSE, 
                          overdispersion = FALSE)
 fit_pois
 names(fit_pois)
 
 tmp_pois <- data.frame("mean_fit" = rowMeans(fit_pois$Mu), 
            "variance_pois_fit" = rowMeans(fit_pois$Mu), 
-           "variance_emp" = genefilter::rowVars(assay(se_subset, "counts"))) %>% 
+           "variance_emp" = genefilter::rowVars(counts_sub)) %>% 
   tidyr::pivot_longer(cols = -mean_fit, names_to = "var_type", values_to = "var_value")
 
 tmp_pois %>%
   ggplot(aes(x = mean_fit, y = var_value, color = var_type)) + 
   geom_point() + 
-  scale_x_log10() + scale_y_log10()
+  scale_x_log10() + scale_y_log10() +
+  theme_bw()
 
-fit_nb <- glmGamPoi::glm_gp(se_subset, design = ~ 1, size_factors = FALSE, 
+# Negative binomial
+fit_nb <- glmGamPoi::glm_gp(counts_sub, design = ~ 1, size_factors = FALSE, 
                          overdispersion = TRUE)
 fit_nb
 names(fit_nb)
 
 tmp_nb <- data.frame("mean_fit" = rowMeans(fit_nb$Mu), 
            "variance_NB_fit" = rowMeans(fit_nb$Mu) + rowMeans(fit_nb$Mu)^2 * fit_nb$overdispersions, 
-           "variance_emp" = genefilter::rowVars(assay(se_subset, "counts"))) %>% 
+           "variance_emp" = genefilter::rowVars(counts_sub)) %>% 
   tidyr::pivot_longer(cols = -mean_fit, names_to = "var_type", values_to = "var_value")
 
 tmp_nb %>%
   ggplot(aes(x = mean_fit, y = var_value, color = var_type)) + 
   geom_point() + 
-  scale_x_log10() + scale_y_log10()
+  scale_x_log10() + scale_y_log10() +
+  theme_bw()
 ```
 
