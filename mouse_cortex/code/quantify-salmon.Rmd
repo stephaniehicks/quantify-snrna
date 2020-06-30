@@ -468,11 +468,14 @@ saveRDS(se, here("mouse_cortex", "salmon_quants", paste0("se_", run_names[i], "_
 ## Exploratory Analysis
 
 ```{r}
-library(here)
-library(scran)
-library(scater)
-library(tictoc)
-library(BiocSingular)
+suppressPackageStartupMessages({
+  library(here)
+  library(tidyverse)
+  library(tictoc)
+  library(scran)
+  library(scater)
+  library(BiocSingular)
+})
 se = readRDS(here("mouse_cortex", "salmon_quants", "se_SRR9169228_transcripts.rds"))
 se
 ```
@@ -513,6 +516,7 @@ plotReducedDim(sce, "PCA", colour_by = "size")
 ```
 
 ### Cell types 
+
 #### singleR
 
 Use singleR to map cells to cell type based on correlation in expression to mouse bulk RNA-seq data.
@@ -595,16 +599,61 @@ plotReducedDim(sce, "PCA", colour_by="labels_gb")
 ```
 
 
+### Distributions
+
+#### Goodness-of-fit tests
+
+```{r}
+library(MASS)
+
+# Subset to cluster
+counts_sub = as.matrix(assay(sce, "counts")[, (colData(sce)$ding_labels == "Excitatory neuron" & !is.na(colData(sce)$ding_labels))])
+counts_sub = counts_sub[rowSums(counts_sub) != 0, ]
+
+# Poisson
+p_values_pois = c()
+for(i in 1:100){
+  x = counts_sub[i,]
+  poissonfit = fitdistr(x, "poisson")
+  lambda.fit = poissonfit$estimate["lambda"]
+  nsamples = length(x)
+  f.obs = table(x)
+  bins = as.numeric(names(f.obs))
+  f.hyp = dpois(bins, lambda = lambda.fit)*nsamples
+  chiSquare.pois = sum((f.obs-f.hyp)^2/f.hyp)
+  dof = length(bins) - 1
+  p_values_pois = c(p_values_pois, 1 - pchisq(chiSquare.pois, df = dof))
+}
+p_values_pois
+
+# Negative binomial
+p_values_nb = c()
+for(i in 1:100){
+  x = counts_sub[i,]
+  nbfit = fitdistr(x, "negative binomial")
+  r.fit = nbfit$estimate['size']
+  p.fit = r.fit / (nbfit$estimate['mu'] + r.fit)
+  nsamples = length(x)
+  f.obs = table(x)
+  bins = as.numeric(names(f.obs))
+  f.hyp = dnbinom(bins, size = r.fit, prob = p.fit)*nsamples
+  chiSquare.nb = sum((f.obs-f.hyp)^2/f.hyp)
+  dof = length(bins) - 1
+  p_values_nb = c(p_values_nb, 1 - pchisq(chiSquare.nb, df = dof))
+}
+p_values_nb
+```
 
 
-### trying to fit Poisson-Gamma models with `glmGamPoi`
+#### Poisson-Gamma models
+
+Using `glmGamPoi` to plot mean-variance relationships.
 
 ```{r}
 library(glmGamPoi)
-library(tidyverse)
 
 # Subset to cluster
-counts_sub = as.matrix(assay(sce, "counts")[, colData(sce)$label == 1])
+counts_sub = as.matrix(assay(sce, "counts")[, (colData(sce)$ding_labels == "Excitatory neuron" & !is.na(colData(sce)$ding_labels))])
 counts_sub = counts_sub[rowSums(counts_sub) != 0, ]
 
 # Poisson
