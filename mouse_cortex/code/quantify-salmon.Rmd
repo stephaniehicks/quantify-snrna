@@ -412,7 +412,7 @@ makeLinkedTxome(indexDir=index_dir,
 # created linkedTranscriptome for preandmrna decoys pipline
 index_dir = here("mouse_cortex", "salmon_files", "gencode.vM25_salmon-index-v1.0.0-preandmrna-mouse")
 fasta_path = here("mouse_cortex", "salmon_files", "gencode.vM25.preandmrna.mouse.fa.gz")
-gtf_path = here("mouse_cortex", "salmon_files", "gencode.vM25.preandmrna.annotation.gtf.gz") 
+gtf_path = here("mouse_cortex", "salmon_files", "gencode.vM25.annotation.gtf.gz") 
 json_file = here("mouse_cortex", "salmon_files", paste0(basename(index_dir), ".json"))
 makeLinkedTxome(indexDir=index_dir,
                 source="other", organism="mouse",
@@ -426,6 +426,7 @@ makeLinkedTxome(indexDir=index_dir,
 
 ```{r eval = F}
 suppressPackageStartupMessages({
+  library(here)
   library(tximeta)
   library(BiocFileCache)
   library(SummarizedExperiment)
@@ -438,14 +439,14 @@ bfcinfo(bfc)
 
 # if not, load linkedTxome json file
 # json_file <- here("salmon_files", "mouse", "salmon_index_gentrome_decoys_k25.json")
-json_file = here("mouse_cortex", "salmon_files", "gencode.v32_salmon-index-v1.0.0-transcripts-mouse")
+json_file = here("mouse_cortex", "salmon_files", "gencode.v32_salmon-index-v1.0.0-preandmrna-mouse")
 loadLinkedTxome(json_file)
 ```
 
 
 ```{r eval = F}
 # Note: alevin import currently only supports a single experiment
-pipeline = "transcripts" # "transcripts" or "preandmrna"
+pipeline = "preandmrna" # "transcripts" or "preandmrna"
 run_names = gsub("_quant", "", basename(list.dirs(here("mouse_cortex", "salmon_quants", paste0(pipeline, "_pipeline")), recursive = F)))
 run_names = run_names[!grepl("nodecoys", run_names)]
 file_paths = here("mouse_cortex", "salmon_quants", paste0(pipeline, "_pipeline"), paste0(run_names, "_quant"), "alevin", "quants_mat.gz") 
@@ -476,7 +477,7 @@ suppressPackageStartupMessages({
   library(scater)
   library(BiocSingular)
 })
-se = readRDS(here("mouse_cortex", "salmon_quants", "se_SRR9169228_transcripts.rds"))
+se = readRDS(here("mouse_cortex", "salmon_quants", "se_SRR9169228_preandmrna.rds"))
 se
 ```
 
@@ -603,7 +604,7 @@ plotReducedDim(sce, "PCA", colour_by="labels_gb")
 
 #### Goodness-of-fit tests
 
-```{r}
+```{r eval = F}
 library(MASS)
 
 # Subset to cluster
