@@ -8,9 +8,9 @@
 # mem_free=30G,h_vmem=30G,h_fsize=30G (preandmrna index)
 # mem_free=25G,h_vmem=25G,h_fsize=30G (intron index)
 # create salmon index (this process takes ~2-3 hours for humans)
-salmon index -t /fastscratch/myscratch/akuo/alsf-filbin/mouse_cortex/salmon_files/gentrome_introncollapse_mouse.fa.gz \
+salmon index -t /fastscratch/myscratch/akuo/alsf-filbin/mouse_cortex/salmon_files/gentrome_intronseparate_mouse.fa.gz \
              -d /fastscratch/myscratch/akuo/alsf-filbin/mouse_cortex/salmon_files/decoys_mouse.txt \
-             -i /fastscratch/myscratch/akuo/alsf-filbin/mouse_cortex/salmon_files/gencode.vM25_salmon-index-v1.0.0-introncollapse-mouse \
+             -i /fastscratch/myscratch/akuo/alsf-filbin/mouse_cortex/salmon_files/gencode.vM25_salmon-index-v1.0.0-intronseparate-mouse \
              --gencode --threads 4
 
 # create salmon index without decoys

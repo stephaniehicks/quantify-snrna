@@ -275,7 +275,7 @@ names(genome) <- sapply(strsplit(names(genome), " "), .subset, 1) # creates chr1
 
 # Extract transcript (tx) and intron sequences (takes a few minutes)
 tx <- extractTxSeqs(gtf = gtf_file, genome = genome, type = "spliced")
-isoform_action = "collapse"
+isoform_action = "separate"
 flanklength = 90 # default in script
 intr <- extractIntronSeqs(gtf = gtf_file, genome = genome, type = isoform_action, 
                           flanklength = flanklength,
