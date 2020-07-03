@@ -761,10 +761,10 @@ tic()
 p_values_nb = c()
 for(i in 1:nrow(counts_sub)){
   # message(i)
-  try({
+  tryCatch({
   x = counts_sub[i,]
   x = round(x)
-  nbfit = fitdistr(x, "negative binomial")
+  nbfit = suppressWarnings(fitdistr(x, "negative binomial"))
   r.fit = nbfit$estimate['size']
   p.fit = r.fit / (nbfit$estimate['mu'] + r.fit)
   nsamples = length(x)
@@ -773,7 +773,7 @@ for(i in 1:nrow(counts_sub)){
   f.hyp = dnbinom(bins, size = r.fit, prob = p.fit)*nsamples
   chiSquare.nb = sum((f.obs-f.hyp)^2/f.hyp)
   dof = length(bins) - 1
-  p_values_nb = c(p_values_nb, 1 - pchisq(chiSquare.nb, df = dof))})
+  p_values_nb = c(p_values_nb, 1 - pchisq(chiSquare.nb, df = dof))}, error = function(e){})
 }
 toc()
 
