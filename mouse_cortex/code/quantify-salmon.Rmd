@@ -587,6 +587,34 @@ colData(sce)$ding_labels = meta_ding_10x$CellType[match_cols]
 plotReducedDim(sce, "PCA", colour_by = "ding_labels")
 ```
 
+```{r}
+# Get overlap with singleR labels
+overlap = table(colData(sce)$singleR_labels_pruned, colData(sce)$ding_labels) %>%
+  as.data.frame()
+
+# Normalize frequency within each Ding cell type
+overlap = overlap %>%
+  group_by(Var2) %>%
+  mutate(Freq_norm = Freq/sum(Freq)) %>%
+  ungroup()
+
+# Plot
+overlap %>%
+  ggplot(aes(x = Var1, y = Var2, fill = Freq)) + 
+  scale_fill_gradient(low="white", high="blue") +
+  geom_tile() +
+  labs(x = "singleR_labels_pruned",
+       y = "ding_labels") +
+  theme(axis.text.x = element_text(angle = 90, hjust = 1))
+
+overlap %>%
+  ggplot(aes(x = Var1, y = Var2, fill = Freq_norm)) + 
+  scale_fill_gradient(low="white", high="blue") +
+  geom_tile() +
+  labs(x = "singleR_labels_pruned",
+       y = "ding_labels") +
+  theme(axis.text.x = element_text(angle = 90, hjust = 1))
+```
 
 
 #### Clustering
@@ -706,7 +734,7 @@ library(MASS)
 
 # Poisson
 p_values_pois = c()
-for(i in 1:100){
+for(i in 1:1){
   x = counts_sub[i,]
   poissonfit = fitdistr(x, "poisson")
   lambda.fit = poissonfit$estimate["lambda"]
