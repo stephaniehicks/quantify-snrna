@@ -729,13 +729,21 @@ prob_out$plot
 
 #### Goodness-of-fit tests
 
+There are 2 issues:
+
+1) Why is quant matrix not all integers?
+2) Why are NaNs produced/non-finite finite-difference value errors occur in fitdistr("negative binomial")?
+
 ```{r eval = F}
 library(MASS)
 
 # Poisson
+tic()
 p_values_pois = c()
-for(i in 1:1){
+for(i in 1:nrow(counts_sub)){
+  # message(i)
   x = counts_sub[i,]
+  x = round(x) 
   poissonfit = fitdistr(x, "poisson")
   lambda.fit = poissonfit$estimate["lambda"]
   nsamples = length(x)
@@ -746,12 +754,16 @@ for(i in 1:1){
   dof = length(bins) - 1
   p_values_pois = c(p_values_pois, 1 - pchisq(chiSquare.pois, df = dof))
 }
-p_values_pois
+toc()
 
 # Negative binomial
+tic()
 p_values_nb = c()
-for(i in 1:100){
+for(i in 1:nrow(counts_sub)){
+  # message(i)
+  try({
   x = counts_sub[i,]
+  x = round(x)
   nbfit = fitdistr(x, "negative binomial")
   r.fit = nbfit$estimate['size']
   p.fit = r.fit / (nbfit$estimate['mu'] + r.fit)
@@ -761,9 +773,17 @@ for(i in 1:100){
   f.hyp = dnbinom(bins, size = r.fit, prob = p.fit)*nsamples
   chiSquare.nb = sum((f.obs-f.hyp)^2/f.hyp)
   dof = length(bins) - 1
-  p_values_nb = c(p_values_nb, 1 - pchisq(chiSquare.nb, df = dof))
+  p_values_nb = c(p_values_nb, 1 - pchisq(chiSquare.nb, df = dof))})
 }
-p_values_nb
+toc()
+
+# Plot p-values
+tibble(distribution = c(rep("Poisson", length(p_values_pois)), rep("NB", length(p_values_nb))),
+       p_value = c(p_values_pois, p_values_nb)) %>%
+  ggplot(aes(x = p_value)) + 
+  geom_histogram() +
+  facet_wrap(~ distribution) +
+  theme_bw()
 ```
 
 
