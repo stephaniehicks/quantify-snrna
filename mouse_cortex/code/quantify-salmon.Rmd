@@ -685,7 +685,7 @@ plot_prob = function(dat_sub){
   emp_probs_0 = apply(dat_sub, MARGIN = 1, function(r) sum(r==0)/ncol(dat_sub))
   plot_dt = tibble(means, emp_probs_0)
   
-  emp_props = rowMeans(dat_sub/colSums(dat_sub))
+  emp_props = rowSums(dat_sub)/sum(colSums(dat_sub))
   # Model P(X_i = 0) under Binomial
   binom_probs_0 = dbinom(x = 0, size = n, prob = emp_props)
   # Model P(X_i = 0) under Poisson
@@ -785,6 +785,10 @@ tibble(distribution = c(rep("Poisson", length(p_values_pois)), rep("NB", length(
   facet_wrap(~ distribution) +
   theme_bw()
 ```
+
+
+
+
 
 
 #### Poisson-Gamma models
