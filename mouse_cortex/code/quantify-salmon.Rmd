@@ -477,25 +477,44 @@ suppressPackageStartupMessages({
   library(scater)
   library(BiocSingular)
 })
-se = readRDS(here("mouse_cortex", "salmon_quants", "se_SRR9169228_preandmrna.rds"))
-se
+se_ls = list()
+se_ls[["transcripts"]] = readRDS(here("mouse_cortex", "salmon_quants", "se_SRR9169228_transcripts.rds"))
+se_ls[["preandmrna"]] = readRDS(here("mouse_cortex", "salmon_quants", "se_SRR9169228_preandmrna.rds"))
 ```
 
 ### Quality control
 
 ```{r}
-# Remove empty rows
-non_empty_rows <- which(rowSums(assay(se, "counts")) > 1)
-se_subset <- se[non_empty_rows, ]
+sce_ls = list()
+for(i in seq_along(se_ls)){
+  se = se_ls[[i]]
+  # Remove empty rows
+  non_empty_rows <- which(rowSums(assay(se, "counts")) > 1)
+  se_subset <- se[non_empty_rows, ]
+  
+  # Remove low-quality cells
+  df = perCellQCMetrics(se_subset)
+  reasons = quickPerCellQC(df) # DataFrame of logical values
+  colSums(as.matrix(reasons))
+  
+  # Convert to SingleCellExperiment
+  sce = as(se_subset[, !reasons$discard], "SingleCellExperiment")
+  colData(sce)$lib_size = colSums(counts(sce))
+  sce_ls[[names(se_ls)[i]]] = sce
+}
 
-# Remove low-quality cells
-df = perCellQCMetrics(se_subset)
-reasons = quickPerCellQC(df) # DataFrame of logical values
-colSums(as.matrix(reasons))
+# Add library size to colData
+lib_sizes = lapply(X = sce_ls, function(x) colData(x) %>% as_tibble() %>% mutate(cell_barcode = rownames(colData(x))))
+inner_join(lib_sizes$transcripts, lib_sizes$preandmrna, by = "cell_barcode") %>%
+  ggplot(aes(x = lib_size.x, y = lib_size.y)) + 
+  geom_point(size = 0.5, alpha = 0.5) + 
+  geom_abline(intercept = 0, slope = 1) +
+  labs(x = "lib_size_transcripts", y = "lib_size_preandmrna") +
+  theme_bw()
+```
 
-# Convert to SingleCellExperiment
-sce = as(se_subset[, !reasons$discard], "SingleCellExperiment")
-sce
+```{r}
+sce = sce_ls[["transcripts"]]
 ```
 
 ### PCA
@@ -512,8 +531,7 @@ sce = runPCA(sce, exprs_values = "logcounts", ntop = ncol(sce), BSPARAM = Random
 toc()
 
 # PCA colored by library size
-colData(sce)$size = colSums(counts(sce))
-plotReducedDim(sce, "PCA", colour_by = "size")
+plotReducedDim(sce, "PCA", colour_by = "lib_size")
 ```
 
 ### Cell types 
@@ -573,7 +591,7 @@ plotReducedDim(sce, "PCA", colour_by = "ding_labels")
 
 #### Clustering
 
-```{r}
+```{r eval = F}
 # K-means clustering
 set.seed(1)
 
@@ -590,7 +608,7 @@ colData(sce)$labels_kmeans <- factor(clust.kmeans$cluster)
 plotReducedDim(sce, "PCA", colour_by = "labels_kmeans")
 ```
 
-```{r}
+```{r eval = F}
 # Graph-based clustering
 g <- buildSNNGraph(sce, k=10, use.dimred = 'PCA')
 clust <- igraph::cluster_walktrap(g)$membership
@@ -602,14 +620,89 @@ plotReducedDim(sce, "PCA", colour_by="labels_gb")
 
 ### Distributions
 
+To assess distributions, we want to obtain a homogenous group of cells.
+
+```{r}
+# Subset to cluster
+counts_sub = as.matrix(assay(sce, "counts")[, (colData(sce)$ding_labels == "Excitatory neuron" & !is.na(colData(sce)$ding_labels))])
+counts_sub = counts_sub[rowSums(counts_sub) != 0, ]
+dim(counts_sub)
+```
+
+#### Proportion of zero plots
+
+First, I make all the column sums the same by scaling (is downsampling preferred?). The count in row $i$ and column $j$ is transformed as $x_{ij} = x_{ij}*\sum_i x_{ij}/median_j(\sum_i x_{ij})$. 
+
+```{r pre-mRNA_distribution}
+summary(colData(sce)$lib_size)
+
+# Apply transformation
+n = round(median(colData(sce)$lib_size))
+counts_sub_scaled = apply(counts_sub, MARGIN = 2, function(x) x*n/sum(x))
+summary(colSums(counts_sub_scaled))
+```
+
+I compute the average expression for every row (x-axis) $\hat{\mu}_i$ and the empirical $P(X_i=0)$, which is the probability that for a given transcript $i$, the count is 0. 
+
+I then compute what $P(X_i=0)$ would be under the model assumptions of binomial or poisson, using parameters estimated from the data. In particular, for a $Binom(n, p_i)$, $n$ is the median number of total counts of cells and $p_i$ is the mean proportion of counts that were in gene $i$.
+
+```{r}
+# Function to plot P(X_i = 0) against average expression level mu_i
+plot_prob = function(dat_sub){
+  n = round(median(colSums(dat_sub)))
+  means = rowMeans(dat_sub)
+  vars = apply(dat_sub, MARGIN = 1, var)
+  
+  # empirical P(X_i = 0)
+  emp_probs_0 = apply(dat_sub, MARGIN = 1, function(r) sum(r==0)/ncol(dat_sub))
+  plot_dt = tibble(means, emp_probs_0)
+  
+  emp_props = rowMeans(dat_sub/colSums(dat_sub))
+  # Model P(X_i = 0) under Binomial
+  binom_probs_0 = dbinom(x = 0, size = n, prob = emp_props)
+  # Model P(X_i = 0) under Poisson
+  poiss_probs_0 = dpois(x = 0, lambda = n*emp_props)
+  # Model P(X_i = 0) under Negative Binomial
+  # Estimate size/dispersion parameter
+  model = lm(vars ~ 1*means + I(means^2) + 0, tibble(means, vars))
+  phi = 1/coef(model)["I(means^2)"]
+  nbinom_probs_0 = dnbinom(x = 0, size = phi, mu = n*emp_props) 
+  
+  # Tibble for plot
+  plot_lines_dt = tibble(means = means,
+                         binomial = binom_probs_0,
+                         poisson = poiss_probs_0,
+                         nbinomial = nbinom_probs_0) %>%
+    pivot_longer(-means, names_to = "model", values_to = "probs_0")
+  
+  # Plot
+  plt = plot_lines_dt %>%
+    ggplot(aes(x = log(means), y = probs_0)) +
+    geom_point(data = plot_dt, aes(x = log(means), y = emp_probs_0), alpha = 0.4) + # Add data points
+    geom_line(aes(color = model),
+              size = 1) + # Add lines for models
+    labs(x = "Average expression level log(E(X_i))",
+         y = "P(X_i = 0)") +
+    theme_bw() +
+    theme(text = element_text(size = 15))
+  
+  # Return object
+  out = list(plot = plt,
+             lines_dt = plot_lines_dt)
+  return(out)
+}
+```
+
+```{r}
+# Plot P(X_i = 0) against average expression level
+prob_out = plot_prob(counts_sub_scaled)
+prob_out$plot
+```
+
 #### Goodness-of-fit tests
 
 ```{r eval = F}
 library(MASS)
-
-# Subset to cluster
-counts_sub = as.matrix(assay(sce, "counts")[, (colData(sce)$ding_labels == "Excitatory neuron" & !is.na(colData(sce)$ding_labels))])
-counts_sub = counts_sub[rowSums(counts_sub) != 0, ]
 
 # Poisson
 p_values_pois = c()
@@ -652,10 +745,6 @@ Using `glmGamPoi` to plot mean-variance relationships.
 
 ```{r}
 library(glmGamPoi)
-
-# Subset to cluster
-counts_sub = as.matrix(assay(sce, "counts")[, (colData(sce)$ding_labels == "Excitatory neuron" & !is.na(colData(sce)$ding_labels))])
-counts_sub = counts_sub[rowSums(counts_sub) != 0, ]
 
 # Poisson
 fit_pois <- glmGamPoi::glm_gp(counts_sub, design = ~ 1, size_factors = FALSE, 
