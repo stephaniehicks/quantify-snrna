@@ -514,7 +514,7 @@ inner_join(lib_sizes$transcripts, lib_sizes$preandmrna, by = "cell_barcode") %>%
 ```
 
 ```{r}
-sce = sce_ls[["transcripts"]]
+sce = sce_ls[["preandmrna"]]
 ```
 
 ### PCA
@@ -723,7 +723,7 @@ plot_prob = function(dat_sub){
     ggplot(aes(x = log(means), y = probs_0)) +
     geom_point(data = plot_dt, aes(x = log(means), y = emp_probs_0), alpha = 0.4) + # Add data points
     geom_line(aes(color = model),
-              size = 1) + # Add lines for models
+              size = 0.5) + # Add lines for models
     labs(x = "Average expression level log(E(X_i))",
          y = "P(X_i = 0)") +
     theme_bw() +
@@ -756,9 +756,9 @@ library(MASS)
 # Poisson
 tic()
 p_values_pois = c()
-for(i in 1:nrow(counts_sub)){
+for(i in 1:nrow(counts_sub_scaled)){
   # message(i)
-  x = counts_sub[i,]
+  x = counts_sub_scaled[i,]
   x = ceiling(x) 
   poissonfit = fitdistr(x, "poisson")
   lambda.fit = poissonfit$estimate["lambda"]
@@ -775,10 +775,10 @@ toc()
 # Negative binomial
 tic()
 p_values_nb = c()
-for(i in 1:nrow(counts_sub)){
+for(i in 1:nrow(counts_sub_scaled)){
   # message(i)
   tryCatch({
-  x = counts_sub[i,]
+  x = counts_sub_scaled[i,]
   x = ceiling(x)
   nbfit = suppressWarnings(fitdistr(x, "negative binomial"))
   r.fit = nbfit$estimate['size']
@@ -794,11 +794,13 @@ for(i in 1:nrow(counts_sub)){
 toc()
 
 # Plot p-values
+print(length(p_values_pois) - length(p_values_nb))
 tibble(distribution = c(rep("Poisson", length(p_values_pois)), rep("NB", length(p_values_nb))),
        p_value = c(p_values_pois, p_values_nb)) %>%
   ggplot(aes(x = p_value)) + 
   geom_histogram() +
   facet_wrap(~ distribution) +
+  labs(title = cell_type) +
   theme_bw()
 ```
 
@@ -817,9 +819,9 @@ poi_fit<-function(m,X=NULL,sz=NULL,maxit=100){
   #poisson
   if(is.null(sz)){ sz<-log(colMeans(m)) }
   if(is.null(X)){ #no covariates => closed form solution
-    sz<-exp(sz)
-    lam<-rowSums(m)/sum(sz) # each gene has an empirically estimated lambda
-    mu<-outer(lam,sz) # outer product of lambda and lib size, each cell x gene has a mu
+    sz<-exp(sz) # sz is library size / number of genes
+    lam<-rowSums(m)/sum(sz) # each gene has an empirically estimated lambda (~ proportion of counts in that gene)
+    mu<-outer(lam,sz) # outer product of lambda and sz (equivalent to prop of counts in gene * library size), each cell x gene has a mu
     ll<-matrix(dpois(m,mu,log=TRUE),nrow=nrow(m)) # Calculate loglikelihood in every cell x gene
     return(data.frame(ll=rowSums(ll),converged=TRUE)) # Sum loglikelihoods in each row
   } else { #covariates included
@@ -852,7 +854,7 @@ poi_bic<-function(m,X=NULL,prefit=NULL,maxit=100){
 
 nb_fit<-function(m,X=NULL,sz=NULL){
   #neg binom
-  if(is.null(sz)){ sz<-colMeans(m)} # Note: original code took log but that led to invalid xmin
+  if(is.null(sz)){ sz<-log(colMeans(m))} 
   if(is.null(X)){
     f<-function(y){
       mgcv::gam(y~1,family=mgcv::nb,offset=sz,method="ML")
@@ -886,8 +888,12 @@ nb_bic<-function(m,X=NULL,prefit=NULL){
 ```
 
 ```{r}
-m = counts_sub[1:100, ]
+m = counts_sub
 m = ceiling(m)
+summary(colSums(m))
+summary(rowSums(m))
+m = m[rowSums(m) != 0, ]
+dim(m)
 tic()
 poi_bic(m)
 toc()
