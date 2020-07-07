@@ -652,27 +652,42 @@ To assess distributions, we want to obtain a homogenous group of cells.
 
 ```{r}
 # Subset to cluster
-counts_sub = as.matrix(assay(sce, "counts")[, (colData(sce)$ding_labels == "Excitatory neuron" & !is.na(colData(sce)$ding_labels))])
+cell_type = "Astrocyte"
+counts_sub = as.matrix(assay(sce, "counts")[, (colData(sce)$ding_labels == cell_type & !is.na(colData(sce)$ding_labels))])
 counts_sub = counts_sub[rowSums(counts_sub) != 0, ]
 dim(counts_sub)
 ```
 
 #### Proportion of zero plots
 
-First, I make all the column sums the same by scaling (is downsampling preferred?). The count in row $i$ and column $j$ is transformed as $x_{ij} = x_{ij}*\sum_i x_{ij}/median_j(\sum_i x_{ij})$. 
+First, I make all the column sums comparable by downsampling (this is a stochastic transformation as opposed to scaling).
 
-```{r pre-mRNA_distribution}
-summary(colData(sce)$lib_size)
+```{r}
+summary(colSums(counts_sub))
 
-# Apply transformation
-n = round(median(colData(sce)$lib_size))
-counts_sub_scaled = apply(counts_sub, MARGIN = 2, function(x) x*n/sum(x))
+# Source: https://github.com/willtownes/scrna2019/blob/028363f04139a58b19143f3058ca8fa4a3533b63/util/functions.R
+Down_Sample_Matrix<-function(expr_mat,min_lib_size=NULL){
+  min_sz<-min(colSums(expr_mat))
+  if(is.null(min_lib_size)){
+    min_lib_size<-min_sz
+  } else {
+    stopifnot(min_lib_size<=min_sz)
+  }
+  down_sample<-function(x){
+    prob <- min_lib_size/sum(x)
+    unlist(lapply(x,function(y){rbinom(1, y, prob)}))
+  }
+  apply(expr_mat, 2, down_sample)
+}
+
+
+counts_sub_scaled = Down_Sample_Matrix(ceiling(counts_sub))
 summary(colSums(counts_sub_scaled))
 ```
 
 I compute the average expression for every row (x-axis) $\hat{\mu}_i$ and the empirical $P(X_i=0)$, which is the probability that for a given transcript $i$, the count is 0. 
 
-I then compute what $P(X_i=0)$ would be under the model assumptions of binomial or poisson, using parameters estimated from the data. In particular, for a $Binom(n, p_i)$, $n$ is the median number of total counts of cells and $p_i$ is the mean proportion of counts that were in gene $i$.
+I then compute what $P(X_i=0)$ would be under the model assumptions of binomial or poisson, using parameters estimated from the data. In particular, for a $Binom(n, p_i)$, $n$ is the median number of total counts of cells and $p_i$ is the proportion of counts that were in gene $i$.
 
 ```{r}
 # Function to plot P(X_i = 0) against average expression level mu_i
@@ -724,7 +739,8 @@ plot_prob = function(dat_sub){
 ```{r}
 # Plot P(X_i = 0) against average expression level
 prob_out = plot_prob(counts_sub_scaled)
-prob_out$plot
+prob_out$plot +
+  labs(title = cell_type)
 ```
 
 #### Goodness-of-fit tests
