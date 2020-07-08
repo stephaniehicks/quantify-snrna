@@ -652,7 +652,7 @@ To assess distributions, we want to obtain a homogenous group of cells.
 
 ```{r}
 # Subset to cluster
-cell_type = "Astrocyte"
+cell_type = "Inhibitory neuron"
 counts_sub = as.matrix(assay(sce, "counts")[, (colData(sce)$ding_labels == cell_type & !is.na(colData(sce)$ding_labels))])
 counts_sub = counts_sub[rowSums(counts_sub) != 0, ]
 dim(counts_sub)
@@ -794,14 +794,31 @@ for(i in 1:nrow(counts_sub_scaled)){
 }
 toc()
 
-# Plot p-values
+# Put p-values in tibble
 print(length(p_values_pois) - length(p_values_nb))
-tibble(distribution = c(rep("Poisson", length(p_values_pois)), rep("NB", length(p_values_nb))),
-       p_value = c(p_values_pois, p_values_nb)) %>%
+p_value_tb = tibble(distribution = c(rep("Poisson", length(p_values_pois)), rep("NB", length(p_values_nb))),
+       p_value = c(p_values_pois, p_values_nb),
+       gene = rep(rownames(counts_sub_scaled), 2))
+
+# Histogram of p-values
+p_value_tb %>%
   ggplot(aes(x = p_value)) + 
   geom_histogram() +
   facet_wrap(~ distribution) +
   labs(title = cell_type) +
+  theme_bw()
+
+# Scatterplot of p-values
+emp_probs_0 = apply(counts_sub_scaled, MARGIN = 1, function(r) sum(r==0)/ncol(counts_sub_scaled))
+p_value_tb %>%
+  pivot_wider(id_cols = gene,
+              names_from = "distribution",
+              values_from = "p_value") %>%
+  mutate(emp_probs_0 = emp_probs_0) %>%
+  ggplot(aes(x = Poisson, y = NB)) + 
+  geom_point(aes(color = emp_probs_0), alpha = 0.5) +
+  labs(x = "poisson_pvalue",
+       y = "nb_pvalue") +
   theme_bw()
 ```
 
@@ -889,7 +906,7 @@ nb_bic<-function(m,X=NULL,prefit=NULL){
 ```
 
 ```{r eval = F}
-m = counts_sub
+m = counts_sub_scaled
 m = ceiling(m)
 summary(colSums(m))
 summary(rowSums(m))
@@ -919,10 +936,11 @@ var_emp = genefilter::rowVars(counts_sub_scaled)
 fit_pois = glmGamPoi::glm_gp(counts_sub_scaled, design = ~ 1, size_factors = FALSE, 
                          overdispersion = FALSE)
 # Negative binomial
-# Estimate size/dispersion parameter
+# Estimate overall size/dispersion parameter
 model = lm(var_emp ~ 1*mean_emp + I(mean_emp^2) + 0, tibble(mean_emp, var_emp))
 phi = 1/coef(model)["I(mean_emp^2)"]
-  
+
+# Estimate size/dispersion parameter for every gene
 fit_nb =  glmGamPoi::glm_gp(counts_sub_scaled, design = ~ 1, size_factors = FALSE, 
                          overdispersion = TRUE)
 
@@ -930,8 +948,8 @@ fit_nb =  glmGamPoi::glm_gp(counts_sub_scaled, design = ~ 1, size_factors = FALS
 mean_var_tb = tibble(mean_emp = mean_emp,
                      var_emp = var_emp,
                      var_pois = rowMeans(counts_sub_scaled),
-                     var_nb_v1 = mean_emp + mean_emp^2 * 1/phi, # overdispersion is same for every gene
-                     var_nb_v2 = mean_emp + mean_emp^2 * fit_nb$overdispersions) %>% # overdispersion parameter is different for every gene
+                     var_nb_v1 = mean_emp + mean_emp^2 * 1/phi, 
+                     var_nb_v2 = mean_emp + mean_emp^2 * fit_nb$overdispersions) %>% 
   tidyr::pivot_longer(cols = -mean_emp, names_to = "var_type", values_to = "var_value")
 
 # Plot
@@ -941,8 +959,5 @@ mean_var_tb %>%
   geom_point(alpha = 0.1) + 
   scale_x_log10() + scale_y_log10() +
   theme_bw()
-
-smoothScatter(mean_var_tb %>%
-  filter(var_type %in% c("var_pois")) %>% select(mean_emp, var_value) %>% log10())
 ```
 
