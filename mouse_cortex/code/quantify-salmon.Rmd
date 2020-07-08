@@ -682,6 +682,7 @@ Down_Sample_Matrix<-function(expr_mat,min_lib_size=NULL){
 
 
 counts_sub_scaled = Down_Sample_Matrix(ceiling(counts_sub))
+counts_sub_scaled = counts_sub_scaled[rowSums(counts_sub_scaled) != 0, ]
 summary(colSums(counts_sub_scaled))
 ```
 
@@ -813,7 +814,7 @@ Issues:
 
 1. Taking log for sz? Why does offset require taking log?
 
-```{r}
+```{r eval = F}
 # Helper functions
 poi_fit<-function(m,X=NULL,sz=NULL,maxit=100){
   #poisson
@@ -887,7 +888,7 @@ nb_bic<-function(m,X=NULL,prefit=NULL){
 }
 ```
 
-```{r}
+```{r eval = F}
 m = counts_sub
 m = ceiling(m)
 summary(colSums(m))
@@ -903,8 +904,6 @@ nb_bic(m)
 toc()
 ```
 
-
-
 #### Poisson-Gamma models
 
 Using `glmGamPoi` to plot mean-variance relationships.
@@ -912,38 +911,38 @@ Using `glmGamPoi` to plot mean-variance relationships.
 ```{r}
 library(glmGamPoi)
 
+# Empirical mean and variance
+mean_emp = rowMeans(counts_sub_scaled)
+var_emp = genefilter::rowVars(counts_sub_scaled)
+
 # Poisson
-fit_pois <- glmGamPoi::glm_gp(counts_sub, design = ~ 1, size_factors = FALSE, 
+fit_pois = glmGamPoi::glm_gp(counts_sub_scaled, design = ~ 1, size_factors = FALSE, 
                          overdispersion = FALSE)
-fit_pois
-names(fit_pois)
-
-tmp_pois <- data.frame("mean_fit" = rowMeans(fit_pois$Mu), 
-           "variance_pois_fit" = rowMeans(fit_pois$Mu), 
-           "variance_emp" = genefilter::rowVars(counts_sub)) %>% 
-  tidyr::pivot_longer(cols = -mean_fit, names_to = "var_type", values_to = "var_value")
-
-tmp_pois %>%
-  ggplot(aes(x = mean_fit, y = var_value, color = var_type)) + 
-  geom_point() + 
-  scale_x_log10() + scale_y_log10() +
-  theme_bw()
-
 # Negative binomial
-fit_nb <- glmGamPoi::glm_gp(counts_sub, design = ~ 1, size_factors = FALSE, 
+# Estimate size/dispersion parameter
+model = lm(var_emp ~ 1*mean_emp + I(mean_emp^2) + 0, tibble(mean_emp, var_emp))
+phi = 1/coef(model)["I(mean_emp^2)"]
+  
+fit_nb =  glmGamPoi::glm_gp(counts_sub_scaled, design = ~ 1, size_factors = FALSE, 
                          overdispersion = TRUE)
-fit_nb
-names(fit_nb)
 
-tmp_nb <- data.frame("mean_fit" = rowMeans(fit_nb$Mu), 
-           "variance_NB_fit" = rowMeans(fit_nb$Mu) + rowMeans(fit_nb$Mu)^2 * fit_nb$overdispersions, 
-           "variance_emp" = genefilter::rowVars(counts_sub)) %>% 
-  tidyr::pivot_longer(cols = -mean_fit, names_to = "var_type", values_to = "var_value")
+# Note: rowMean(fit_pois$Mu) = rowMeans(fit_nb$Mu) = rowMeans(counts)
+mean_var_tb = tibble(mean_emp = mean_emp,
+                     var_emp = var_emp,
+                     var_pois = rowMeans(counts_sub_scaled),
+                     var_nb_v1 = mean_emp + mean_emp^2 * 1/phi, # overdispersion is same for every gene
+                     var_nb_v2 = mean_emp + mean_emp^2 * fit_nb$overdispersions) %>% # overdispersion parameter is different for every gene
+  tidyr::pivot_longer(cols = -mean_emp, names_to = "var_type", values_to = "var_value")
 
-tmp_nb %>%
-  ggplot(aes(x = mean_fit, y = var_value, color = var_type)) + 
-  geom_point() + 
+# Plot
+mean_var_tb %>%
+  filter(var_type %in% c("var_emp", "var_nb_v1")) %>%
+  ggplot(aes(x = mean_emp, y = var_value, color = var_type)) + 
+  geom_point(alpha = 0.1) + 
   scale_x_log10() + scale_y_log10() +
   theme_bw()
+
+smoothScatter(mean_var_tb %>%
+  filter(var_type %in% c("var_pois")) %>% select(mean_emp, var_value) %>% log10())
 ```
 
