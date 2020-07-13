@@ -484,7 +484,7 @@ se_ls[["preandmrna"]] = readRDS(here("mouse_cortex", "salmon_quants", "se_SRR916
 
 ### Quality control
 
-```{r}
+```{r fig.width = 5, fig.height = 5}
 sce_ls = list()
 for(i in seq_along(se_ls)){
   se = se_ls[[i]]
@@ -509,7 +509,16 @@ inner_join(lib_sizes$transcripts, lib_sizes$preandmrna, by = "cell_barcode") %>%
   ggplot(aes(x = lib_size.x, y = lib_size.y)) + 
   geom_point(size = 0.5, alpha = 0.5) + 
   geom_abline(intercept = 0, slope = 1) +
-  labs(x = "lib_size_transcripts", y = "lib_size_preandmrna") +
+  labs(x = "num_reads_transcripts", y = "num_reads_preandmrna") +
+  theme_bw()
+
+inner_join(lib_sizes$transcripts, lib_sizes$preandmrna, by = "cell_barcode") %>%
+  dplyr::rename(preandmrna = lib_size.y,
+                transcripts = lib_size.x) %>%
+  pivot_longer(cols = c("preandmrna", "transcripts"), names_to = "pipeline") %>%
+  ggplot(aes(x = pipeline, y = value)) +
+  geom_boxplot() + 
+  labs(y = "num_reads") +
   theme_bw()
 ```
 
