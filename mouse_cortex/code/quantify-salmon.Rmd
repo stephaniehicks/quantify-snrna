@@ -523,7 +523,7 @@ inner_join(lib_sizes$transcripts, lib_sizes$preandmrna, by = "cell_barcode") %>%
 ```
 
 ```{r}
-sce = sce_ls[["preandmrna"]]
+sce = sce_ls[["transcripts"]]
 ```
 
 ### PCA
@@ -577,6 +577,25 @@ colData(sce)$singleR_labels_pruned = pred_celltypes$pruned.labels
 # PCA colored by singleR labels
 plotReducedDim(sce, "PCA", colour_by = "singleR_labels_pruned")
 ```
+
+```{r}
+# Comparison of singleR classification between pipelines
+preandmrna_cd = as_tibble(tmp) %>%
+  mutate(cell = rownames(tmp)) %>%
+  dplyr::rename(singleR_labels_pruned_preandmrna = singleR_labels_pruned) %>%
+  select(cell, singleR_labels_pruned_preandmrna)
+transcripts_cd = as_tibble(colData(sce)) %>%
+  mutate(cell = rownames(colData(sce))) %>%
+  dplyr::rename(singleR_labels_pruned_transcripts = singleR_labels_pruned)
+
+cd = inner_join(preandmrna_cd, transcripts_cd, by = "cell")
+cd %>%
+  ggplot(aes(x = singleR_labels_pruned_preandmrna, fill = singleR_labels_pruned_transcripts)) +
+  geom_bar() +
+  theme_bw() +
+  theme(axis.text.x = element_text(angle = 90, hjust = 1))
+```
+
 
 #### Ding
 
