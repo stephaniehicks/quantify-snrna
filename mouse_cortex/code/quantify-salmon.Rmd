@@ -523,7 +523,7 @@ inner_join(lib_sizes$transcripts, lib_sizes$preandmrna, by = "cell_barcode") %>%
 ```
 
 ```{r}
-sce = sce_ls[["transcripts"]]
+sce = sce_ls[["preandmrna"]]
 ```
 
 ### PCA
@@ -571,6 +571,9 @@ pred_celltypes = SingleR(test = test_counts,
                          labels = mouse_se$label.main)
 colData(sce)$singleR_labels = pred_celltypes$labels
 colData(sce)$singleR_labels_pruned = pred_celltypes$pruned.labels
+
+# preandmrna_cd = colData(sce)
+# transcripts_cd = colData(sce)
 ```
 
 ```{r}
@@ -580,20 +583,23 @@ plotReducedDim(sce, "PCA", colour_by = "singleR_labels_pruned")
 
 ```{r}
 # Comparison of singleR classification between pipelines
-preandmrna_cd = as_tibble(tmp) %>%
-  mutate(cell = rownames(tmp)) %>%
-  dplyr::rename(singleR_labels_pruned_preandmrna = singleR_labels_pruned) %>%
-  select(cell, singleR_labels_pruned_preandmrna)
-transcripts_cd = as_tibble(colData(sce)) %>%
-  mutate(cell = rownames(colData(sce))) %>%
-  dplyr::rename(singleR_labels_pruned_transcripts = singleR_labels_pruned)
+preandmrna_cd_tb = as_tibble(preandmrna_cd) %>%
+  mutate(cell = rownames(preandmrna_cd)) %>%
+  dplyr::rename(singleR_labels_pruned_preandmrna = singleR_labels_pruned,
+                singleR_labels_preandmrna = singleR_labels)
+transcripts_cd_tb = as_tibble(transcripts_cd) %>%
+  mutate(cell = rownames(transcripts_cd)) %>%
+  dplyr::rename(singleR_labels_pruned_transcripts = singleR_labels_pruned,
+                singleR_labels_transcripts = singleR_labels)
 
-cd = inner_join(preandmrna_cd, transcripts_cd, by = "cell")
+cd = inner_join(preandmrna_cd_tb, transcripts_cd_tb, by = "cell")
 cd %>%
-  ggplot(aes(x = singleR_labels_pruned_preandmrna, fill = singleR_labels_pruned_transcripts)) +
+  ggplot(aes(x = singleR_labels_preandmrna, fill = singleR_labels_transcripts)) +
   geom_bar() +
   theme_bw() +
   theme(axis.text.x = element_text(angle = 90, hjust = 1))
+
+table(cd$singleR_labels_pruned_preandmrna, cd$singleR_labels_pruned_transcripts, useNA = "ifany")
 ```
 
 
@@ -617,7 +623,7 @@ plotReducedDim(sce, "PCA", colour_by = "ding_labels")
 
 ```{r}
 # Get overlap with singleR labels
-overlap = table(colData(sce)$singleR_labels_pruned, colData(sce)$ding_labels) %>%
+overlap = table(colData(sce)$singleR_labels_pruned, colData(sce)$ding_labels, useNA = "ifany") %>%
   as.data.frame()
 
 # Normalize frequency within each Ding cell type
@@ -644,36 +650,6 @@ overlap %>%
   theme(axis.text.x = element_text(angle = 90, hjust = 1))
 ```
 
-
-#### Clustering
-
-```{r eval = F}
-# K-means clustering
-set.seed(1)
-
-# Elbow plot with SSE
-sse = c()
-for(k in 1:10){
-  clust.kmeans <- kmeans(reducedDim(sce, "PCA"), centers = k)
-  sse = c(sse, clust.kmeans$tot.withinss)
-}
-plot(sse)
-
-clust.kmeans <- kmeans(reducedDim(sce, "PCA"), centers = 6)
-colData(sce)$labels_kmeans <- factor(clust.kmeans$cluster)
-plotReducedDim(sce, "PCA", colour_by = "labels_kmeans")
-```
-
-```{r eval = F}
-# Graph-based clustering
-g <- buildSNNGraph(sce, k=10, use.dimred = 'PCA')
-clust <- igraph::cluster_walktrap(g)$membership
-
-colData(sce)$labels_gb <- factor(clust)
-plotReducedDim(sce, "PCA", colour_by="labels_gb")
-```
-
-
 ### Distributions
 
 To assess distributions, we want to obtain a homogenous group of cells.
@@ -684,6 +660,47 @@ cell_type = "Inhibitory neuron"
 counts_sub = as.matrix(assay(sce, "counts")[, (colData(sce)$ding_labels == cell_type & !is.na(colData(sce)$ding_labels))])
 counts_sub = counts_sub[rowSums(counts_sub) != 0, ]
 dim(counts_sub)
+```
+
+#### Within-group clustering
+
+```{r}
+sce_sub = SingleCellExperiment(assays=list(counts = counts_sub))
+# Normalize and take log
+clust = quickCluster(sce_sub)
+sce_sub = computeSumFactors(sce_sub, clusters = clust)
+sce_sub = logNormCounts(sce_sub)
+
+set.seed(1)
+tic("approx PCA")
+sce_sub = runPCA(sce_sub, exprs_values = "logcounts", ntop = ncol(sce), BSPARAM = RandomParam())
+toc()
+```
+
+```{r eval = F}
+# K-means clustering
+set.seed(1)
+
+# Elbow plot with SSE
+sse = c()
+for(k in 1:10){
+  clust.kmeans <- kmeans(reducedDim(sce_sub, "PCA"), centers = k)
+  sse = c(sse, clust.kmeans$tot.withinss)
+}
+plot(sse)
+
+clust.kmeans <- kmeans(reducedDim(sce_sub, "PCA"), centers = 4)
+colData(sce_sub)$labels_kmeans <- factor(clust.kmeans$cluster)
+plotReducedDim(sce_sub, "PCA", colour_by = "labels_kmeans")
+```
+
+```{r eval = F}
+# Graph-based clustering
+g <- buildSNNGraph(sce_sub, k=10, use.dimred = 'PCA')
+clust <- igraph::cluster_walktrap(g)$membership
+
+colData(sce_sub)$labels_gb <- factor(clust)
+plotReducedDim(sce_sub, "PCA", colour_by="labels_gb")
 ```
 
 #### Proportion of zero plots
