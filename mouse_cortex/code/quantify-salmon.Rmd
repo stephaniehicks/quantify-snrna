@@ -419,6 +419,17 @@ makeLinkedTxome(indexDir=index_dir,
                 release="other", genome="GRCm38",
                 fasta=fasta_path, gtf=gtf_path,
                 jsonFile=json_file) # this command will add the index to the cache automatically
+
+# created linkedTranscriptome for introncollapse decoys pipline
+index_dir = here("mouse_cortex", "salmon_files", "gencode.vM25_salmon-index-v1.0.0-introncollapse-mouse")
+fasta_path = here("mouse_cortex", "salmon_files", "gencode.vM25.introncollapse.mouse.fa.gz")
+gtf_path = here("mouse_cortex", "salmon_files", "gencode.vM25.annotation.gtf.gz") 
+json_file = here("mouse_cortex", "salmon_files", paste0(basename(index_dir), ".json"))
+makeLinkedTxome(indexDir=index_dir,
+                source="other", organism="mouse",
+                release="other", genome="GRCm38",
+                fasta=fasta_path, gtf=gtf_path,
+                jsonFile=json_file) # this command will add the index to the cache automatically
 ```
 
 
@@ -446,7 +457,7 @@ loadLinkedTxome(json_file)
 
 ```{r eval = F}
 # Note: alevin import currently only supports a single experiment
-pipeline = "preandmrna" # "transcripts" or "preandmrna"
+pipeline = "introncollapse" # "transcripts" or "preandmrna" or "introncollapse/separate"
 run_names = gsub("_quant", "", basename(list.dirs(here("mouse_cortex", "salmon_quants", paste0(pipeline, "_pipeline")), recursive = F)))
 run_names = run_names[!grepl("nodecoys", run_names)]
 file_paths = here("mouse_cortex", "salmon_quants", paste0(pipeline, "_pipeline"), paste0(run_names, "_quant"), "alevin", "quants_mat.gz") 
