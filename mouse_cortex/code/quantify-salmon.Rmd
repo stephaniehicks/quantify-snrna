@@ -535,7 +535,7 @@ inner_join(lib_sizes$transcripts, lib_sizes$preandmrna, by = "cell_barcode") %>%
 ```
 
 ```{r}
-sce = sce_ls[["preandmrna"]]
+sce = sce_ls[["transcripts"]]
 ```
 
 ### PCA
@@ -626,6 +626,9 @@ meta_ding_10x = meta_ding %>%
   mutate(cell_barcode = gsub("Cortex.*10xChromium", "", NAME))
 match_cols = match(colnames(sce), meta_ding_10x$cell_barcode)
 colData(sce)$ding_labels = meta_ding_10x$CellType[match_cols]
+
+# preandmrna_cd = colData(sce)
+# transcripts_cd = colData(sce)
 ```
 
 ```{r}
@@ -635,7 +638,8 @@ plotReducedDim(sce, "PCA", colour_by = "ding_labels")
 
 ```{r}
 # Get overlap with singleR labels
-overlap = table(colData(sce)$singleR_labels_pruned, colData(sce)$ding_labels, useNA = "ifany") %>%
+tb = as_tibble(preandmrna_cd)
+overlap = table(tb$singleR_labels_pruned, tb$ding_labels, useNA = "ifany") %>%
   as.data.frame()
 
 # Normalize frequency within each Ding cell type
@@ -660,6 +664,39 @@ overlap %>%
   labs(x = "singleR_labels_pruned",
        y = "ding_labels") +
   theme(axis.text.x = element_text(angle = 90, hjust = 1))
+```
+
+```{r}
+tb = as_tibble(preandmrna_cd) %>%
+  mutate(cell = rownames(preandmrna_cd))
+
+# Label cells where singleR label != ding label
+tb = tb %>%
+  mutate(ding_labels_match = case_when(ding_labels == "Astrocyte" ~ "Astrocytes",
+                                       ding_labels == "Endothelial" ~ "Endothelial cells",
+                                       ding_labels == "Excitatory neuron" ~ "Neurons",
+                                       ding_labels == "Inhibitory neuron" ~ "Neurons",
+                                       ding_labels == "Microglia" ~ "Microglia",
+                                       ding_labels == "Oligodendrocyte" ~ "Oligodendrocytes",
+                                       ding_labels == "OPC" ~ "OPC"))
+
+tb = tb %>%
+  mutate(non_matching_cells = (singleR_labels_pruned != ding_labels_match) | is.na(singleR_labels_pruned))
+
+tb_misclassify = tb %>%
+  filter(!is.na(ding_labels_match)) %>%
+  filter(ding_labels_match != "OPC")
+
+tb_misclassify %>%
+  ggplot(aes(x = lib_size)) +
+  geom_histogram(aes(fill = non_matching_cells)) +
+  facet_wrap(~ ding_labels_match, nrow = 2) +
+  labs(title = "preandmrna pipeline") +
+  theme_bw()
+
+print(sum(tb_misclassify$non_matching_cells, na.rm = T))
+
+tb_misclassify
 ```
 
 ### Distributions
@@ -1016,6 +1053,10 @@ dim(m)
 # Print BIC values (lower value is better fit)
 tic()
 mult_bic(m) # 5 sec
+toc() 
+
+tic()
+dmn_bic(m) # 
 toc() 
 
 tic()
