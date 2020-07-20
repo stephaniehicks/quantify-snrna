@@ -936,6 +936,27 @@ poi_bic<-function(m,X=NULL,prefit=NULL,maxit=100){
   -2*ll+df*log(prod(dim(m)))
 }
 
+# Negative binomial (single overdispersion parameter for all genes)
+nb_bic_1 = function(m){
+  # estimate phi
+  means = rowMeans(m)
+  vars = apply(m, MARGIN = 1, var)
+  model = lm(vars ~ 1*means + I(means^2) + 0, tibble(means, vars))
+  phi = 1/coef(model)["I(means^2)"]
+  
+  # estimate mu
+  sz <- colMeans(m) # sz is library size / number of genes = colMeans(m)
+  lam <- rowSums(m)/sum(sz) # each gene has an empirically estimated lambda (~ proportion of counts in that gene)
+  mu <- outer(lam, sz) # outer product of lambda and sz (equivalent to prop of counts in gene * library size), each cell x gene has a mu
+  
+  # get ll
+  ll = matrix(dnbinom(m, size = phi, mu = mu, log = TRUE), nrow = nrow(m)) # get likelihood for every cell x gene
+  ll = sum(ll) # sum likelihood
+  df = nrow(m) + 1
+  print(paste0("Loglikelihood is ", ll, " df is ", df))
+  -2*ll+df*log(prod(dim(m)))
+}
+
 # Negative binomial (separate overdispersion parameter for each gene)
 nb_fit<-function(m,X=NULL,sz=NULL){
   #neg binom
@@ -960,7 +981,7 @@ nb_fit<-function(m,X=NULL,sz=NULL){
   res
 }
 
-nb_bic<-function(m,X=NULL,prefit=NULL){
+nb_bic_2<-function(m,X=NULL,prefit=NULL){
   if(is.null(prefit)){ 
     prefit<-nb_fit(m,X)
   } else {
@@ -971,7 +992,6 @@ nb_bic<-function(m,X=NULL,prefit=NULL){
   df = k*nrow(m)
   print(paste0("Loglikelihood is ", ll, " df is ", df))
   -2*ll+df*log(prod(dim(m)))
-
 }
 ```
 
@@ -993,7 +1013,11 @@ poi_bic(m) # 5 sec
 toc()
 
 tic()
-nb_bic(m) # ~ 15 min
+nb_bic_1(m) # 5 sec
+toc()
+
+tic()
+nb_bic_2(m) # ~ 15 min
 toc()
 ```
 
