@@ -892,9 +892,19 @@ mult_bic<-function(m){
   n<-colSums(m)
   p<-rowSums(m)/sum(n)
   ll<-sum(apply(m,2,dmultinom,prob=p,log=TRUE))
-  df<-length(p)-1
+  df<-nrow(m)-1
   print(paste0("Loglikelihood is ", ll, " df is ", df))
   -2*ll+df*log(prod(dim(m)))
+}
+
+# Dirichlet multinomial (for overdispersion)
+dmn_bic<-function(m){
+  fit<-DirichletMultinomial::dmn(t(m),1)
+  alpha<-drop(fit@fit$Estimate)
+  ll<-sum(extraDistr::ddirmnom(t(m), colSums(m), alpha, log = TRUE))
+  df = nrow(m)
+  print(paste0("Loglikelihood is ", ll, " df is ", df))
+  -2*ll+nrow(m)*log(prod(dim(m)))
 }
 
 # Poisson
