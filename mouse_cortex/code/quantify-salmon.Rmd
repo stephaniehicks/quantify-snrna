@@ -491,6 +491,7 @@ suppressPackageStartupMessages({
 se_ls = list()
 se_ls[["transcripts"]] = readRDS(here("mouse_cortex", "salmon_quants", "se_SRR9169228_transcripts.rds"))
 se_ls[["preandmrna"]] = readRDS(here("mouse_cortex", "salmon_quants", "se_SRR9169228_preandmrna.rds"))
+se_ls[["introncollapse"]] = readRDS(here("mouse_cortex", "salmon_quants", "se_SRR9169228_introncollapse.rds"))
 ```
 
 ### Quality control
@@ -883,12 +884,20 @@ p_value_tb %>%
 
 Source: https://github.com/willtownes/scrna2019/blob/028363f04139a58b19143f3058ca8fa4a3533b63/util/functions.R
 
-Issues:
-
-1. Taking log for sz? Why does offset require taking log?
-
 ```{r eval = F}
 # Helper functions
+# Multinomial
+mult_bic<-function(m){
+  #multinomial model
+  n<-colSums(m)
+  p<-rowSums(m)/sum(n)
+  ll<-sum(apply(m,2,dmultinom,prob=p,log=TRUE))
+  df<-length(p)-1
+  print(paste0("Loglikelihood is ", ll, " df is ", df))
+  -2*ll+df*log(prod(dim(m)))
+}
+
+# Poisson
 poi_fit<-function(m,X=NULL,sz=NULL,maxit=100){
   #poisson
   if(is.null(sz)){ sz<-log(colMeans(m)) }
@@ -927,6 +936,7 @@ poi_bic<-function(m,X=NULL,prefit=NULL,maxit=100){
   -2*ll+df*log(prod(dim(m)))
 }
 
+# Negative binomial (separate overdispersion parameter for each gene)
 nb_fit<-function(m,X=NULL,sz=NULL){
   #neg binom
   if(is.null(sz)){ sz<-log(colMeans(m))} 
@@ -972,12 +982,18 @@ summary(colSums(m))
 summary(rowSums(m))
 m = m[rowSums(m) != 0, ]
 dim(m)
+
+# Print BIC values (lower value is better fit)
 tic()
-poi_bic(m)
+mult_bic(m) # 5 sec
+toc() 
+
+tic()
+poi_bic(m) # 5 sec
 toc()
 
 tic()
-nb_bic(m)
+nb_bic(m) # ~ 15 min
 toc()
 ```
 
