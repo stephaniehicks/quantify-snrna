@@ -515,7 +515,7 @@ for(i in seq_along(se_ls)){
   sce_ls[[names(se_ls)[i]]] = sce
 }
 
-# Add library size to colData
+# Plot library sizes
 lib_sizes = lapply(X = sce_ls, function(x) colData(x) %>% as_tibble() %>% mutate(cell_barcode = rownames(colData(x))))
 inner_join(lib_sizes$transcripts, lib_sizes$preandmrna, by = "cell_barcode") %>%
   ggplot(aes(x = lib_size.x, y = lib_size.y)) + 
@@ -534,8 +534,63 @@ inner_join(lib_sizes$transcripts, lib_sizes$preandmrna, by = "cell_barcode") %>%
   theme_bw()
 ```
 
+### Mapping differences by gene
+
+We investigate the differences in mapping rate
+
 ```{r}
-sce = sce_ls[["transcripts"]]
+# Read in gene metadata
+tx2gene = readRDS(here("mouse_cortex", "salmon_files", "gencode.vM25.annotation.tx2gene.mouse.rds"))
+
+for(i in seq_along(sce_ls)){
+  match_rows = match(rownames(sce_ls[[i]]), tx2gene$gene_id)
+  t2g = tx2gene[match_rows, ]
+  rowData(sce_ls[[i]]) = t2g
+}
+```
+
+```{r}
+# Calculate sums for different gene types
+gene_sum_tb_ls = list()
+for(i in seq_along(sce_ls)){
+  pipeline_name = names(sce_ls)[i]
+  sce = sce_ls[[i]]
+  
+  lib_size_tb = tibble(cell_barcode = colnames(sce))
+  for(gene_type_name in c("protein_coding", "lincRNA", "antisense", "processed_pseudogene")){
+    genes_in_type = rowData(sce) %>% as_tibble() %>% filter(gene_type == gene_type_name) %>% pull(gene_id)
+    lib_size_gene_type = colSums(counts(sce)[genes_in_type,])
+    lib_size_gene_type_tb = tibble(cell_barcode = names(lib_size_gene_type),
+                                   !!gene_type_name := lib_size_gene_type)
+    lib_size_tb = lib_size_tb %>% 
+      left_join(., lib_size_gene_type_tb, by = "cell_barcode")
+  }
+  gene_sum_tb_ls[[pipeline_name]] = lib_size_tb %>%
+    pivot_longer(cols = -cell_barcode) %>%
+    mutate(pipeline = pipeline_name)
+}
+gene_sum_tb = bind_rows(gene_sum_tb_ls)
+gene_sum_tb = gene_sum_tb %>%
+  pivot_wider(names_from = pipeline, values_from = value)
+```
+
+```{r}
+# Plot
+gene_sum_tb %>%
+  ggplot(aes(x = introncollapse, y = preandmrna)) + 
+  geom_point(size = 0.1, alpha = 0.5) +
+  geom_abline(intercept = 0, slope = 1) +
+  facet_wrap(~ name, scales = "free") +
+  labs(x = "num_reads_introncollapse",
+       y = "num_reads_preandmrna") +
+  theme_bw()
+```
+
+
+
+
+```{r}
+sce = sce_ls[["preandmrna"]]
 ```
 
 ### PCA
@@ -740,7 +795,7 @@ plot(sse)
 
 clust.kmeans <- kmeans(reducedDim(sce_sub, "PCA"), centers = 4)
 colData(sce_sub)$labels_kmeans <- factor(clust.kmeans$cluster)
-plotReducedDim(sce_sub, "PCA", colour_by = "labels_kmeans")
+plotReducedDim(sce_sub, "PCA", colour_by = "labels_kmeans", ncomponents = c(1, 2))
 ```
 
 ```{r eval = F}
