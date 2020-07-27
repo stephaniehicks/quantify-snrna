@@ -590,7 +590,7 @@ gene_sum_tb %>%
 
 
 ```{r}
-sce = sce_ls[["preandmrna"]]
+sce = sce_ls[["transcripts"]]
 ```
 
 ### PCA
@@ -635,9 +635,14 @@ rownames(test_counts) = tx2gene$gene_name[match_rows]
 
 pred_celltypes = SingleR(test = test_counts, 
                          ref = mouse_se,
-                         labels = mouse_se$label.main)
+                         labels = mouse_se$label.fine)
 colData(sce)$singleR_labels = pred_celltypes$labels
 colData(sce)$singleR_labels_pruned = pred_celltypes$pruned.labels
+colData(sce)$singleR_main_labels = colData(sce) %>% 
+  as_tibble() %>%
+  select(singleR_labels) %>%
+  left_join(., as_tibble(colData(mouse_se)) %>% distinct(), by = c("singleR_labels" = "label.fine")) %>%
+  select(label.main)
 
 # preandmrna_cd = colData(sce)
 # transcripts_cd = colData(sce)
@@ -722,8 +727,8 @@ overlap %>%
 ```
 
 ```{r}
-tb = as_tibble(preandmrna_cd) %>%
-  mutate(cell = rownames(preandmrna_cd))
+tb = as_tibble(transcripts_cd) %>%
+  mutate(cell = rownames(transcripts_cd))
 
 # Label cells where singleR label != ding label
 tb = tb %>%
@@ -731,22 +736,27 @@ tb = tb %>%
                                        ding_labels == "Endothelial" ~ "Endothelial cells",
                                        ding_labels == "Excitatory neuron" ~ "Neurons",
                                        ding_labels == "Inhibitory neuron" ~ "Neurons",
-                                       ding_labels == "Microglia" ~ "Microglia",
                                        ding_labels == "Oligodendrocyte" ~ "Oligodendrocytes",
-                                       ding_labels == "OPC" ~ "OPC"))
+                                       T ~ ding_labels))
 
 tb = tb %>%
-  mutate(non_matching_cells = (singleR_labels_pruned != ding_labels_match) | is.na(singleR_labels_pruned))
+  mutate(singleR_labels_match = case_when(singleR_labels_pruned == "Astrocytes activated" ~ "Astrocytes",
+                                          singleR_labels_pruned == "Fibroblasts activated" ~ "Fibroblasts",
+                                          singleR_labels_pruned == "Fibroblasts senescent" ~ "Fibroblasts",
+                                          singleR_labels_pruned == "Macrophages activated" ~ "Macrophages",
+                                          singleR_labels_pruned == "Microglia activated" ~ "Microglia",
+                                          singleR_labels_pruned == "Neurons activated" ~ "Neurons",
+                                          T ~ singleR_labels_pruned),
+         non_matching_cells = (singleR_labels_match != ding_labels_match) | (is.na(singleR_labels_match) & !is.na(ding_labels_match)))
 
 tb_misclassify = tb %>%
-  filter(!is.na(ding_labels_match)) %>%
-  filter(ding_labels_match != "OPC")
+  filter(!is.na(ding_labels_match)) 
 
 tb_misclassify %>%
   ggplot(aes(x = lib_size)) +
   geom_histogram(aes(fill = non_matching_cells)) +
-  facet_wrap(~ ding_labels_match, nrow = 2) +
-  labs(title = "preandmrna pipeline") +
+  facet_wrap(~ ding_labels_match, nrow = 2, scales = "free") +
+  labs(title = "transcripts pipeline") +
   theme_bw()
 
 print(sum(tb_misclassify$non_matching_cells, na.rm = T))
