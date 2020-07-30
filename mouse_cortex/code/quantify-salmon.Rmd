@@ -524,10 +524,12 @@ inner_join(lib_sizes$transcripts, lib_sizes$preandmrna, by = "cell_barcode") %>%
   labs(x = "num_reads_transcripts", y = "num_reads_preandmrna") +
   theme_bw()
 
-inner_join(lib_sizes$transcripts, lib_sizes$preandmrna, by = "cell_barcode") %>%
+lib_sizes %>%
+  purrr::reduce(inner_join, by = "cell_barcode") %>%
   dplyr::rename(preandmrna = lib_size.y,
-                transcripts = lib_size.x) %>%
-  pivot_longer(cols = c("preandmrna", "transcripts"), names_to = "pipeline") %>%
+                transcripts = lib_size.x,
+                introncollapse = lib_size) %>%
+  pivot_longer(cols = c("preandmrna", "transcripts", "introncollapse"), names_to = "pipeline") %>%
   ggplot(aes(x = pipeline, y = value)) +
   geom_boxplot() + 
   labs(y = "num_reads") +
@@ -586,11 +588,44 @@ gene_sum_tb %>%
   theme_bw()
 ```
 
+```{r}
+# Calculate sums for cell type marker genes
+gene_sum_tb_ls = list()
+for(i in seq_along(sce_ls)){
+  pipeline_name = names(sce_ls)[i]
+  sce = sce_ls[[i]]
+  
+  lib_size_tb = tibble(cell_barcode = colnames(sce))
+  genes_in_type = rowData(sce) %>% as_tibble() %>% filter(gene_name %in% astrocyte_mg) %>% pull(gene_id)
+  lib_size_gene_type = colSums(counts(sce)[genes_in_type,])
+  lib_size_gene_type_tb = tibble(cell_barcode = names(lib_size_gene_type),
+                                 astrocyte_mg := lib_size_gene_type)
+  lib_size_tb = lib_size_tb %>% 
+    left_join(., lib_size_gene_type_tb, by = "cell_barcode")
+  gene_sum_tb_ls[[pipeline_name]] = lib_size_tb %>%
+    pivot_longer(cols = -cell_barcode) %>%
+    mutate(pipeline = pipeline_name)
+}
+gene_sum_tb = bind_rows(gene_sum_tb_ls)
+gene_sum_tb = gene_sum_tb %>%
+  pivot_wider(names_from = pipeline, values_from = value)
+```
 
+```{r}
+# Plot
+gene_sum_tb %>%
+  ggplot(aes(x = transcripts, y = preandmrna)) + 
+  geom_point(size = 0.1, alpha = 0.5) +
+  geom_abline(intercept = 0, slope = 1) +
+  facet_wrap(~ name, scales = "free") +
+  labs(x = "num_reads_transcripts",
+       y = "num_reads_preandmrna") +
+  theme_bw()
+```
 
 
 ```{r}
-sce = sce_ls[["transcripts"]]
+sce = sce_ls[["preandmrna"]]
 ```
 
 ### PCA
@@ -623,6 +658,7 @@ Vignettes:
 
 ```{r}
 library(SingleR)
+library(pheatmap)
 
 # Built-in reference mouse dataset
 mouse_se = MouseRNAseqData() # inclusion in singleR is deprecated, obtain from celldex
@@ -636,6 +672,17 @@ rownames(test_counts) = tx2gene$gene_name[match_rows]
 pred_celltypes = SingleR(test = test_counts, 
                          ref = mouse_se,
                          labels = mouse_se$label.fine)
+
+# Plot
+all.markers <- metadata(pred_celltypes)$de.genes
+astrocyte_mg = unique(unlist(all.markers$Astrocytes))
+
+# Beta cell-related markers
+features = unique(unlist(all.markers$qNSCs))
+features = tx2gene %>% filter(gene_name %in% features) %>% pull(gene_id)
+# plotHeatmap(sce, features = features) # takes a while to run
+
+# Add to colData
 colData(sce)$singleR_labels = pred_celltypes$labels
 colData(sce)$singleR_labels_pruned = pred_celltypes$pruned.labels
 colData(sce)$singleR_main_labels = colData(sce) %>% 
@@ -643,9 +690,6 @@ colData(sce)$singleR_main_labels = colData(sce) %>%
   select(singleR_labels) %>%
   left_join(., as_tibble(colData(mouse_se)) %>% distinct(), by = c("singleR_labels" = "label.fine")) %>%
   select(label.main)
-
-# preandmrna_cd = colData(sce)
-# transcripts_cd = colData(sce)
 ```
 
 ```{r}
@@ -689,6 +733,7 @@ colData(sce)$ding_labels = meta_ding_10x$CellType[match_cols]
 
 # preandmrna_cd = colData(sce)
 # transcripts_cd = colData(sce)
+# introncollapse_cd = colData(sce)
 ```
 
 ```{r}
@@ -698,7 +743,7 @@ plotReducedDim(sce, "PCA", colour_by = "ding_labels")
 
 ```{r}
 # Get overlap with singleR labels
-tb = as_tibble(preandmrna_cd)
+tb = as_tibble(introncollapse_cd)
 overlap = table(tb$singleR_labels_pruned, tb$ding_labels, useNA = "ifany") %>%
   as.data.frame()
 
@@ -727,8 +772,8 @@ overlap %>%
 ```
 
 ```{r}
-tb = as_tibble(transcripts_cd) %>%
-  mutate(cell = rownames(transcripts_cd))
+tb = as_tibble(preandmrna_cd) %>%
+  mutate(cell = rownames(preandmrna_cd))
 
 # Label cells where singleR label != ding label
 tb = tb %>%
@@ -756,7 +801,7 @@ tb_misclassify %>%
   ggplot(aes(x = lib_size)) +
   geom_histogram(aes(fill = non_matching_cells)) +
   facet_wrap(~ ding_labels_match, nrow = 2, scales = "free") +
-  labs(title = "transcripts pipeline") +
+  labs(title = "preandmrna pipeline") +
   theme_bw()
 
 print(sum(tb_misclassify$non_matching_cells, na.rm = T))
