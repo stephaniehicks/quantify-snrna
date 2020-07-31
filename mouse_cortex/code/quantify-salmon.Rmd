@@ -589,43 +589,7 @@ gene_sum_tb %>%
 ```
 
 ```{r}
-# Calculate sums for cell type marker genes
-gene_sum_tb_ls = list()
-for(i in seq_along(sce_ls)){
-  pipeline_name = names(sce_ls)[i]
-  sce = sce_ls[[i]]
-  
-  lib_size_tb = tibble(cell_barcode = colnames(sce))
-  genes_in_type = rowData(sce) %>% as_tibble() %>% filter(gene_name %in% astrocyte_mg) %>% pull(gene_id)
-  lib_size_gene_type = colSums(counts(sce)[genes_in_type,])
-  lib_size_gene_type_tb = tibble(cell_barcode = names(lib_size_gene_type),
-                                 astrocyte_mg := lib_size_gene_type)
-  lib_size_tb = lib_size_tb %>% 
-    left_join(., lib_size_gene_type_tb, by = "cell_barcode")
-  gene_sum_tb_ls[[pipeline_name]] = lib_size_tb %>%
-    pivot_longer(cols = -cell_barcode) %>%
-    mutate(pipeline = pipeline_name)
-}
-gene_sum_tb = bind_rows(gene_sum_tb_ls)
-gene_sum_tb = gene_sum_tb %>%
-  pivot_wider(names_from = pipeline, values_from = value)
-```
-
-```{r}
-# Plot
-gene_sum_tb %>%
-  ggplot(aes(x = transcripts, y = preandmrna)) + 
-  geom_point(size = 0.1, alpha = 0.5) +
-  geom_abline(intercept = 0, slope = 1) +
-  facet_wrap(~ name, scales = "free") +
-  labs(x = "num_reads_transcripts",
-       y = "num_reads_preandmrna") +
-  theme_bw()
-```
-
-
-```{r}
-sce = sce_ls[["preandmrna"]]
+sce = sce_ls[["transcripts"]]
 ```
 
 ### PCA
@@ -675,11 +639,11 @@ pred_celltypes = SingleR(test = test_counts,
 
 # Plot
 all.markers <- metadata(pred_celltypes)$de.genes
-astrocyte_mg = unique(unlist(all.markers$Astrocytes))
 
 # Beta cell-related markers
 features = unique(unlist(all.markers$qNSCs))
 features = tx2gene %>% filter(gene_name %in% features) %>% pull(gene_id)
+# plotScoreHeatmap(pred_celltypes)
 # plotHeatmap(sce, features = features) # takes a while to run
 
 # Add to colData
@@ -695,27 +659,6 @@ colData(sce)$singleR_main_labels = colData(sce) %>%
 ```{r}
 # PCA colored by singleR labels
 plotReducedDim(sce, "PCA", colour_by = "singleR_labels_pruned")
-```
-
-```{r}
-# Comparison of singleR classification between pipelines
-preandmrna_cd_tb = as_tibble(preandmrna_cd) %>%
-  mutate(cell = rownames(preandmrna_cd)) %>%
-  dplyr::rename(singleR_labels_pruned_preandmrna = singleR_labels_pruned,
-                singleR_labels_preandmrna = singleR_labels)
-transcripts_cd_tb = as_tibble(transcripts_cd) %>%
-  mutate(cell = rownames(transcripts_cd)) %>%
-  dplyr::rename(singleR_labels_pruned_transcripts = singleR_labels_pruned,
-                singleR_labels_transcripts = singleR_labels)
-
-cd = inner_join(preandmrna_cd_tb, transcripts_cd_tb, by = "cell")
-cd %>%
-  ggplot(aes(x = singleR_labels_preandmrna, fill = singleR_labels_transcripts)) +
-  geom_bar() +
-  theme_bw() +
-  theme(axis.text.x = element_text(angle = 90, hjust = 1))
-
-table(cd$singleR_labels_pruned_preandmrna, cd$singleR_labels_pruned_transcripts, useNA = "ifany")
 ```
 
 
@@ -808,6 +751,82 @@ print(sum(tb_misclassify$non_matching_cells, na.rm = T))
 
 tb_misclassify
 ```
+
+```{r}
+# Counts for marker genes
+astrocyte_mg = unique(unlist(all.markers$Microglia))
+genes_in_type = rowData(sce) %>% as_tibble() %>% filter(gene_name %in% astrocyte_mg) %>% pull(gene_id)
+cd = colData(sce) %>% as_tibble() %>% mutate(cell = rownames(colData(sce)))
+astrocyte_cells = cd %>% filter(ding_labels == "Microglia") %>% pull(cell)
+astrocyte_matrix = counts(sce)[genes_in_type, astrocyte_cells] # Astrocyte cells and astrocyte marker genes only
+rowSums(astrocyte_matrix)
+colSums(astrocyte_matrix) %>% 
+  as_tibble() %>%
+  mutate(cell = colnames(astrocyte_matrix)) %>%
+  left_join(., cd, by = "cell") %>%
+  ggplot(aes(x = value)) +
+  geom_histogram(aes(fill = singleR_labels_pruned)) +
+  theme_bw()
+```
+
+```{r}
+gene_type_name = "Microglia"
+gene_sum_tb_ls = list()
+for(i in seq_along(sce_ls)){
+  pipeline_name = names(sce_ls)[i]
+  sce_i = sce_ls[[i]]
+  
+  lib_size_tb = tibble(cell_barcode = astrocyte_cells)
+  lib_size_gene_type = colSums(counts(sce_i)[intersect(rownames(counts(sce_i)), genes_in_type), astrocyte_cells])
+  lib_size_gene_type_tb = tibble(cell_barcode = names(lib_size_gene_type),
+                                 !!gene_type_name := lib_size_gene_type)
+  lib_size_tb = lib_size_tb %>% 
+    left_join(., lib_size_gene_type_tb, by = "cell_barcode")
+  gene_sum_tb_ls[[pipeline_name]] = lib_size_tb %>%
+    pivot_longer(cols = -cell_barcode) %>%
+    mutate(pipeline = pipeline_name)
+}
+gene_sum_tb = bind_rows(gene_sum_tb_ls)
+gene_sum_tb = gene_sum_tb %>%
+  pivot_wider(names_from = pipeline, values_from = value)
+```
+
+```{r}
+# Plot comparison of marker genes for cell type across pipelines
+gene_sum_tb %>%
+  ggplot(aes(x = transcripts, y = preandmrna)) + 
+  geom_point(size = 0.1, alpha = 0.5) +
+  geom_abline(intercept = 0, slope = 1) +
+  facet_wrap(~ name, scales = "free") +
+  labs(x = "num_reads_transcripts",
+       y = "num_reads_preandmrna") +
+  theme_bw()
+```
+```{r}
+# Plot lib size for different cell types
+lib_size_tb = tibble(cell_barcode = colnames(sce_ls[[1]]),
+                     ding_labels = colData(sce)$ding_labels)
+
+for(i in seq_along(sce_ls)){
+  pipeline_name = names(sce_ls)[i]
+  sce_i = sce_ls[[i]]
+  
+  lib_size = colSums(counts(sce_i))
+  lib_size_pipeline_tb = tibble(cell_barcode = colnames(sce_i),
+                       !!paste0("lib_size_", pipeline_name) := lib_size)
+  lib_size_tb = lib_size_tb %>%
+    left_join(., lib_size_pipeline_tb, by = "cell_barcode")
+}
+
+lib_size_tb %>%
+  ggplot(aes(x = lib_size_transcripts, y = lib_size_preandmrna, color = ding_labels), alpha = 0.5) + 
+  facet_wrap(~ ding_labels) + 
+  geom_point() +
+  geom_abline(slope = 1, intercept = 0) +
+  theme_bw()
+```
+
+
 
 ### Distributions
 
