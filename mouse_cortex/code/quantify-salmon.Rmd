@@ -589,7 +589,7 @@ gene_sum_tb %>%
 ```
 
 ```{r}
-sce = sce_ls[["transcripts"]]
+sce = sce_ls[["preandmrna"]]
 ```
 
 ### PCA
@@ -1179,27 +1179,25 @@ summary(rowSums(m))
 m = m[rowSums(m) != 0, ]
 dim(m)
 
-# Print BIC values (lower value is better fit)
-tic()
-mult_bic(m) # 5 sec
-toc() 
+bic_tb = tibble(multinomial = mult_bic(m),     # 5 sec
+                # dmn = dmn_bic(m),     # Unknown time, need to run as script on cluster
+                poisson = poi_bic(m),       # 5 sec
+                negative_binomial_1 = nb_bic_1(m),     # 5 sec
+                negative_binomial_2 = nb_bic_2(m),   # 15 min
+                cell_type_name = cell_type)
 
-tic()
-dmn_bic(m) # 
-toc() 
-
-tic()
-poi_bic(m) # 5 sec
-toc()
-
-tic()
-nb_bic_1(m) # 5 sec
-toc()
-
-tic()
-nb_bic_2(m) # ~ 15 min
-toc()
+# Plot
+bic_tb %>% 
+  pivot_longer(cols = -cell_type_name) %>%
+  ggplot(aes(x = reorder(name, value), y = value)) +
+  geom_point(size = 3) +
+  labs(title = ,
+       x = "Distribution",
+       y = "BIC") +
+  theme_bw()
 ```
+
+
 
 #### Poisson-Gamma models
 
