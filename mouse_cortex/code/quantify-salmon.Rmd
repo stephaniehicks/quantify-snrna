@@ -524,14 +524,22 @@ inner_join(lib_sizes$transcripts, lib_sizes$preandmrna, by = "cell_barcode") %>%
   labs(x = "num_reads_transcripts", y = "num_reads_preandmrna") +
   theme_bw()
 
-lib_sizes %>%
+lib_sizes_tb = lib_sizes %>%
   purrr::reduce(inner_join, by = "cell_barcode") %>%
   dplyr::rename(preandmrna = lib_size.y,
                 transcripts = lib_size.x,
                 introncollapse = lib_size) %>%
-  pivot_longer(cols = c("preandmrna", "transcripts", "introncollapse"), names_to = "pipeline") %>%
+  pivot_longer(cols = c("preandmrna", "transcripts", "introncollapse"), names_to = "pipeline")
+
+summ <- lib_sizes_tb %>% 
+  group_by(pipeline) %>% 
+  summarize(median = median(value))
+
+lib_sizes_tb %>%
   ggplot(aes(x = pipeline, y = value)) +
   geom_boxplot() + 
+  geom_label(data = summ, aes(x = pipeline, y = median, 
+                              label = round(median, 0))) +
   labs(y = "num_reads") +
   theme_bw()
 ```
@@ -752,14 +760,16 @@ print(sum(tb_misclassify$non_matching_cells, na.rm = T))
 tb_misclassify
 ```
 
+#### Differences between pipelines
+
 ```{r}
 # Counts for marker genes
-astrocyte_mg = unique(unlist(all.markers$Microglia))
-genes_in_type = rowData(sce) %>% as_tibble() %>% filter(gene_name %in% astrocyte_mg) %>% pull(gene_id)
+astrocyte_mg = unique(unlist(all.markers$Astrocytes))
+genes_in_type = t2g %>% filter(gene_name %in% astrocyte_mg) %>% pull(gene_id)
 cd = colData(sce) %>% as_tibble() %>% mutate(cell = rownames(colData(sce)))
-astrocyte_cells = cd %>% filter(ding_labels == "Microglia") %>% pull(cell)
+astrocyte_cells = cd %>% filter(ding_labels == "Astrocyte") %>% pull(cell)
 astrocyte_matrix = counts(sce)[genes_in_type, astrocyte_cells] # Astrocyte cells and astrocyte marker genes only
-rowSums(astrocyte_matrix)
+# rowSums(astrocyte_matrix)
 colSums(astrocyte_matrix) %>% 
   as_tibble() %>%
   mutate(cell = colnames(astrocyte_matrix)) %>%
@@ -770,14 +780,15 @@ colSums(astrocyte_matrix) %>%
 ```
 
 ```{r}
-gene_type_name = "Microglia"
+genes_in_type = names(sort(-rowSums(astrocyte_matrix))[3]) # Choose a specific gene
+gene_type_name = "Astrocyte"
 gene_sum_tb_ls = list()
 for(i in seq_along(sce_ls)){
   pipeline_name = names(sce_ls)[i]
   sce_i = sce_ls[[i]]
   
   lib_size_tb = tibble(cell_barcode = astrocyte_cells)
-  lib_size_gene_type = colSums(counts(sce_i)[intersect(rownames(counts(sce_i)), genes_in_type), astrocyte_cells])
+  lib_size_gene_type = colSums(counts(sce_i)[intersect(rownames(counts(sce_i)), genes_in_type), astrocyte_cells, drop = F])
   lib_size_gene_type_tb = tibble(cell_barcode = names(lib_size_gene_type),
                                  !!gene_type_name := lib_size_gene_type)
   lib_size_tb = lib_size_tb %>% 
@@ -801,7 +812,96 @@ gene_sum_tb %>%
   labs(x = "num_reads_transcripts",
        y = "num_reads_preandmrna") +
   theme_bw()
+
+# Boxplot
+gene_sum_tb_2 = gene_sum_tb %>%
+  pivot_longer(-c("cell_barcode", "name"), names_to = "pipeline", values_to = "counts")
+summ <- gene_sum_tb_2 %>% 
+  group_by(pipeline) %>% 
+  summarize(median = median(counts))
+gene_sum_tb_2 %>%
+  ggplot(aes(x = pipeline, y = counts)) +
+  geom_boxplot() +
+  geom_label(data = summ, aes(x = pipeline, y = median, 
+                              label = round(median, 0))) +
+  theme_bw() 
 ```
+
+
+```{r}
+# Find genes that are most different between pipelines
+gene_diff_tb_ls = list()
+for(i in seq_along(sce_ls)){
+  pipeline_name = names(sce_ls)[i]
+  sce_i = sce_ls[[i]]
+  gene_diff_tb_ls[[i]] = tibble(pipeline = pipeline_name,
+                            gene_id = rownames(counts(sce_i)),
+                            sum = rowSums(counts(sce_i)))
+}
+
+gene_diff_tb = bind_rows(gene_diff_tb_ls) %>%
+  pivot_wider(names_from = pipeline, values_from = sum) %>%
+  left_join(., t2g %>% select(gene_id, gene_name), by = "gene_id") %>% # Join to gene name
+  mutate(diff = (preandmrna - transcripts)/preandmrna) %>%             # Calculate percent increase from transcripts to preandmrna
+  arrange(-diff) %>%                                                   # Arrange by difference
+  filter(complete.cases(.))                                            # Remove rows with NA (e.g. genes that are not present in all pipelines)
+
+
+# Markers for all genes
+all_marker_genes_tb_ls = list()
+for(cell_type in names(all.markers)){
+  all_marker_genes_tb_ls[[cell_type]] = tibble(cell_type = cell_type,
+                                               gene_name = unique(unlist(all.markers[[cell_type]])))
+}
+all_marker_genes_tb = bind_rows(all_marker_genes_tb_ls)
+gene_diff_plt = gene_diff_tb %>%
+  left_join(., all_marker_genes_tb, by = "gene_name") %>%
+  filter(complete.cases(.)) %>%     # Remove genes that are not marker genes
+  mutate(group = ceiling((1:n())/1000)) # Assign group for every 1000 genes
+
+# Summary statistics (median difference for each group)
+gene_diff_plt %>% 
+  group_by(group) %>%
+  summarize(median_diff = median(diff)) %>%
+  ungroup(group) %>%
+  ggplot(aes(x = group, y = median_diff)) +
+  geom_bar(stat = "identity") +
+  scale_x_continuous(breaks = 1:9) +
+  theme_bw()
+```
+
+```{r fig.height = 10, fig.width = 8}
+library(tidytext) # for reorder_within
+# Plot distribution of marker genes for each group 
+gene_diff_plt %>%
+  group_by(cell_type, group) %>%
+  summarize(count = n()) %>%
+  ungroup() %>%
+  ggplot(aes(x = reorder_within(cell_type, -count, group), y = count)) + 
+  geom_bar(stat = "identity") +
+  facet_wrap(~ group, scales = "free_x", labeller = label_both) +
+  labs(x = "Cell type marker genes",
+       title = "Distribution of marker genes grouped by difference between pipelines") +
+  theme_bw() +
+  theme(axis.text.x = element_text(angle = 90, hjust = 1))
+
+
+gene_diff_plt %>%
+  group_by(cell_type, group) %>%
+  summarize(count = n()) %>%
+  ungroup() %>%
+  ggplot(aes(x = group, y = count)) + 
+  geom_bar(stat = "identity") +
+  facet_wrap(~ cell_type, scales = "free_x") +
+  scale_x_continuous(breaks = 1:9) +
+  labs(x = "Cell type marker genes",
+       title = "Distribution of marker genes across the groups") +
+  theme_bw() +
+  theme(axis.text.x = element_text(angle = 90, hjust = 1))
+```
+
+
+
 ```{r}
 # Plot lib size for different cell types
 lib_size_tb = tibble(cell_barcode = colnames(sce_ls[[1]]),
