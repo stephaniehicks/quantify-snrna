@@ -780,7 +780,7 @@ colSums(astrocyte_matrix) %>%
 ```
 
 ```{r}
-genes_in_type = names(sort(-rowSums(astrocyte_matrix))[3]) # Choose a specific gene
+# genes_in_type = names(sort(-rowSums(astrocyte_matrix))[3]) # Choose a specific gene
 gene_type_name = "Astrocyte"
 gene_sum_tb_ls = list()
 for(i in seq_along(sce_ls)){
@@ -824,6 +824,59 @@ gene_sum_tb_2 %>%
   geom_boxplot() +
   geom_label(data = summ, aes(x = pipeline, y = median, 
                               label = round(median, 0))) +
+  theme_bw() 
+```
+
+```{r}
+# Plot ratio of astrocyte:qNSC marker genes for astrocyte cells between pipelines
+astrocyte_mg = unique(unlist(all.markers$Astrocytes))
+astrocyte_genes = t2g %>% filter(gene_name %in% astrocyte_mg) %>% pull(gene_id)
+qnsc_mg = unique(unlist(all.markers$qNSCs))
+qnsc_genes = t2g %>% filter(gene_name %in% qnsc_mg) %>% pull(gene_id)
+
+gene_type_name = "Astrocyte qNSC ratio"
+gene_sum_tb_ls = list()
+for(i in seq_along(sce_ls)){
+  pipeline_name = names(sce_ls)[i]
+  sce_i = sce_ls[[i]]
+  
+  lib_size_tb = tibble(cell_barcode = astrocyte_cells)
+  lib_size_gene_type_astrocyte = colSums(counts(sce_i)[intersect(rownames(counts(sce_i)), astrocyte_genes), astrocyte_cells, drop = F])
+  lib_size_gene_type_qnsc = colSums(counts(sce_i)[intersect(rownames(counts(sce_i)), qnsc_genes), astrocyte_cells, drop = F])
+  lib_size_gene_type_tb = tibble(cell_barcode = names(lib_size_gene_type),
+                                 !!gene_type_name := lib_size_gene_type_astrocyte/lib_size_gene_type_qnsc)
+  lib_size_tb = lib_size_tb %>% 
+    left_join(., lib_size_gene_type_tb, by = "cell_barcode")
+  gene_sum_tb_ls[[pipeline_name]] = lib_size_tb %>%
+    pivot_longer(cols = -cell_barcode) %>%
+    mutate(pipeline = pipeline_name)
+}
+gene_sum_tb = bind_rows(gene_sum_tb_ls)
+gene_sum_tb = gene_sum_tb %>%
+  pivot_wider(names_from = pipeline, values_from = value)
+
+# Plot comparison of marker genes for cell type across pipelines
+gene_sum_tb %>%
+  ggplot(aes(x = transcripts, y = preandmrna)) + 
+  geom_point(size = 0.1, alpha = 0.5) +
+  geom_abline(intercept = 0, slope = 1) +
+  facet_wrap(~ name, scales = "free") +
+  labs(x = "num_reads_transcripts",
+       y = "num_reads_preandmrna") +
+  theme_bw()
+```
+```{r}
+# Boxplot
+gene_sum_tb_2 = gene_sum_tb %>%
+  pivot_longer(-c("cell_barcode", "name"), names_to = "pipeline", values_to = "counts")
+summ <- gene_sum_tb_2 %>% 
+  group_by(pipeline) %>% 
+  summarize(median = median(counts))
+gene_sum_tb_2 %>%
+  ggplot(aes(x = pipeline, y = counts)) +
+  geom_boxplot() +
+  geom_label(data = summ, aes(x = pipeline, y = median, 
+                              label = round(median, 2))) +
   theme_bw() 
 ```
 
