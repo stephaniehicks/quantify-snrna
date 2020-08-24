@@ -597,7 +597,7 @@ gene_sum_tb %>%
 ```
 
 ```{r}
-sce = sce_ls[["preandmrna"]]
+sce = sce_ls[["transcripts"]]
 ```
 
 ### PCA
@@ -648,12 +648,6 @@ pred_celltypes = SingleR(test = test_counts,
 # Plot
 all.markers <- metadata(pred_celltypes)$de.genes
 
-# Beta cell-related markers
-features = unique(unlist(all.markers$qNSCs))
-features = tx2gene %>% filter(gene_name %in% features) %>% pull(gene_id)
-# plotScoreHeatmap(pred_celltypes)
-# plotHeatmap(sce, features = features) # takes a while to run
-
 # Add to colData
 colData(sce)$singleR_labels = pred_celltypes$labels
 colData(sce)$singleR_labels_pruned = pred_celltypes$pruned.labels
@@ -662,6 +656,15 @@ colData(sce)$singleR_main_labels = colData(sce) %>%
   select(singleR_labels) %>%
   left_join(., as_tibble(colData(mouse_se)) %>% distinct(), by = c("singleR_labels" = "label.fine")) %>%
   select(label.main)
+
+# Built-in plots
+# plotScoreHeatmap(pred_celltypes)
+# features = unique(unlist(all.markers$Astrocytes))
+# features = tx2gene %>% filter(gene_name %in% features) %>% pull(gene_id) %>% unique()
+# plotHeatmap(sce[, which(colData(sce)$ding_labels == "Astrocyte")], # Need to run ding section first
+#             order_columns_by = "singleR_labels_pruned",
+#             features = features,
+#             fontsize_row = 1) # takes a while to run if too many cells/genes
 ```
 
 ```{r}
@@ -873,10 +876,13 @@ summ <- gene_sum_tb_2 %>%
   group_by(pipeline) %>% 
   summarize(median = median(counts))
 gene_sum_tb_2 %>%
+  left_join(., cd, by = c("cell_barcode" = "cell")) %>%
   ggplot(aes(x = pipeline, y = counts)) +
   geom_boxplot() +
   geom_label(data = summ, aes(x = pipeline, y = median, 
                               label = round(median, 2))) +
+  facet_wrap(~ singleR_labels_pruned) +
+  labs(caption = "Cell types labels assigned by singleR under transcripts pipeline") +
   theme_bw() 
 ```
 
