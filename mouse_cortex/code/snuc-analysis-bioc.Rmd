@@ -136,7 +136,8 @@ gene_sum_tb %>%
 ```
 
 ```{r}
-sce = sce_ls[["transcripts"]]
+pipeline = "preandmrna"
+sce = sce_ls[[pipeline]]
 ```
 
 ### PCA
@@ -198,7 +199,7 @@ colData(sce)$singleR_main_labels = colData(sce) %>%
 
 # Built-in plots
 # plotScoreHeatmap(pred_celltypes)
-# features = unique(unlist(all.markers$Astrocytes))
+# features = unique(unlist(all.markers$qNSCs))
 # features = tx2gene %>% filter(gene_name %in% features) %>% pull(gene_id) %>% unique()
 # plotHeatmap(sce[, which(colData(sce)$ding_labels == "Astrocyte")], # Need to run ding section first
 #             order_columns_by = "singleR_labels_pruned",
@@ -385,7 +386,7 @@ for(i in seq_along(sce_ls)){
   lib_size_tb = tibble(cell_barcode = astrocyte_cells)
   lib_size_gene_type_astrocyte = colSums(counts(sce_i)[intersect(rownames(counts(sce_i)), astrocyte_genes), astrocyte_cells, drop = F])
   lib_size_gene_type_qnsc = colSums(counts(sce_i)[intersect(rownames(counts(sce_i)), qnsc_genes), astrocyte_cells, drop = F])
-  lib_size_gene_type_tb = tibble(cell_barcode = names(lib_size_gene_type),
+  lib_size_gene_type_tb = tibble(cell_barcode = names(lib_size_gene_type_astrocyte),
                                  !!gene_type_name := lib_size_gene_type_astrocyte/lib_size_gene_type_qnsc)
   lib_size_tb = lib_size_tb %>% 
     left_join(., lib_size_gene_type_tb, by = "cell_barcode")
@@ -408,20 +409,39 @@ gene_sum_tb %>%
   theme_bw()
 ```
 ```{r}
-# Boxplot
+# Boxplot comparing ratios across pipelines
 gene_sum_tb_2 = gene_sum_tb %>%
-  pivot_longer(-c("cell_barcode", "name"), names_to = "pipeline", values_to = "counts")
+  pivot_longer(-c("cell_barcode", "name"), names_to = "pipeline", values_to = "ratio")
 summ <- gene_sum_tb_2 %>% 
+  left_join(., cd, by = c("cell_barcode" = "cell")) %>%
   group_by(pipeline) %>% 
-  summarize(median = median(counts))
+  summarize(median = median(ratio))
 gene_sum_tb_2 %>%
   left_join(., cd, by = c("cell_barcode" = "cell")) %>%
-  ggplot(aes(x = pipeline, y = counts)) +
+  ggplot(aes(x = pipeline, y = ratio)) +
   geom_boxplot() +
   geom_label(data = summ, aes(x = pipeline, y = median, 
                               label = round(median, 2))) +
-  facet_wrap(~ singleR_labels_pruned) +
-  labs(caption = "Cell types labels assigned by singleR under transcripts pipeline") +
+  labs() +
+  theme_bw() 
+```
+
+```{r}
+# Boxplot comparing ratios across singleR_labels under a given pipeline
+summ <- gene_sum_tb_2 %>% 
+  filter(pipeline == !!pipeline) %>%
+  left_join(., cd, by = c("cell_barcode" = "cell")) %>%
+  group_by(singleR_labels_pruned) %>% 
+  summarize(median = median(ratio))
+gene_sum_tb_2 %>%
+  filter(pipeline == !!pipeline) %>%
+  left_join(., cd, by = c("cell_barcode" = "cell")) %>%
+  ggplot(aes(x = singleR_labels_pruned, y = ratio)) +
+  geom_boxplot() +
+  geom_label(data = summ, aes(x = singleR_labels_pruned, y = median, 
+                              label = round(median, 2))) +
+  labs(title = pipeline,
+       y = "Astrocyte:qNSC ratio") +
   theme_bw() 
 ```
 
