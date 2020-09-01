@@ -15,13 +15,13 @@ for sample in `cat $d/files/SRR_files_10x.txt`;
 do
 # sample=SRR9169236
 salmon alevin --libType ISR \
-      --index $d/salmon_files/gencode.vM25_salmon-index-v1.0.0-introncollapse-mouse \
+      --index $d/salmon_files/gencode.vM25_salmon-index-v1.0.0-transcripts-mouse \
       -1 $d/sample_data/geo/sra/${sample}.sra_1.fastq \
       -2 $d/sample_data/geo/sra/${sample}.sra_2.fastq \
-      --tgMap $d/salmon_files/gencode.vM25.introncollapse.tx2gene.mouse.txt \
+      --tgMap $d/salmon_files/gencode.vM25.transcripts.tx2gene.mouse.txt \
       --chromium \
       --threads 10 \
-      --output $d/salmon_quants/introncollapse_pipeline/${sample}_quant \
+      --output $d/salmon_quants/transcripts_pipeline/${sample}_quant \
       --dumpFeatures --dumpBfh
 done
 
