@@ -59,7 +59,7 @@ if(!file.exists(here("mouse_cortex", "salmon_files", "GRCm38.primary_assembly.ge
                 method = "wget")
 }
 
-# download GENCODE transcripts fasta file
+# download GENCODE transcripts fasta file (deprecated)
 # if(!file.exists(here("mouse_cortex", "salmon_files", "gencode.vM25.transcripts.fa.gz"))){
 #   tar_gz_file <- "ftp://ftp.ebi.ac.uk/pub/databases/gencode/Gencode_mouse/release_M25/gencode.vM25.transcripts.fa.gz"
 #   download.file(tar_gz_file,
@@ -173,7 +173,7 @@ sed -i.bak -e 's/>//g' decoys_mouse.txt
 
 ```{bash}
 # 2. Along with the list of decoys salmon also needs the concatenated transcriptome and genome reference file for index. NOTE: the genome targets (decoys) should come after the transcriptome targets in the reference
-cat gencode.vM25.transcripts.fa.gz GRCm38.primary_assembly.genome.fa.gz > gentrome_transcripts_mouse.fa.gz
+cat gencode.vM25.transcripts.mouse.fa.gz GRCm38.primary_assembly.genome.fa.gz > gentrome_transcripts_mouse.fa.gz
 ```
 
 ## mRNA and pre-mRNA ("preandmrna") pipeline
