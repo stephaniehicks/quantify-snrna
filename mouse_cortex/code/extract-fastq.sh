@@ -17,5 +17,5 @@ do
     # albert
     fasterq-dump -O $c/sample_data/geo/sra/ \
        -f --include-technical \
-       --split-files --gzip $c/sample_data/geo/sra/$file
+       --split-files $c/sample_data/geo/sra/$file
 done
