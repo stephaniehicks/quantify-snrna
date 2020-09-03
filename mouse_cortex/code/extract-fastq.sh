@@ -15,7 +15,7 @@ do
     # fastq-dump --split-files --gzip $b/sra/$file
     
     # albert
-    fasterq-dump -O $c/sample_data/geo/sra/ \
+    fasterq-dump -O $a/sample_data/geo/sra/ \
        -f --include-technical \
-       --split-files $c/sample_data/geo/sra/$file
+       --split-files $a/sample_data/geo/sra/$file
 done
