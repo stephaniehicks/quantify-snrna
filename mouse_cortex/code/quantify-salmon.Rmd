@@ -438,6 +438,8 @@ makeLinkedTxome(indexDir=index_dir,
 
 ## Create SummarizedExperiment object
 
+This section can be run as a separate script `run-tximeta.R`.
+
 ```{r eval = F}
 suppressPackageStartupMessages({
   library(here)
