@@ -399,6 +399,7 @@ It also records the checksum of the transcriptome that was computed by Salmon du
 ```{r}
 suppressPackageStartupMessages({
   library(tximeta)
+  library(here)
 })
 
 # create linkedTranscriptome for mRNA (only) decoys pipeline
@@ -433,6 +434,17 @@ makeLinkedTxome(indexDir=index_dir,
                 release="other", genome="GRCm38",
                 fasta=fasta_path, gtf=gtf_path,
                 jsonFile=json_file) # this command will add the index to the cache automatically
+
+# created linkedTranscriptome for intronseparate decoys pipline
+index_dir = here("mouse_cortex", "salmon_files", "gencode.vM25_salmon-index-v1.0.0-intronseparate-mouse")
+fasta_path = here("mouse_cortex", "salmon_files", "gencode.vM25.intronseparate.mouse.fa.gz")
+gtf_path = here("mouse_cortex", "salmon_files", "gencode.vM25.annotation.gtf.gz") 
+json_file = here("mouse_cortex", "salmon_files", paste0(basename(index_dir), ".json"))
+makeLinkedTxome(indexDir=index_dir,
+                source="other", organism="mouse",
+                release="other", genome="GRCm38",
+                fasta=fasta_path, gtf=gtf_path,
+                jsonFile=json_file) # this command will add the index to the cache automatically
 ```
 
 
@@ -455,7 +467,7 @@ bfcinfo(bfc)
 
 # if not, load linkedTxome json file
 # json_file <- here("mouse_cortex", "salmon_files", "salmon_index_gentrome_decoys_k25.json")
-json_file = here("mouse_cortex", "salmon_files", "gencode.v32_salmon-index-v1.0.0-preandmrna-mouse")
+json_file = here("mouse_cortex", "salmon_files", "gencode.vM25_salmon-index-v1.0.0-preandmrna-mouse")
 loadLinkedTxome(json_file)
 ```
 
