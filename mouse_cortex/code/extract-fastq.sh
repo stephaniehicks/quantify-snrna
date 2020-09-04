@@ -2,7 +2,7 @@
 #$ -cwd
 #$ -o log/
 #$ -e log/
-#$ -l mem_free=5G,h_vmem=10G
+#$ -l mem_free=10G,h_vmem=15G,h_fsize=100G
 
 a=/fastscratch/myscratch/akuo/alsf-filbin/mouse_cortex
 b=/fastscratch/myscratch/shicks1/alsf-filbin
@@ -17,5 +17,5 @@ do
     # albert
     fasterq-dump -O $a/sample_data/geo/sra/ \
        -f --include-technical \
-       --split-files $a/sample_data/geo/sra/$file
+       --split-files $a/sample_data/geo/sra/$file.sra
 done
