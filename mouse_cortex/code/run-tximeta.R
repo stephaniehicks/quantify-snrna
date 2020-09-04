@@ -13,7 +13,7 @@ suppressPackageStartupMessages({
   library(SummarizedExperiment)
 })
 
-pipeline = "transcripts" # "transcripts" or "preandmrna" or "introncollapse/separate"
+pipeline = "intronseparate" # "transcripts" or "preandmrna" or "introncollapse/separate"
 
 # load linkedTxome json file if not already in cache (it should be in cache when you create it in quantify-salmon.Rmd)
 # if(pipeline == "transcripts"){
