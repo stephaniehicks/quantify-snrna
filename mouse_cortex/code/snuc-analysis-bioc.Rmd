@@ -27,10 +27,12 @@ suppressPackageStartupMessages({
 ```
 
 ```{r}
+run_number = "SRR9169229"
 se_ls = list()
-se_ls[["transcripts"]] = readRDS(here("mouse_cortex", "salmon_quants", "se_SRR9169228_transcripts.rds"))
-se_ls[["preandmrna"]] = readRDS(here("mouse_cortex", "salmon_quants", "se_SRR9169228_preandmrna.rds"))
-se_ls[["introncollapse"]] = readRDS(here("mouse_cortex", "salmon_quants", "se_SRR9169228_introncollapse.rds"))
+se_ls[["transcripts"]] = readRDS(here("mouse_cortex", "salmon_quants", "transcripts_pipeline", paste0("se_", run_number, ".rds")))
+se_ls[["preandmrna"]] = readRDS(here("mouse_cortex", "salmon_quants", "preandmrna_pipeline", paste0("se_", run_number, ".rds")))
+se_ls[["introncollapse"]] = readRDS(here("mouse_cortex", "salmon_quants", "introncollapse_pipeline", paste0("se_", run_number, ".rds")))
+se_ls[["intronseparate"]] = readRDS(here("mouse_cortex", "salmon_quants", "intronseparate_pipeline", paste0("se_", run_number, ".rds")))
 ```
 
 ### Quality control
@@ -67,8 +69,9 @@ lib_sizes_tb = lib_sizes %>%
   purrr::reduce(inner_join, by = "cell_barcode") %>%
   dplyr::rename(preandmrna = lib_size.y,
                 transcripts = lib_size.x,
-                introncollapse = lib_size) %>%
-  pivot_longer(cols = c("preandmrna", "transcripts", "introncollapse"), names_to = "pipeline")
+                introncollapse = lib_size.x.x,
+                intronseparate = lib_size.y.y) %>%
+  pivot_longer(cols = c("preandmrna", "transcripts", "introncollapse", "intronseparate"), names_to = "pipeline")
 
 summ <- lib_sizes_tb %>% 
   group_by(pipeline) %>% 
@@ -126,11 +129,11 @@ gene_sum_tb = gene_sum_tb %>%
 ```{r}
 # Plot
 gene_sum_tb %>%
-  ggplot(aes(x = introncollapse, y = preandmrna)) + 
+  ggplot(aes(x = transcripts, y = preandmrna)) + 
   geom_point(size = 0.1, alpha = 0.5) +
   geom_abline(intercept = 0, slope = 1) +
   facet_wrap(~ name, scales = "free") +
-  labs(x = "num_reads_introncollapse",
+  labs(x = "num_reads_transcripts",
        y = "num_reads_preandmrna") +
   theme_bw()
 ```
