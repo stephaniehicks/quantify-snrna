@@ -471,7 +471,6 @@ json_file = here("mouse_cortex", "salmon_files", "gencode.vM25_salmon-index-v1.0
 loadLinkedTxome(json_file)
 ```
 
-
 ```{r eval = F}
 # Note: alevin import currently only supports a single experiment
 pipeline = "introncollapse" # "transcripts" or "preandmrna" or "introncollapse/separate"
@@ -492,5 +491,32 @@ rowRanges(se)
 
 # Save SummarizedExperiment object
 saveRDS(se, here("mouse_cortex", "salmon_quants", paste0("se_", run_names[i], "_", pipeline, ".rds")))
+```
+
+
+Combine the different SummarizedExperiment files into one SummarizedExperiment for each pipeline.
+
+```{r}
+pipeline = "transcripts" # "transcripts" or "preandmrna" or "introncollapse/separate"
+run_names = gsub("_quant", "", basename(list.dirs(here("mouse_cortex", "salmon_quants", paste0(pipeline, "_pipeline")), recursive = F)))
+
+# Read in individual rds files
+se_ls = list()
+for(run_name in run_names[c(1,16)]){
+  se_ls[run_name] = readRDS(here("mouse_cortex", "salmon_quants", paste0(pipeline, "_pipeline"), paste0("se_", run_name, ".rds")))
+}
+
+# Merge rds files together
+counts = as.matrix(assay(se_ls[[1]], "counts"))[1:2, 1:2]
+colnames(counts) = paste(colnames(counts), run_names[1], sep = "_") # Add run number to cell barcodes
+for(i in 2:2){
+  m2 = as.matrix(assay(se_ls[[2]], "counts"))[1:2, 1:2]
+  colnames(m2) = paste(colnames(m2), run_names[i], sep = "_")
+  counts = merge(counts, m2, by = "row.names", all = TRUE)
+}
+
+row.names(counts) = counts[, 1]
+counts = counts[, 2:ncol(counts)]
+tmp = SummarizedExperiment(assays = list(counts = counts))
 ```
 
