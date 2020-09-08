@@ -516,7 +516,7 @@ sra_meta = sra_meta %>%
   separate(title, c("cortex", "flow_cell", "seq", "lane"))
 
 # Get t2g metadata for each gene
-tx2gene = readRDS(here("mouse_cortex", "salmon_files", "gencode.vM25.annotation.tx2gene.mouse.rds"))
+tx2gene = readRDS(here("mouse_cortex", "salmon_files", "gencode.vM25.transcripts.tx2gene.mouse.rds"))
 
 # Read in individual rds files
 se_ls = list()
