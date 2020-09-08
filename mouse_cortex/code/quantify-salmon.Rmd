@@ -515,6 +515,9 @@ sra_meta = sra_meta %>%
   select(Run, title) %>%
   separate(title, c("cortex", "flow_cell", "seq", "lane"))
 
+# Get t2g metadata for each gene
+tx2gene = readRDS(here("mouse_cortex", "salmon_files", "gencode.vM25.annotation.tx2gene.mouse.rds"))
+
 # Read in individual rds files
 se_ls = list()
 for(run_name in run_names[1:16]){
@@ -525,6 +528,12 @@ for(run_name in run_names[1:16]){
                             dplyr::filter(Run == run_name) %>%
                             dplyr::slice(rep(1, ncol(se))))
   colnames(se) = column_names
+  
+  # Add rowData
+  match_rows = match(rownames(se), tx2gene$gene_id)
+  t2g = tx2gene[match_rows, ]
+  rowData(se) = t2g
+
   se_ls[[run_name]] = se
 }
 
