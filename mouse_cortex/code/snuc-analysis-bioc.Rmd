@@ -1,7 +1,7 @@
 ---
 title: "single-nucleus analysis (mouse cortex)"
 author: "Albert Kuo and Stephanie Hicks"
-date: "9/1/2020"
+date: "9/8/2020"
 output: 
   html_document:
     code_folding: "hide"
@@ -23,11 +23,12 @@ suppressPackageStartupMessages({
   library(scran)
   library(scater)
   library(BiocSingular)
+  library(SingleCellExperiment)
 })
 ```
 
 ```{r}
-run_number = "SRR9169229"
+run_number = "all" # give run_number or "all" for all of them together
 se_ls = list()
 se_ls[["transcripts"]] = readRDS(here("mouse_cortex", "salmon_quants", "transcripts_pipeline", paste0("se_", run_number, ".rds")))
 se_ls[["preandmrna"]] = readRDS(here("mouse_cortex", "salmon_quants", "preandmrna_pipeline", paste0("se_", run_number, ".rds")))
@@ -37,7 +38,9 @@ se_ls[["intronseparate"]] = readRDS(here("mouse_cortex", "salmon_quants", "intro
 
 ### Quality control
 
-```{r fig.width = 5, fig.height = 5}
+Discard low-quality cells and convert from SummarizedExperiment to SingleCellExperiment.
+
+```{r}
 sce_ls = list()
 for(i in seq_along(se_ls)){
   se = se_ls[[i]]
@@ -55,51 +58,43 @@ for(i in seq_along(se_ls)){
   colData(sce)$lib_size = colSums(counts(sce))
   sce_ls[[names(se_ls)[i]]] = sce
 }
+```
 
-# Plot library sizes
-lib_sizes = lapply(X = sce_ls, function(x) colData(x) %>% as_tibble() %>% mutate(cell_barcode = rownames(colData(x))))
-inner_join(lib_sizes$transcripts, lib_sizes$preandmrna, by = "cell_barcode") %>%
-  ggplot(aes(x = lib_size.x, y = lib_size.y)) + 
-  geom_point(size = 0.5, alpha = 0.5) + 
-  geom_abline(intercept = 0, slope = 1) +
-  labs(x = "num_reads_transcripts", y = "num_reads_preandmrna") +
-  theme_bw()
+### Library size comparison
 
-lib_sizes_tb = lib_sizes %>%
-  purrr::reduce(inner_join, by = "cell_barcode") %>%
-  dplyr::rename(preandmrna = lib_size.y,
-                transcripts = lib_size.x,
-                introncollapse = lib_size.x.x,
-                intronseparate = lib_size.y.y) %>%
-  pivot_longer(cols = c("preandmrna", "transcripts", "introncollapse", "intronseparate"), names_to = "pipeline")
+```{r}
+# Get library sizes
+lib_sizes_ls = list()
+for(i in seq_along(sce_ls)){
+  sce = sce_ls[[i]]
+  pipeline = names(sce_ls)[i]
+  
+  lib_sizes_ls[[pipeline]] = colData(sce) %>%
+    as_tibble() %>%
+    mutate(cell_barcode = rownames(colData(sce)),
+           pipeline = pipeline)
+}
 
-summ <- lib_sizes_tb %>% 
-  group_by(pipeline) %>% 
-  summarize(median = median(value))
+lib_sizes = bind_rows(lib_sizes_ls)
 
-lib_sizes_tb %>%
-  ggplot(aes(x = pipeline, y = value)) +
+# Compute median label
+summ = lib_sizes %>% 
+  group_by(pipeline, cortex) %>% 
+  summarize(median = median(lib_size))
+
+# Plot library size comparison between pipelines
+lib_sizes %>%
+  ggplot(aes(x = pipeline, y = lib_size)) +
   geom_boxplot() + 
   geom_label(data = summ, aes(x = pipeline, y = median, 
                               label = round(median, 0))) +
+  facet_wrap(~ cortex) +
   labs(y = "num_reads") +
   theme_bw()
 ```
 
 ### Mapping differences by gene
 
-We investigate the differences in mapping rate
-
-```{r}
-# Read in gene metadata
-tx2gene = readRDS(here("mouse_cortex", "salmon_files", "gencode.vM25.annotation.tx2gene.mouse.rds"))
-
-for(i in seq_along(sce_ls)){
-  match_rows = match(rownames(sce_ls[[i]]), tx2gene$gene_id)
-  t2g = tx2gene[match_rows, ]
-  rowData(sce_ls[[i]]) = t2g
-}
-```
 
 ```{r}
 # Calculate sums for different gene types
