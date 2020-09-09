@@ -31,9 +31,9 @@ suppressPackageStartupMessages({
 run_number = "all" # give run_number or "all" for all of them together
 se_ls = list()
 se_ls[["transcripts"]] = readRDS(here("mouse_cortex", "salmon_quants", "transcripts_pipeline", paste0("se_", run_number, ".rds")))
-se_ls[["preandmrna"]] = readRDS(here("mouse_cortex", "salmon_quants", "preandmrna_pipeline", paste0("se_", run_number, ".rds")))
-se_ls[["introncollapse"]] = readRDS(here("mouse_cortex", "salmon_quants", "introncollapse_pipeline", paste0("se_", run_number, ".rds")))
-se_ls[["intronseparate"]] = readRDS(here("mouse_cortex", "salmon_quants", "intronseparate_pipeline", paste0("se_", run_number, ".rds")))
+# se_ls[["preandmrna"]] = readRDS(here("mouse_cortex", "salmon_quants", "preandmrna_pipeline", paste0("se_", run_number, ".rds")))
+# se_ls[["introncollapse"]] = readRDS(here("mouse_cortex", "salmon_quants", "introncollapse_pipeline", paste0("se_", run_number, ".rds")))
+# se_ls[["intronseparate"]] = readRDS(here("mouse_cortex", "salmon_quants", "intronseparate_pipeline", paste0("se_", run_number, ".rds")))
 ```
 
 ### Quality control
@@ -58,6 +58,7 @@ for(i in seq_along(se_ls)){
   colData(sce)$lib_size = colSums(counts(sce))
   sce_ls[[names(se_ls)[i]]] = sce
 }
+rm(se_ls, se, se_subset)
 ```
 
 ### Library size comparison
@@ -95,7 +96,6 @@ lib_sizes %>%
 
 ### Mapping differences by gene
 
-
 ```{r}
 # Calculate sums for different gene types
 gene_sum_tb_ls = list()
@@ -103,56 +103,57 @@ for(i in seq_along(sce_ls)){
   pipeline_name = names(sce_ls)[i]
   sce = sce_ls[[i]]
   
-  lib_size_tb = tibble(cell_barcode = colnames(sce))
+  lib_size_tb = colData(sce) %>%
+    as_tibble() %>%
+    mutate(cell_barcode = colnames(sce))
+  
   for(gene_type_name in c("protein_coding", "lincRNA", "antisense", "processed_pseudogene")){
     genes_in_type = rowData(sce) %>% as_tibble() %>% filter(gene_type == gene_type_name) %>% pull(gene_id)
     lib_size_gene_type = colSums(counts(sce)[genes_in_type,])
-    lib_size_gene_type_tb = tibble(cell_barcode = names(lib_size_gene_type),
-                                   !!gene_type_name := lib_size_gene_type)
     lib_size_tb = lib_size_tb %>% 
-      left_join(., lib_size_gene_type_tb, by = "cell_barcode")
+      mutate(!!gene_type_name := lib_size_gene_type)
   }
   gene_sum_tb_ls[[pipeline_name]] = lib_size_tb %>%
-    pivot_longer(cols = -cell_barcode) %>%
     mutate(pipeline = pipeline_name)
 }
 gene_sum_tb = bind_rows(gene_sum_tb_ls)
-gene_sum_tb = gene_sum_tb %>%
-  pivot_wider(names_from = pipeline, values_from = value)
 ```
 
 ```{r}
 # Plot
 gene_sum_tb %>%
-  ggplot(aes(x = transcripts, y = preandmrna)) + 
-  geom_point(size = 0.1, alpha = 0.5) +
-  geom_abline(intercept = 0, slope = 1) +
-  facet_wrap(~ name, scales = "free") +
-  labs(x = "num_reads_transcripts",
-       y = "num_reads_preandmrna") +
+  ggplot(aes(x = pipeline, y = protein_coding)) + 
+  geom_boxplot() +
+  labs(x = "pipeline",
+       y = "num_reads") +
   theme_bw()
 ```
 
 ```{r}
-pipeline = "preandmrna"
-sce = sce_ls[[pipeline]]
+# pipeline = "preandmrna"
+# sce = sce_ls[[pipeline]]
 ```
 
 ### PCA
 
 ```{r}
-# Normalize and take log
-clust = quickCluster(sce)
-sce = computeSumFactors(sce, clusters = clust)
-sce = logNormCounts(sce)
+for(i in seq_along(sce_ls)){
+  sce = sce_ls[[i]]
+  # Normalize and take log
+  clust = quickCluster(sce)
+  sce = computeSumFactors(sce, clusters = clust)
+  sce = logNormCounts(sce)
+  
+  set.seed(1)
+  tic("approx PCA")
+  sce = runPCA(sce, exprs_values = "logcounts", ntop = ncol(sce), BSPARAM = RandomParam())
+  toc()
+  
+  sce_ls[[i]] = sce
+}
 
-set.seed(1)
-tic("approx PCA")
-sce = runPCA(sce, exprs_values = "logcounts", ntop = ncol(sce), BSPARAM = RandomParam())
-toc()
-
-# PCA colored by library size
-plotReducedDim(sce, "PCA", colour_by = "lib_size")
+# PCA colored by provided attribute
+plotReducedDim(sce_ls[["transcripts"]], "PCA", colour_by = "cortex")
 ```
 
 ### Cell types 
@@ -173,27 +174,33 @@ library(pheatmap)
 # Built-in reference mouse dataset
 mouse_se = MouseRNAseqData() # inclusion in singleR is deprecated, obtain from celldex
 
-# Convert gene names
-test_counts = assay(sce, "logcounts")
-tx2gene = readRDS(here("mouse_cortex", "salmon_files", "gencode.vM25.annotation.tx2gene.mouse.rds"))
-match_rows = match(rownames(test_counts), tx2gene$gene_id)
-rownames(test_counts) = tx2gene$gene_name[match_rows]
-
-pred_celltypes = SingleR(test = test_counts, 
-                         ref = mouse_se,
-                         labels = mouse_se$label.fine)
-
-# Plot
-all.markers <- metadata(pred_celltypes)$de.genes
-
-# Add to colData
-colData(sce)$singleR_labels = pred_celltypes$labels
-colData(sce)$singleR_labels_pruned = pred_celltypes$pruned.labels
-colData(sce)$singleR_main_labels = colData(sce) %>% 
-  as_tibble() %>%
-  select(singleR_labels) %>%
-  left_join(., as_tibble(colData(mouse_se)) %>% distinct(), by = c("singleR_labels" = "label.fine")) %>%
-  select(label.main)
+for(i in seq_along(sce_ls)){
+  sce = sce_ls[[i]]
+  
+  # Convert gene names
+  test_counts = assay(sce, "logcounts")
+  tx2gene = readRDS(here("mouse_cortex", "salmon_files", "gencode.vM25.annotation.tx2gene.mouse.rds"))
+  match_rows = match(rownames(test_counts), tx2gene$gene_id)
+  rownames(test_counts) = tx2gene$gene_name[match_rows]
+  
+  pred_celltypes = SingleR(test = test_counts, 
+                           ref = mouse_se,
+                           labels = mouse_se$label.fine)
+  
+  # Plot
+  all.markers <- metadata(pred_celltypes)$de.genes
+  
+  # Add to colData
+  colData(sce)$singleR_labels = pred_celltypes$labels
+  colData(sce)$singleR_labels_pruned = pred_celltypes$pruned.labels
+  colData(sce)$singleR_main_labels = colData(sce) %>% 
+    as_tibble() %>%
+    select(singleR_labels) %>%
+    left_join(., as_tibble(colData(mouse_se)) %>% distinct(), by = c("singleR_labels" = "label.fine")) %>%
+    select(label.main)
+  
+  sce_ls[[i]] = sce
+}
 
 # Built-in plots
 # plotScoreHeatmap(pred_celltypes)
@@ -220,8 +227,15 @@ meta_ding = read_tsv(here("mouse_cortex", "files", "meta_combined.txt"))
 meta_ding_10x = meta_ding %>%
   filter(Method == "10x Chromium") %>%
   mutate(cell_barcode = gsub("Cortex.*10xChromium", "", NAME))
-match_cols = match(colnames(sce), meta_ding_10x$cell_barcode)
-colData(sce)$ding_labels = meta_ding_10x$CellType[match_cols]
+
+for(i in seq_along(sce_ls)){
+  sce = sce_ls[[i]]
+  
+  match_cols = match(colnames(sce), meta_ding_10x$cell_barcode)
+  colData(sce)$ding_labels = meta_ding_10x$CellType[match_cols]
+  
+  sce_ls[[i]] = sce
+})
 
 # preandmrna_cd = colData(sce)
 # transcripts_cd = colData(sce)
@@ -235,7 +249,7 @@ plotReducedDim(sce, "PCA", colour_by = "ding_labels")
 
 ```{r}
 # Get overlap with singleR labels
-tb = as_tibble(introncollapse_cd)
+tb = as_tibble(colData(sce_ls[["transcripts"]]))
 overlap = table(tb$singleR_labels_pruned, tb$ding_labels, useNA = "ifany") %>%
   as.data.frame()
 
