@@ -726,7 +726,7 @@ bic_tb %>%
   pivot_longer(cols = -cell_type_name) %>%
   ggplot(aes(x = reorder(name, value), y = value)) +
   geom_point(size = 3) +
-  labs(title = ,
+  labs(title = pipeline,
        x = "Distribution",
        y = "BIC") +
   theme_bw()

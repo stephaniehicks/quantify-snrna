@@ -5,6 +5,7 @@
 #
 # Make all distribution-related plots 
 
+# Packages
 suppressPackageStartupMessages({
   library(here)
   library(tidyverse)
@@ -17,6 +18,7 @@ suppressPackageStartupMessages({
 })
 source(here("./mouse_cortex/code/distribution-plots-helpers.R"))
 
+# Parameters
 pipeline = "transcripts" # Options are "transcripts", "preandmrna", "intronseparate", and "introncollapse"
 cell_type = "Inhibitory neuron" # Options are "Excitatory neuron", "Inhibitory neuron", "Astrocyte", "Oligodendrocyte", "OPC", "Endothelial", and "Microglia"
 cortex = "Cortex1" # Options are "Cortex1" or "Cortex2"
@@ -48,7 +50,6 @@ counts_sub_scaled = Down_Sample_Matrix(ceiling(counts_sub))
 counts_sub_scaled = counts_sub_scaled[rowSums(counts_sub_scaled) != 0, ]
 summary(colSums(counts_sub_scaled))
 
-
 # Plot P(X_i = 0) against average expression level mu_i
 prob_out = plot_prob(counts_sub_scaled)
 p = prob_out$plot +
@@ -62,10 +63,8 @@ ggsave(file = here(paste0("./mouse_cortex/plots/prob0_plot_",
 
 # Plot BIC values
 m = counts_sub_scaled
-m = ceiling(m)
 summary(colSums(m))
 summary(rowSums(m))
-m = m[rowSums(m) != 0, ]
 dim(m)
 
 bic_tb = tibble(multinomial = mult_bic(m),     
@@ -79,7 +78,8 @@ p = bic_tb %>%
   pivot_longer(cols = -cell_type_name) %>%
   ggplot(aes(x = reorder(name, value), y = value)) +
   geom_point(size = 3) +
-  labs(title = ,
+  labs(title = pipeline,
+       subtitle = paste(cell_type, cortex, sep = " - ")),
        x = "Distribution",
        y = "BIC") +
   theme_bw()
