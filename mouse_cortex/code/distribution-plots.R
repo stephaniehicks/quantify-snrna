@@ -19,9 +19,18 @@ suppressPackageStartupMessages({
 source(here("./mouse_cortex/code/distribution-plots-helpers.R"))
 
 # Parameters
-pipeline = "transcripts" # Options are "transcripts", "preandmrna", "intronseparate", and "introncollapse"
-cell_type = "Inhibitory neuron" # Options are "Excitatory neuron", "Inhibitory neuron", "Astrocyte", "Oligodendrocyte", "OPC", "Endothelial", and "Microglia"
-cortex = "Cortex1" # Options are "Cortex1" or "Cortex2"
+task_id = as.integer(Sys.getenv("SGE_TASK_ID"))
+pipeline_ls = c("transcripts", "preandmrna", "intronseparate", "introncollapse")
+cell_type_ls = c("Excitatory neuron", "Inhibitory neuron", "Astrocyte", "Oligodendrocyte", "OPC", "Endothelial", "Microglia")
+cortex_ls = c("Cortex1", "Cortex2")
+
+pipeline = pipeline_ls[ceiling(task_id/(length(cortex_ls)*length(cell_type_ls)))]
+cell_type = cell_type_ls[ceiling(task_id/length(cortex_ls)) %% length(cell_type_ls) + 1]
+cortex = cortex_ls[task_id %% length(cortex_ls) + 1]
+
+# pipeline = "transcripts" # Options are "transcripts", "preandmrna", "intronseparate", and "introncollapse"
+# cell_type = "Inhibitory neuron" # Options are "Excitatory neuron", "Inhibitory neuron", "Astrocyte", "Oligodendrocyte", "OPC", "Endothelial", and "Microglia"
+# cortex = "Cortex1" # Options are "Cortex1" or "Cortex2"
 
 # Read in data
 sce = readRDS(here("mouse_cortex", "salmon_quants", 
@@ -60,7 +69,6 @@ ggsave(file = here(paste0("./mouse_cortex/plots/prob0_plot_",
                                 to_snake_case(cortex), sep = "_"), 
                           ".png")), plot = p)
 
-
 # Plot BIC values
 m = counts_sub_scaled
 summary(colSums(m))
@@ -79,7 +87,7 @@ p = bic_tb %>%
   ggplot(aes(x = reorder(name, value), y = value)) +
   geom_point(size = 3) +
   labs(title = pipeline,
-       subtitle = paste(cell_type, cortex, sep = " - ")),
+       subtitle = paste(cell_type, cortex, sep = " - "),
        x = "Distribution",
        y = "BIC") +
   theme_bw()
