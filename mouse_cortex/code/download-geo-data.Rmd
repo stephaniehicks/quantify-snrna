@@ -34,7 +34,7 @@ In the paper there were the following types of data:
 4. mouse cell line and cortex, bulk RNA-seq
 5. mixture of human and murine cell line, scRNA-seq
 
-We are going ot focus on the mouse cortex. 
+We are going to focus on the mouse cortex. 
 
 ```{r, eval=FALSE}
 gse <- GEOquery::getGEO("GSE132044")
