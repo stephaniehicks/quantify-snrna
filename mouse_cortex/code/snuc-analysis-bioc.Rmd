@@ -66,11 +66,17 @@ summ = lib_sizes %>%
 lib_sizes %>%
   ggplot(aes(x = pipeline, y = lib_size)) +
   geom_boxplot() + 
-  geom_label(data = summ, aes(x = pipeline, y = median, 
-                              label = round(median, 0))) +
+  # geom_text(data = summ, aes(x = pipeline, y = median, 
+                              # label = round(median, 0)), 
+            # vjust = -0.5, size = 2.5) +
   facet_wrap(~ cortex) +
-  labs(y = "num_reads") +
-  theme_bw()
+  labs(x = "Pipeline",
+       y = "Library size") +
+  theme_bw() +
+  theme(axis.text = element_text(size = 8))
+
+ggsave(file = here(paste0("./mouse_cortex/plots/lib_size_comparison.png")),
+       width = 8, height = 5)
 ```
 
 ### Mapping differences by gene
@@ -699,6 +705,11 @@ library(glmGamPoi)
 mean_emp = rowMeans(counts_sub_scaled)
 var_emp = genefilter::rowVars(counts_sub_scaled)
 
+# Binomial
+n = round(median(colSums(dat_sub)))
+emp_props = rowSums(dat_sub)/sum(colSums(dat_sub))
+var_binom = n*emp_props*(1-emp_props)
+
 # Poisson
 fit_pois = glmGamPoi::glm_gp(counts_sub_scaled, design = ~ 1, size_factors = FALSE, 
                          overdispersion = FALSE)
@@ -714,6 +725,7 @@ fit_nb =  glmGamPoi::glm_gp(counts_sub_scaled, design = ~ 1, size_factors = FALS
 # Note: rowMean(fit_pois$Mu) = rowMeans(fit_nb$Mu) = rowMeans(counts)
 mean_var_tb = tibble(mean_emp = mean_emp,
                      var_emp = var_emp,
+                     var_binom = var_binom,
                      var_pois = rowMeans(counts_sub_scaled),
                      var_nb_v1 = mean_emp + mean_emp^2 * 1/phi, 
                      var_nb_v2 = mean_emp + mean_emp^2 * fit_nb$overdispersions) %>% 
@@ -721,9 +733,11 @@ mean_var_tb = tibble(mean_emp = mean_emp,
 
 # Plot
 mean_var_tb %>%
-  filter(var_type %in% c("var_emp", "var_nb_v1")) %>%
+  filter(var_type %in% c("var_emp")) %>%
   ggplot(aes(x = mean_emp, y = var_value, color = var_type)) + 
   geom_point(alpha = 0.1) + 
+  geom_line(data = mean_var_tb %>% filter(var_type %in% c("var_pois", "var_nb_v1", "var_binom")),
+            aes(x = mean_emp, y = var_value, color = var_type)) +
   scale_x_log10() + scale_y_log10() +
   theme_bw()
 ```
