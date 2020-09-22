@@ -53,7 +53,7 @@ plot_prob = function(dat_sub){
   
   # Plot
   plt = plot_lines_dt %>%
-    ggplot(aes(x = log(means), y = probs_0)) +
+    ggplot(aes(x = log10(means), y = probs_0)) +
     geom_point(data = plot_dt, aes(x = log(means), y = emp_probs_0), alpha = 0.4) + # Add data points
     geom_line(aes(color = model),
               size = 1) + # Add lines for models
