@@ -13,6 +13,7 @@ suppressPackageStartupMessages({
   library(scater)
   library(BiocSingular)
   library(SingleCellExperiment)
+  library(SingleR)
 })
 
 run_number = "all" # give run_number or "all" for all of them together
@@ -57,6 +58,56 @@ for(i in seq_along(sce_ls)){
   
   sce_ls[[i]] = sce
 }
+
+# Cell type labels (Ding)
+meta_ding = read_tsv(here("mouse_cortex", "files", "meta_combined.txt"))
+meta_ding_10x = meta_ding %>%
+  filter(Method == "10x Chromium") %>%
+  mutate(cell_barcode = gsub("Cortex.*10xChromium", "", NAME))
+
+for(i in seq_along(sce_ls)){
+  sce = sce_ls[[i]]
+  
+  match_cols = match(colnames(sce), meta_ding_10x$cell_barcode)
+  colData(sce)$ding_labels = meta_ding_10x$CellType[match_cols]
+  
+  sce_ls[[i]] = sce
+}
+
+# Cell type labels (singleR)
+# Built-in reference mouse dataset
+mouse_se = MouseRNAseqData() # inclusion in singleR is deprecated, obtain from celldex
+
+for(i in seq_along(sce_ls)){
+  sce = sce_ls[[i]]
+  
+  # Convert gene names
+  test_counts = assay(sce, "logcounts")
+  tx2gene = readRDS(here("mouse_cortex", "salmon_files", "gencode.vM25.annotation.tx2gene.mouse.rds"))
+  match_rows = match(rownames(test_counts), tx2gene$gene_id)
+  rownames(test_counts) = tx2gene$gene_name[match_rows]
+  
+  pred_celltypes = SingleR(test = test_counts, 
+                           ref = mouse_se,
+                           labels = mouse_se$label.fine)
+  
+  all.markers <- metadata(pred_celltypes)$de.genes
+  
+  # Save SingleR output
+  saveRDS(pred_celltypes, here("mouse_cortex", "salmon_quants", paste0(names(sce_ls)[[i]], "_pipeline"), "singler_results.rds"))
+  
+  # Add to colData
+  colData(sce)$singleR_labels = pred_celltypes$labels
+  colData(sce)$singleR_labels_pruned = pred_celltypes$pruned.labels
+  colData(sce)$singleR_main_labels = colData(sce) %>% 
+    as_tibble() %>%
+    select(singleR_labels) %>%
+    left_join(., as_tibble(colData(mouse_se)) %>% distinct(), by = c("singleR_labels" = "label.fine")) %>%
+    select(label.main)
+  
+  sce_ls[[i]] = sce
+}
+
 
 # Save SCE with PCA
 saveRDS(sce_ls[["transcripts"]], here("mouse_cortex", "salmon_quants", "transcripts_pipeline", paste0("sce_", run_number, ".rds")))

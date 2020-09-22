@@ -132,6 +132,8 @@ plotReducedDim(sce_ls[["transcripts"]], "PCA", colour_by = "lib_size")
 
 ### Cell types 
 
+Cell types added in `save-sce.R`.
+
 #### singleR
 
 Use singleR to map cells to cell type based on correlation in expression to mouse bulk RNA-seq data.
@@ -142,40 +144,10 @@ Vignettes:
 * https://bioconductor.org/packages/devel/data/experiment/vignettes/celldex/inst/doc/userguide.html#23_Mouse_RNA-seq
 
 ```{r}
-library(SingleR)
 library(pheatmap)
 
-# Built-in reference mouse dataset
-mouse_se = MouseRNAseqData() # inclusion in singleR is deprecated, obtain from celldex
-
-for(i in seq_along(sce_ls)){
-  sce = sce_ls[[i]]
-  
-  # Convert gene names
-  test_counts = assay(sce, "logcounts")
-  tx2gene = readRDS(here("mouse_cortex", "salmon_files", "gencode.vM25.annotation.tx2gene.mouse.rds"))
-  match_rows = match(rownames(test_counts), tx2gene$gene_id)
-  rownames(test_counts) = tx2gene$gene_name[match_rows]
-  
-  pred_celltypes = SingleR(test = test_counts, 
-                           ref = mouse_se,
-                           labels = mouse_se$label.fine)
-  
-  # Plot
-  all.markers <- metadata(pred_celltypes)$de.genes
-  
-  # Add to colData
-  colData(sce)$singleR_labels = pred_celltypes$labels
-  colData(sce)$singleR_labels_pruned = pred_celltypes$pruned.labels
-  colData(sce)$singleR_main_labels = colData(sce) %>% 
-    as_tibble() %>%
-    select(singleR_labels) %>%
-    left_join(., as_tibble(colData(mouse_se)) %>% distinct(), by = c("singleR_labels" = "label.fine")) %>%
-    select(label.main)
-  
-  sce_ls[[i]] = sce
-}
-
+pred_celltypes = readRDS(here("mouse_cortex", "salmon_quants", "transcripts_pipeline", "singler_results.rds"))
+all.markers <- metadata(pred_celltypes)$de.genes
 # Built-in plots
 # plotScoreHeatmap(pred_celltypes)
 # features = unique(unlist(all.markers$qNSCs))
@@ -196,25 +168,7 @@ plotReducedDim(sce, "PCA", colour_by = "singleR_labels_pruned")
 
 > We used marker genes for each cell type to compute a score for each cell and automatically assign cell types to clusters.
 
-```{r}
-meta_ding = read_tsv(here("mouse_cortex", "files", "meta_combined.txt"))
-meta_ding_10x = meta_ding %>%
-  filter(Method == "10x Chromium") %>%
-  mutate(cell_barcode = gsub("Cortex.*10xChromium", "", NAME))
-
-for(i in seq_along(sce_ls)){
-  sce = sce_ls[[i]]
-  
-  match_cols = match(colnames(sce), meta_ding_10x$cell_barcode)
-  colData(sce)$ding_labels = meta_ding_10x$CellType[match_cols]
-  
-  sce_ls[[i]] = sce
-}
-
-# preandmrna_cd = colData(sce)
-# transcripts_cd = colData(sce)
-# introncollapse_cd = colData(sce)
-```
+Cell types added in `save-sce.R`.
 
 ```{r}
 # PCA colored by Ding's labels

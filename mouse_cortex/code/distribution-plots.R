@@ -1,7 +1,7 @@
 # distribution-plots.R
 # -----------------------------------------------------------------------------
 # Author:             Albert Kuo
-# Date last modified: Sep 14, 2020
+# Date last modified: Sep 21, 2020
 #
 # Make all distribution-related plots 
 
@@ -36,15 +36,6 @@ cortex = cortex_ls[task_id %% length(cortex_ls) + 1]
 sce = readRDS(here("mouse_cortex", "salmon_quants", 
                    paste0(pipeline, "_pipeline"), 
                    "sce_all.rds"))
-
-# Add Ding cell type labels
-meta_ding = read_tsv(here("mouse_cortex", "files", "meta_combined.txt"))
-meta_ding_10x = meta_ding %>%
-  filter(Method == "10x Chromium") %>%
-  mutate(cell_barcode = gsub("Cortex.*10xChromium", "", NAME))
-
-match_cols = match(colnames(sce), meta_ding_10x$cell_barcode)
-colData(sce)$ding_labels = meta_ding_10x$CellType[match_cols]
 
 # Subset to cell type and cortex
 sce_sub = sce[, colData(sce)$ding_labels == cell_type & 
