@@ -56,8 +56,7 @@ plot_prob = function(dat_sub){
     ggplot(aes(x = log(means), y = probs_0)) +
     geom_point(data = plot_dt, aes(x = log(means), y = emp_probs_0), alpha = 0.4) + # Add data points
     geom_line(aes(color = model),
-              size = 1,
-              linetype = "dashed") + # Add lines for models
+              size = 1) + # Add lines for models
     labs(x = "Log of mean expression",
          y = "Fraction of zeros droplets") +
     theme_bw() +

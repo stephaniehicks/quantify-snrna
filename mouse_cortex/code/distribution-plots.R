@@ -1,7 +1,7 @@
 # distribution-plots.R
 # -----------------------------------------------------------------------------
 # Author:             Albert Kuo
-# Date last modified: Sep 21, 2020
+# Date last modified: Sep 22, 2020
 #
 # Make all distribution-related plots 
 
@@ -50,12 +50,64 @@ counts_sub_scaled = Down_Sample_Matrix(ceiling(counts_sub))
 counts_sub_scaled = counts_sub_scaled[rowSums(counts_sub_scaled) != 0, ]
 summary(colSums(counts_sub_scaled))
 
-# Plot P(X_i = 0) against average expression level mu_i
+# Plot fraction of zero droplets P(X_i = 0) against mean expression level mu_i
 prob_out = plot_prob(counts_sub_scaled)
 p = prob_out$plot +
   labs(title = pipeline,
        subtitle = paste(cell_type, cortex, sep = " - "))
 ggsave(file = here(paste0("./mouse_cortex/plots/prob0_plot_",
+                          paste(pipeline, to_snake_case(cell_type), 
+                                to_snake_case(cortex), sep = "_"), 
+                          ".png")), plot = p)
+
+
+
+# Plot mean-variance
+# Empirical mean and variance
+mean_emp = rowMeans(counts_sub_scaled)
+var_emp = genefilter::rowVars(counts_sub_scaled)
+
+# Binomial
+n = round(median(colSums(counts_sub_scaled)))
+emp_props = rowSums(counts_sub_scaled)/sum(colSums(counts_sub_scaled))
+var_binom = n*emp_props*(1-emp_props)
+
+# Poisson
+fit_pois = glmGamPoi::glm_gp(counts_sub_scaled, design = ~ 1, size_factors = FALSE, 
+                             overdispersion = FALSE)
+# Negative binomial
+# Estimate overall size/dispersion parameter
+model = lm(var_emp ~ 1*mean_emp + I(mean_emp^2) + 0, tibble(mean_emp, var_emp))
+phi = 1/coef(model)["I(mean_emp^2)"]
+
+# Estimate size/dispersion parameter for every gene
+# library(glmGamPoi)
+# fit_nb =  glmGamPoi::glm_gp(counts_sub_scaled, design = ~ 1, size_factors = FALSE, 
+#                          overdispersion = TRUE)
+
+# Note: rowMean(fit_pois$Mu) = rowMeans(fit_nb$Mu) = rowMeans(counts)
+mean_var_tb = tibble(mean_emp = mean_emp,
+                     var_emp = var_emp,
+                     binomial = var_binom,
+                     poisson = rowMeans(counts_sub_scaled),
+                     nbinomial = mean_emp + mean_emp^2 * 1/phi) %>%
+  # var_nb_v2 = mean_emp + mean_emp^2 * fit_nb$overdispersions) %>% 
+  tidyr::pivot_longer(cols = -mean_emp, names_to = "model", values_to = "var_value")
+
+# Plot
+p = mean_var_tb %>%
+  filter(model %in% c("var_emp")) %>%
+  ggplot(aes(x = mean_emp, y = var_value)) + 
+  geom_point(alpha = 0.3) + 
+  geom_line(data = mean_var_tb %>% filter(model %in% c("binomial", "poisson", "nbinomial")),
+            aes(x = mean_emp, y = var_value, color = model)) +
+  scale_x_log10() + scale_y_log10() +
+  labs(title = pipeline,
+       subtitle = paste(cell_type, cortex, sep = " - "),
+       x = "Log of mean expression",
+       y = "Log of variance") +
+  theme_bw()
+ggsave(file = here(paste0("./mouse_cortex/plots/meanvar_plot_",
                           paste(pipeline, to_snake_case(cell_type), 
                                 to_snake_case(cortex), sep = "_"), 
                           ".png")), plot = p)
@@ -69,8 +121,8 @@ dim(m)
 bic_tb = tibble(multinomial = mult_bic(m),     
                 # dmn = dmn_bic(m),     # Unknown time
                 poisson = poi_bic(m),       
-                negative_binomial_1 = nb_bic_1(m),    
-                negative_binomial_2 = nb_bic_2(m),
+                nbinomial = nb_bic_1(m),    
+                nbinomial_2 = nb_bic_2(m),
                 cell_type_name = cell_type)
 
 p = bic_tb %>% 

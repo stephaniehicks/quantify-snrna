@@ -694,50 +694,11 @@ bic_tb %>%
 
 
 
-#### Poisson-Gamma models
+#### Mean-variance plots
 
-Using `glmGamPoi` to plot mean-variance relationships.
+This section has been moved to `distribution-plots.R`.
+
 
 ```{r}
-library(glmGamPoi)
 
-# Empirical mean and variance
-mean_emp = rowMeans(counts_sub_scaled)
-var_emp = genefilter::rowVars(counts_sub_scaled)
-
-# Binomial
-n = round(median(colSums(dat_sub)))
-emp_props = rowSums(dat_sub)/sum(colSums(dat_sub))
-var_binom = n*emp_props*(1-emp_props)
-
-# Poisson
-fit_pois = glmGamPoi::glm_gp(counts_sub_scaled, design = ~ 1, size_factors = FALSE, 
-                         overdispersion = FALSE)
-# Negative binomial
-# Estimate overall size/dispersion parameter
-model = lm(var_emp ~ 1*mean_emp + I(mean_emp^2) + 0, tibble(mean_emp, var_emp))
-phi = 1/coef(model)["I(mean_emp^2)"]
-
-# Estimate size/dispersion parameter for every gene
-fit_nb =  glmGamPoi::glm_gp(counts_sub_scaled, design = ~ 1, size_factors = FALSE, 
-                         overdispersion = TRUE)
-
-# Note: rowMean(fit_pois$Mu) = rowMeans(fit_nb$Mu) = rowMeans(counts)
-mean_var_tb = tibble(mean_emp = mean_emp,
-                     var_emp = var_emp,
-                     var_binom = var_binom,
-                     var_pois = rowMeans(counts_sub_scaled),
-                     var_nb_v1 = mean_emp + mean_emp^2 * 1/phi, 
-                     var_nb_v2 = mean_emp + mean_emp^2 * fit_nb$overdispersions) %>% 
-  tidyr::pivot_longer(cols = -mean_emp, names_to = "var_type", values_to = "var_value")
-
-# Plot
-mean_var_tb %>%
-  filter(var_type %in% c("var_emp")) %>%
-  ggplot(aes(x = mean_emp, y = var_value, color = var_type)) + 
-  geom_point(alpha = 0.1) + 
-  geom_line(data = mean_var_tb %>% filter(var_type %in% c("var_pois", "var_nb_v1", "var_binom")),
-            aes(x = mean_emp, y = var_value, color = var_type)) +
-  scale_x_log10() + scale_y_log10() +
-  theme_bw()
 ```
