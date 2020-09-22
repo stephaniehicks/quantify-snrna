@@ -53,7 +53,7 @@ for(i in seq_along(sce_ls)){
   
   set.seed(1)
   tic("approx PCA")
-  sce = runPCA(sce, exprs_values = "logcounts", ntop = ncol(sce), BSPARAM = RandomParam())
+  sce = scater::runPCA(sce, exprs_values = "logcounts", ntop = ncol(sce), BSPARAM = RandomParam())
   toc()
   
   sce_ls[[i]] = sce
