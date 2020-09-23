@@ -15,10 +15,23 @@ p_load(cowplot, here, stringr, tidyverse, xtable)
 ```
 
 
-# Figure 1
+# Figure 1 (distributions)
 
 ```{r}
 
+```
+
+# Figure (cell type misclassification)
+
+```{r}
+celltypemis = readRDS(here("./mouse_cortex/plots/celltypemis_plot.rds"))
+celltypemis = celltypemis +
+  theme(axis.text.x = element_text(size = 7))
+astrocytemgratios = readRDS(here("./mouse_cortex/plots/astrocytemgratios_plot.rds"))
+
+p = plot_grid(celltypemis, astrocytemgratios, nrow = 1, rel_widths = c(0.7, 0.3), labels = "auto")
+print(p)
+ggsave(here("./publication/figures/figure_3.png"), plot = p, width = 16, height = 8)
 ```
 
 
