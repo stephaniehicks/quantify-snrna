@@ -18,7 +18,73 @@ p_load(cowplot, here, stringr, tidyverse, xtable)
 # Figure 1 (distributions)
 
 ```{r}
+a = readRDS(here("./mouse_cortex/plots/meanvar_plot_preandmrna_excitatory_neuron_cortex_1.rds"))
+b = readRDS(here("./mouse_cortex/plots/prob0_plot_preandmrna_excitatory_neuron_cortex_1.rds"))
+c = readRDS(here("./mouse_cortex/plots/meanvar_plot_preandmrna_inhibitory_neuron_cortex_1.rds"))
+d = readRDS(here("./mouse_cortex/plots/prob0_plot_preandmrna_inhibitory_neuron_cortex_1.rds"))
+e = readRDS(here("./mouse_cortex/plots/meanvar_plot_preandmrna_astrocyte_cortex_1.rds"))
+f = readRDS(here("./mouse_cortex/plots/prob0_plot_preandmrna_astrocyte_cortex_1.rds"))
 
+# Edit titles and labels
+a = a +
+  labs(title = "Excitatory neuron",
+       subtitle = NULL) +
+  theme(legend.title = element_text(size = 10),
+        legend.text = element_text(size = 8),
+        axis.text.y = element_text(size = 6),
+        axis.text.x = element_text(size = 6),
+        axis.title = element_text(size = 8),
+        plot.title = element_text(size = 12))
+b = b + 
+  labs(title = "Excitatory neuron",
+       subtitle = NULL) +
+  theme(legend.title = element_text(size = 10),
+        legend.text = element_text(size = 8),
+        axis.text.y = element_text(size = 6),
+        axis.text.x = element_text(size = 6),
+        axis.title = element_text(size = 8),
+        plot.title = element_text(size = 12))
+c = c +
+  labs(title = "Inhibitory neuron",
+       subtitle = NULL) +
+  theme(legend.title = element_text(size = 10),
+        legend.text = element_text(size = 8),
+        axis.text.y = element_text(size = 6),
+        axis.text.x = element_text(size = 6),
+        axis.title = element_text(size = 8),
+        plot.title = element_text(size = 12))
+d = d + 
+  labs(title = "Inhibitory neuron",
+       subtitle = NULL) +
+  theme(legend.title = element_text(size = 10),
+        legend.text = element_text(size = 8),
+        axis.text.y = element_text(size = 6),
+        axis.text.x = element_text(size = 6),
+        axis.title = element_text(size = 8),
+        plot.title = element_text(size = 12))
+e = e +
+  labs(title = "Astrocyte",
+       subtitle = NULL) +
+  theme(legend.title = element_text(size = 10),
+        legend.text = element_text(size = 8),
+        axis.text.y = element_text(size = 6),
+        axis.text.x = element_text(size = 6),
+        axis.title = element_text(size = 8),
+        plot.title = element_text(size = 12))
+f = f + 
+  labs(title = "Astrocyte",
+       subtitle = NULL) +
+  theme(legend.title = element_text(size = 10),
+        legend.text = element_text(size = 8),
+        axis.text.y = element_text(size = 6),
+        axis.text.x = element_text(size = 6),
+        axis.title = element_text(size = 8),
+        plot.title = element_text(size = 12))
+
+
+p = plot_grid(a, b, c, d, e, f, nrow = 3, labels = "auto")
+print(p)
+ggsave(here("./publication/figures/figure_1.png"), plot = p, width = 12, height = 6)
 ```
 
 # Figure (cell type misclassification)
