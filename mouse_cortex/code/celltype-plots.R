@@ -74,10 +74,13 @@ for(i in seq_along(sce_ls)){
   pred_celltypes[[pipeline]] = readRDS(here(paste0("./mouse_cortex/salmon_quants/"), pipeline, "_pipeline/singler_results.rds"))
 }
 
+tx2gene = readRDS(here("mouse_cortex", "salmon_files", "gencode.vM25.transcripts.tx2gene.mouse.rds"))
+t2g = tx2gene %>% select(gene_name, gene_id) %>% distinct()
+
 # Plot ratio of astrocyte:qNSC marker genes for astrocyte cells between pipelines
-astrocyte_mg = unique(unlist(all.markers$Astrocytes))
+astrocyte_mg = unique(unlist(sapply(pred_celltypes, function(x) unique(unlist(metadata(x)$de.genes$Astrocytes)))))
 astrocyte_genes = t2g %>% filter(gene_name %in% astrocyte_mg) %>% pull(gene_id)
-qnsc_mg = unique(unlist(all.markers$qNSCs))
+qnsc_mg = unique(unlist(sapply(pred_celltypes, function(x) unique(unlist(metadata(x)$de.genes$qNSCs)))))
 qnsc_genes = t2g %>% filter(gene_name %in% qnsc_mg) %>% pull(gene_id)
 
 gene_type_name = "Astrocyte qNSC ratio"
@@ -97,21 +100,26 @@ for(i in seq_along(sce_ls)){
     pivot_longer(cols = -cell_barcode) %>%
     mutate(pipeline = pipeline_name)
 }
+
 gene_sum_tb = bind_rows(gene_sum_tb_ls)
 gene_sum_tb = gene_sum_tb %>%
   pivot_wider(names_from = pipeline, values_from = value)
 
 gene_sum_tb_2 = gene_sum_tb %>%
   pivot_longer(-c("cell_barcode", "name"), names_to = "pipeline", values_to = "ratio")
-summ <- gene_sum_tb_2 %>% 
+
+summ <- gene_sum_tb_2 %>%
   left_join(., cd, by = c("cell_barcode" = "cell")) %>%
-  group_by(pipeline) %>% 
+  group_by(pipeline) %>%
   summarize(median = median(ratio))
-gene_sum_tb_2 %>%
+
+p = gene_sum_tb_2 %>%
   left_join(., cd, by = c("cell_barcode" = "cell")) %>%
   ggplot(aes(x = pipeline, y = ratio)) +
   geom_boxplot() +
-  geom_label(data = summ, aes(x = pipeline, y = median, 
-                              label = round(median, 2))) +
+  # geom_label(data = summ, aes(x = pipeline, y = median, 
+  #                             label = round(median, 2))) +
   labs() +
   theme_bw() 
+
+ggsave(file = here(paste0("./mouse_cortex/plots/astrocytemgratios_plot.png")), plot = p)
