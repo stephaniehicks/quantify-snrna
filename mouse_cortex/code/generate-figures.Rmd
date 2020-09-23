@@ -1,0 +1,46 @@
+---
+title: "Generate figures"
+author: "Albert Kuo"
+date: "9/23/2020"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r packages}
+library(pacman)
+p_load(cowplot, here, stringr, tidyverse, xtable)
+```
+
+
+# Figure 1
+
+```{r}
+
+```
+
+
+# Table (BIC values)
+
+```{r}
+files_ls = list.files(here("./mouse_cortex/plots"), pattern = "bic_data.*.rds", full.names = T)
+bic_values = lapply(files_ls, readRDS)
+for(i in seq_along(bic_values)){
+  x = bic_values[i]
+  cortex = str_sub(files_ls[i], -12, -5)
+  x[[1]]$cortex = cortex
+  x[[1]]$pipeline = str_split(files_ls[i], "_")[[1]][4]
+  x[[1]] = x[[1]] %>%
+    rename(binomial = multinomial) %>%
+    select(pipeline, cortex, cell_type_name, binomial, poisson, nbinomial, nbinomial_2)
+  bic_values[i] = x
+}
+
+bic_values = bind_rows(bic_values) %>%
+  arrange(pipeline, cortex, cell_type_name)
+names(bic_values) = c("Pipeline", "Cortex", "Cell type", "Binomial BIC", "Poisson BIC", "Negative binomial BIC", "Negative binomial 2 BIC")
+print(xtable(bic_values, digits = 0, label = "table:bic", caption = "BIC log-likelihoods for every pipeline, cell type, and cortex combination. Negative binomial refers to a negative binomial distribution with one overdispersion parameter for all genes. Negative binomial 2 refers to a negative binomial distribution with gene-specific overdispersion parameters."), include.rownames = F)
+```
+
