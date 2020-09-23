@@ -131,7 +131,7 @@ summary(colSums(m))
 summary(rowSums(m))
 dim(m)
 
-bic_tb = tibble(multinomial = mult_bic(m),     
+bic_tb = tibble(binomial = mult_bic(m),     
                 # dmn = dmn_bic(m),     # Unknown time
                 poisson = poi_bic(m),       
                 nbinomial = nb_bic_1(m),    
