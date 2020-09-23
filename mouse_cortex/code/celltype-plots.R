@@ -55,13 +55,14 @@ for(i in seq_along(sce_ls)){
 }
 
 tb_misclassify = bind_rows(tb_misclassify_ls)
-tb_misclassify = tb_misclassify %>%
-  pivot_wider(names_from = pipeline, values_from = c(ding_labels_match, singleR_labels_match, non_matching_cells))
 
-tb_misclassify %>%
+p = tb_misclassify %>%
   ggplot(aes(x = pipeline, fill = singleR_labels_match)) +
   geom_bar(position = "stack") +
-  facet_wrap(~ ding_labels_match)
+  facet_wrap(~ ding_labels_match, scales = "free") +
+  theme_bw()
+
+ggsave(file = here(paste0("./mouse_cortex/plots/celltypemis_plot.png")), plot = p)
 
 ##############################
 # Plot ratio of marker genes #
@@ -72,3 +73,45 @@ for(i in seq_along(sce_ls)){
   pipeline = names(sce_ls)[i]
   pred_celltypes[[pipeline]] = readRDS(here(paste0("./mouse_cortex/salmon_quants/"), pipeline, "_pipeline/singler_results.rds"))
 }
+
+# Plot ratio of astrocyte:qNSC marker genes for astrocyte cells between pipelines
+astrocyte_mg = unique(unlist(all.markers$Astrocytes))
+astrocyte_genes = t2g %>% filter(gene_name %in% astrocyte_mg) %>% pull(gene_id)
+qnsc_mg = unique(unlist(all.markers$qNSCs))
+qnsc_genes = t2g %>% filter(gene_name %in% qnsc_mg) %>% pull(gene_id)
+
+gene_type_name = "Astrocyte qNSC ratio"
+gene_sum_tb_ls = list()
+for(i in seq_along(sce_ls)){
+  pipeline_name = names(sce_ls)[i]
+  sce_i = sce_ls[[i]]
+  
+  lib_size_tb = tibble(cell_barcode = astrocyte_cells)
+  lib_size_gene_type_astrocyte = colSums(counts(sce_i)[intersect(rownames(counts(sce_i)), astrocyte_genes), astrocyte_cells, drop = F])
+  lib_size_gene_type_qnsc = colSums(counts(sce_i)[intersect(rownames(counts(sce_i)), qnsc_genes), astrocyte_cells, drop = F])
+  lib_size_gene_type_tb = tibble(cell_barcode = names(lib_size_gene_type_astrocyte),
+                                 !!gene_type_name := lib_size_gene_type_astrocyte/lib_size_gene_type_qnsc)
+  lib_size_tb = lib_size_tb %>% 
+    left_join(., lib_size_gene_type_tb, by = "cell_barcode")
+  gene_sum_tb_ls[[pipeline_name]] = lib_size_tb %>%
+    pivot_longer(cols = -cell_barcode) %>%
+    mutate(pipeline = pipeline_name)
+}
+gene_sum_tb = bind_rows(gene_sum_tb_ls)
+gene_sum_tb = gene_sum_tb %>%
+  pivot_wider(names_from = pipeline, values_from = value)
+
+gene_sum_tb_2 = gene_sum_tb %>%
+  pivot_longer(-c("cell_barcode", "name"), names_to = "pipeline", values_to = "ratio")
+summ <- gene_sum_tb_2 %>% 
+  left_join(., cd, by = c("cell_barcode" = "cell")) %>%
+  group_by(pipeline) %>% 
+  summarize(median = median(ratio))
+gene_sum_tb_2 %>%
+  left_join(., cd, by = c("cell_barcode" = "cell")) %>%
+  ggplot(aes(x = pipeline, y = ratio)) +
+  geom_boxplot() +
+  geom_label(data = summ, aes(x = pipeline, y = median, 
+                              label = round(median, 2))) +
+  labs() +
+  theme_bw() 
