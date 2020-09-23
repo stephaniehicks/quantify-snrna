@@ -13,7 +13,6 @@ suppressPackageStartupMessages({
   library(scater)
   library(BiocSingular)
   library(SingleCellExperiment)
-  library(SingleR)
 })
 
 run_number = "all" # give run_number or "all" for all of them together
@@ -53,7 +52,7 @@ for(i in seq_along(sce_ls)){
   
   set.seed(1)
   tic("approx PCA")
-  sce = scater::runPCA(sce, exprs_values = "logcounts", ntop = ncol(sce), BSPARAM = RandomParam())
+  sce = runPCA(sce, exprs_values = "logcounts", ntop = ncol(sce), BSPARAM = RandomParam())
   toc()
   
   sce_ls[[i]] = sce
@@ -76,6 +75,7 @@ for(i in seq_along(sce_ls)){
 
 # Cell type labels (singleR)
 # Built-in reference mouse dataset
+library(SingleR)
 mouse_se = MouseRNAseqData() # inclusion in singleR is deprecated, obtain from celldex
 
 for(i in seq_along(sce_ls)){
@@ -83,7 +83,7 @@ for(i in seq_along(sce_ls)){
   
   # Convert gene names
   test_counts = assay(sce, "logcounts")
-  tx2gene = readRDS(here("mouse_cortex", "salmon_files", "gencode.vM25.annotation.tx2gene.mouse.rds"))
+  tx2gene = readRDS(here("mouse_cortex", "salmon_files", "gencode.vM25.transcripts.tx2gene.mouse.rds"))
   match_rows = match(rownames(test_counts), tx2gene$gene_id)
   rownames(test_counts) = tx2gene$gene_name[match_rows]
   
