@@ -7,12 +7,17 @@ The `/mouse_cortex/` folder contains code to download and process data from this
 
 ### files 
 
-    - `/mouse_cortex/code/download-geo-data.Rmd`: Download the SRA files from GEO
+    - `/mouse_cortex/code/download-geo-data.Rmd`: download the SRA files from GEO
         - `/mouse_cortex/code/download-geo-data.sh`: shell script to prefetch SRA files
         - `/mouse_cortex/code/extract-fastq.sh`: shell script to convert SRA to fastq
     - `/mouse_cortex/code/quantify-salmon.Rmd`: quantification with alevin from salmon
         - `/mouse_cortex/code/build-index-salmon.sh`: shell script to build salmon index
         - `/mouse_cortex/code/run-alevin.sh`: shell script to run alevin
+        - `/mouse_cortex/code/run-tximeta.R`: run tximeta
+    - `/mouse_cortex/code/snuc-analysis-bioc.Rmd`: analysis of single-nuclei
+        - `/mouse_cortex/code/save-sce.R`: run PCA, add cell type labels, and convert to SingleCellExperiment
+        - `/mouse_cortex/code/distribution-plots.R`: create distribution plots
+        - `/mouse_cortex/code/celltype-plots.R`: create cell type classification plots
 
 ### reference generation
 
