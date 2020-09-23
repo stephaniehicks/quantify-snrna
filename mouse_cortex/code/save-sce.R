@@ -1,9 +1,9 @@
 # save-sce.R
 # -----------------------------------------------------------------------------
 # Author:             Albert Kuo
-# Date last modified: Sep 9, 2020
+# Date last modified: Sep 23, 2020
 #
-# Quality control, run PCA and save as SingleCellExperiment 
+# Quality control, run PCA, add cell type labels, and save as SingleCellExperiment 
 
 suppressPackageStartupMessages({
   library(here)
@@ -94,7 +94,7 @@ for(i in seq_along(sce_ls)){
   all.markers <- metadata(pred_celltypes)$de.genes
   
   # Save SingleR output
-  saveRDS(pred_celltypes, here("mouse_cortex", "salmon_quants", paste0(names(sce_ls)[[i]], "_pipeline"), "singler_results.rds"))
+  saveRDS(pred_celltypes, here("mouse_cortex", "salmon_quants", paste0(names(sce_ls)[[i]], "_pipeline/singler_results.rds"))
   
   # Add to colData
   colData(sce)$singleR_labels = pred_celltypes$labels
