@@ -59,7 +59,9 @@ counts_sub_scaled = Down_Sample_Matrix(ceiling(counts_sub))
 counts_sub_scaled = counts_sub_scaled[rowSums(counts_sub_scaled) != 0, ]
 summary(colSums(counts_sub_scaled))
 
-# Plot fraction of zero droplets P(X_i = 0) against mean expression level mu_i
+################################################################################
+# Plot fraction of zero droplets P(X_i = 0) against mean expression level mu_i #
+################################################################################
 prob_out = plot_prob(counts_sub_scaled)
 p = prob_out$plot +
   labs(title = pipeline,
@@ -70,8 +72,9 @@ ggsave(file = here(paste0("./mouse_cortex/plots/prob0_plot_",
                           ".png")), plot = p)
 
 
-
-# Plot mean-variance
+######################
+# Plot mean-variance #
+######################
 # Empirical mean and variance
 mean_emp = rowMeans(counts_sub_scaled)
 var_emp = genefilter::rowVars(counts_sub_scaled)
@@ -121,7 +124,9 @@ ggsave(file = here(paste0("./mouse_cortex/plots/meanvar_plot_",
                                 to_snake_case(cortex), sep = "_"), 
                           ".png")), plot = p)
 
-# Plot BIC values
+###################
+# Plot BIC values #
+###################
 m = counts_sub_scaled
 summary(colSums(m))
 summary(rowSums(m))
