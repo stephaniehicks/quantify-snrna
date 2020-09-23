@@ -148,5 +148,9 @@ ggsave(file = here(paste0("./mouse_cortex/plots/bic_plot_",
                           paste(pipeline, to_snake_case(cell_type), 
                                 to_snake_case(cortex), sep = "_"), 
                           ".png")), plot = p)
+saveRDS(bic_tb, here(paste0("./mouse_cortex/plots/bic_data_",
+                            paste(pipeline, to_snake_case(cell_type), 
+                                  to_snake_case(cortex), sep = "_"), 
+                            ".rds")))
 
 
