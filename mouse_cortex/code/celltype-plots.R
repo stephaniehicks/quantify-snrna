@@ -71,13 +71,15 @@ ggsave(file = here(paste0("./mouse_cortex/plots/celltypemis_plot.png")), plot = 
 pred_celltypes = list()
 for(i in seq_along(sce_ls)){
   pipeline = names(sce_ls)[i]
-  pred_celltypes[[pipeline]] = readRDS(here(paste0("./mouse_cortex/salmon_quants/"), pipeline, "_pipeline/singler_results.rds"))
+  pred_celltypes[[pipeline]] = readRDS(here(paste0("./mouse_cortex/salmon_quants/"), 
+                                            paste0(pipeline, "_pipeline/singler_results.rds")))
 }
 
 tx2gene = readRDS(here("mouse_cortex", "salmon_files", "gencode.vM25.transcripts.tx2gene.mouse.rds"))
 t2g = tx2gene %>% select(gene_name, gene_id) %>% distinct()
 
 # Plot ratio of astrocyte:qNSC marker genes for astrocyte cells between pipelines
+astrocyte_cells_ind = which(colData(sce_ls[[1]])$ding_labels == "Astrocyte")
 astrocyte_mg = unique(unlist(sapply(pred_celltypes, function(x) unique(unlist(metadata(x)$de.genes$Astrocytes)))))
 astrocyte_genes = t2g %>% filter(gene_name %in% astrocyte_mg) %>% pull(gene_id)
 qnsc_mg = unique(unlist(sapply(pred_celltypes, function(x) unique(unlist(metadata(x)$de.genes$qNSCs)))))
@@ -89,10 +91,10 @@ for(i in seq_along(sce_ls)){
   pipeline_name = names(sce_ls)[i]
   sce_i = sce_ls[[i]]
   
-  lib_size_tb = tibble(cell_barcode = astrocyte_cells)
-  lib_size_gene_type_astrocyte = colSums(counts(sce_i)[intersect(rownames(counts(sce_i)), astrocyte_genes), astrocyte_cells, drop = F])
-  lib_size_gene_type_qnsc = colSums(counts(sce_i)[intersect(rownames(counts(sce_i)), qnsc_genes), astrocyte_cells, drop = F])
-  lib_size_gene_type_tb = tibble(cell_barcode = names(lib_size_gene_type_astrocyte),
+  lib_size_tb = tibble(cell_barcode = astrocyte_cells_ind)
+  lib_size_gene_type_astrocyte = colSums(counts(sce_i)[intersect(rownames(counts(sce_i)), astrocyte_genes), astrocyte_cells_ind, drop = F])
+  lib_size_gene_type_qnsc = colSums(counts(sce_i)[intersect(rownames(counts(sce_i)), qnsc_genes), astrocyte_cells_ind, drop = F])
+  lib_size_gene_type_tb = tibble(cell_barcode = astrocyte_cells_ind,
                                  !!gene_type_name := lib_size_gene_type_astrocyte/lib_size_gene_type_qnsc)
   lib_size_tb = lib_size_tb %>% 
     left_join(., lib_size_gene_type_tb, by = "cell_barcode")
@@ -114,7 +116,6 @@ summ <- gene_sum_tb_2 %>%
   summarize(median = median(ratio))
 
 p = gene_sum_tb_2 %>%
-  left_join(., cd, by = c("cell_barcode" = "cell")) %>%
   ggplot(aes(x = pipeline, y = ratio)) +
   geom_boxplot() +
   # geom_label(data = summ, aes(x = pipeline, y = median, 
