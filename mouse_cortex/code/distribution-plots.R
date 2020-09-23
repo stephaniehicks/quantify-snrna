@@ -37,15 +37,6 @@ sce = readRDS(here("mouse_cortex", "salmon_quants",
                    paste0(pipeline, "_pipeline"), 
                    "sce_all.rds"))
 
-# Add Ding cell type labels	
-meta_ding = read_tsv(here("mouse_cortex", "files", "meta_combined.txt"))	
-meta_ding_10x = meta_ding %>%	
-  filter(Method == "10x Chromium") %>%	
-  mutate(cell_barcode = gsub("Cortex.*10xChromium", "", NAME))	
-
-match_cols = match(colnames(sce), meta_ding_10x$cell_barcode)	
-colData(sce)$ding_labels = meta_ding_10x$CellType[match_cols]
-
 # Subset to cell type and cortex
 sce_sub = sce[, colData(sce)$ding_labels == cell_type & 
                 !is.na(colData(sce)$ding_labels) & # Subset to cell type
@@ -70,6 +61,10 @@ ggsave(file = here(paste0("./mouse_cortex/plots/prob0_plot_",
                           paste(pipeline, to_snake_case(cell_type), 
                                 to_snake_case(cortex), sep = "_"), 
                           ".png")), plot = p)
+saveRDS(p, file = here(paste0("./mouse_cortex/plots/prob0_plot_",
+                              paste(pipeline, to_snake_case(cell_type), 
+                                    to_snake_case(cortex), sep = "_"), 
+                              ".rds")))
 
 
 ######################
@@ -123,6 +118,10 @@ ggsave(file = here(paste0("./mouse_cortex/plots/meanvar_plot_",
                           paste(pipeline, to_snake_case(cell_type), 
                                 to_snake_case(cortex), sep = "_"), 
                           ".png")), plot = p)
+saveRDS(p, file = here(paste0("./mouse_cortex/plots/meanvar_plot_",
+                              paste(pipeline, to_snake_case(cell_type), 
+                                    to_snake_case(cortex), sep = "_"), 
+                              ".rds")))
 
 ###################
 # Plot BIC values #
@@ -153,6 +152,10 @@ ggsave(file = here(paste0("./mouse_cortex/plots/bic_plot_",
                           paste(pipeline, to_snake_case(cell_type), 
                                 to_snake_case(cortex), sep = "_"), 
                           ".png")), plot = p)
+saveRDS(p, file = here(paste0("./mouse_cortex/plots/bic_plot_",
+                              paste(pipeline, to_snake_case(cell_type), 
+                                    to_snake_case(cortex), sep = "_"), 
+                              ".rds")))
 saveRDS(bic_tb, here(paste0("./mouse_cortex/plots/bic_data_",
                             paste(pipeline, to_snake_case(cell_type), 
                                   to_snake_case(cortex), sep = "_"), 
