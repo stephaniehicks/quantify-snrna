@@ -63,6 +63,7 @@ p = tb_misclassify %>%
   theme_bw()
 
 ggsave(file = here(paste0("./mouse_cortex/plots/celltypemis_plot.png")), plot = p)
+saveRDS(p, here(paste0("./mouse_cortex/plots/celltypemis_plot.rds")))
 
 ##############################
 # Plot ratio of marker genes #
@@ -124,3 +125,4 @@ p = gene_sum_tb_2 %>%
   theme_bw() 
 
 ggsave(file = here(paste0("./mouse_cortex/plots/astrocytemgratios_plot.png")), plot = p)
+saveRDS(p, here(paste0("./mouse_cortex/plots/astrocytemgratios_plot.rds")))
