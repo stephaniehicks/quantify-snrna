@@ -59,7 +59,9 @@ tb_misclassify = bind_rows(tb_misclassify_ls)
 p = tb_misclassify %>%
   ggplot(aes(x = pipeline, fill = singleR_labels_match)) +
   geom_bar(position = "stack") +
-  facet_wrap(~ ding_labels_match, scales = "free") +
+  facet_wrap(~ ding_labels_match, scales = "free", ncol = 2) +
+  labs(x = "Pipeline",
+       fill = "SingleR labels") +
   theme_bw()
 
 ggsave(file = here(paste0("./mouse_cortex/plots/celltypemis_plot.png")), plot = p)
@@ -111,17 +113,18 @@ gene_sum_tb = gene_sum_tb %>%
 gene_sum_tb_2 = gene_sum_tb %>%
   pivot_longer(-c("cell_barcode", "name"), names_to = "pipeline", values_to = "ratio")
 
-summ <- gene_sum_tb_2 %>%
-  left_join(., cd, by = c("cell_barcode" = "cell")) %>%
-  group_by(pipeline) %>%
-  summarize(median = median(ratio))
+# summ <- gene_sum_tb_2 %>%
+#   left_join(., cd, by = c("cell_barcode" = "cell")) %>%
+#   group_by(pipeline) %>%
+#   summarize(median = median(ratio))
 
 p = gene_sum_tb_2 %>%
   ggplot(aes(x = pipeline, y = ratio)) +
   geom_boxplot() +
   # geom_label(data = summ, aes(x = pipeline, y = median, 
   #                             label = round(median, 2))) +
-  labs() +
+  labs(x = "Pipeline",
+       y = "Astrocyte:qNSC ratio") +
   theme_bw() 
 
 ggsave(file = here(paste0("./mouse_cortex/plots/astrocytemgratios_plot.png")), plot = p)
