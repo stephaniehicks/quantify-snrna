@@ -138,6 +138,11 @@ b = readRDS(here("./mouse_cortex/plots/pcading_plot_preandmrna.rds"))
 c = readRDS(here("./mouse_cortex/plots/pcading_plot_introncollapse.rds"))
 d = readRDS(here("./mouse_cortex/plots/pcading_plot_intronseparate.rds"))
 
+a = a + labs(title = "Transcripts pipeline")
+b = b + labs(title = "Preandmrna pipeline")
+c = c + labs(title = "Introncollapse pipeline")
+d = d + labs(title = "Intronseparate pipeline")
+
 p = plot_grid(a, b, c, d, nrow = 2, labels = "auto")
 print(p)
 ggsave(here("./publication/figures/sfigure_2.png"), plot = p, width = 12, height = 8)
@@ -151,6 +156,11 @@ a = readRDS(here("./mouse_cortex/plots/pcacortex_plot_transcripts.rds"))
 b = readRDS(here("./mouse_cortex/plots/pcacortex_plot_preandmrna.rds"))
 c = readRDS(here("./mouse_cortex/plots/pcacortex_plot_introncollapse.rds"))
 d = readRDS(here("./mouse_cortex/plots/pcacortex_plot_intronseparate.rds"))
+
+a = a + labs(title = "Transcripts pipeline")
+b = b + labs(title = "Preandmrna pipeline")
+c = c + labs(title = "Introncollapse pipeline")
+d = d + labs(title = "Intronseparate pipeline")
 
 p = plot_grid(a, b, c, d, nrow = 2, labels = "auto")
 print(p)
