@@ -132,7 +132,7 @@ PCA done in `save-sce.R`.
 
 ```{r}
 # PCA colored by provided attribute
-plotReducedDim(sce_ls[["transcripts"]], "PCA", colour_by = "lib_size")
+plotReducedDim(sce_ls[["transcripts"]], "PCA", colour_by = "ding_labels", point_size = 1)
 ```
 
 
