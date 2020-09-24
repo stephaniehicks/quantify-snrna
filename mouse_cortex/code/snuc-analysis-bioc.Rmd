@@ -42,6 +42,8 @@ Discard low-quality cells and convert from SummarizedExperiment to SingleCellExp
 
 ### Library size comparison
 
+To generate and save these plots, run `libsize-plots.R`.
+
 ```{r}
 # Get library sizes
 lib_sizes_ls = list()
@@ -92,9 +94,14 @@ for(i in seq_along(sce_ls)){
     as_tibble() %>%
     mutate(cell_barcode = colnames(sce))
   
-  for(gene_type_name in c("protein_coding", "lincRNA", "antisense", "processed_pseudogene")){
-    genes_in_type = rowData(sce) %>% as_tibble() %>% filter(gene_type == gene_type_name) %>% pull(gene_id)
-    lib_size_gene_type = colSums(counts(sce)[genes_in_type,])
+  for(gene_type_name in unique(rowData(sce)$gene_type)){ 
+    genes_in_type = rowData(sce)[rowData(sce)$gene_type == gene_type_name, "gene_id"]
+    m = counts(sce)[genes_in_type, ]
+    if(length(genes_in_type) > 1){
+      lib_size_gene_type = colSums(m)
+    } else {
+      lib_size_gene_type = m
+    }
     lib_size_tb = lib_size_tb %>% 
       mutate(!!gene_type_name := lib_size_gene_type)
   }
@@ -105,20 +112,25 @@ gene_sum_tb = bind_rows(gene_sum_tb_ls)
 ```
 
 ```{r}
-# Compute median label
-summ = gene_sum_tb %>% 
-  group_by(pipeline, cortex) %>% 
-  summarize(median = median(processed_pseudogene))
-
 # Plot
-gene_sum_tb %>%
-  ggplot(aes(x = pipeline, y = processed_pseudogene)) + 
-  geom_boxplot() +
-  geom_label(data = summ, aes(x = pipeline, y = median, 
-                              label = round(median, 0))) +
-  labs(x = "pipeline") +
-  facet_wrap(~ cortex) +
-  theme_bw()
+for(gene_type in c("protein_coding", "lincRNA", "antisense", "processed_pseudogene")){ # 4 with highest counts across all pipelines
+  # Compute median label
+  summ = gene_sum_tb %>%
+    group_by(pipeline, cortex) %>%
+    summarize(median = median(!!sym(gene_type)))
+  
+  p = gene_sum_tb %>%
+    ggplot(aes(x = pipeline, y = !!sym(gene_type))) + 
+    geom_boxplot() +
+    # geom_label(data = summ, aes(x = pipeline, y = median, 
+    #                             label = round(median, 0))) +
+    labs(x = "Pipeline",
+         y = "Library size") +
+    facet_wrap(~ cortex) +
+    theme_bw()
+  
+  print(p)
+}
 ```
 
 ```{r}
@@ -128,7 +140,7 @@ gene_sum_tb %>%
 
 ### PCA
 
-PCA done in `save-sce.R`.
+PCA done in `save-sce.R`. To generate and save these plots, run `distribution-plots.R`.
 
 ```{r}
 # PCA colored by provided attribute
@@ -180,6 +192,10 @@ Cell types added in `save-sce.R`.
 # PCA colored by Ding's labels
 plotReducedDim(sce_ls[["preandmrna"]], "PCA", colour_by = "ding_labels")
 ```
+
+#### Differences between pipelines
+
+Some of these plots can be generated and saved by running `celltype-plots.R`. 
 
 ```{r}
 # Get overlap with singleR labels
@@ -248,8 +264,6 @@ print(sum(tb_misclassify$non_matching_cells, na.rm = T))
 
 tb_misclassify
 ```
-
-#### Differences between pipelines
 
 ```{r}
 # Counts for marker genes
@@ -354,6 +368,7 @@ gene_sum_tb %>%
        y = "num_reads_preandmrna") +
   theme_bw()
 ```
+
 ```{r}
 # Boxplot comparing ratios across pipelines
 gene_sum_tb_2 = gene_sum_tb %>%
@@ -464,8 +479,6 @@ gene_diff_plt %>%
   theme(axis.text.x = element_text(angle = 90, hjust = 1))
 ```
 
-
-
 ```{r}
 # Plot lib size for different cell types
 lib_size_tb = tibble(cell_barcode = colnames(sce_ls[[1]]),
@@ -574,6 +587,8 @@ summary(colSums(counts_sub_scaled))
 I compute the average expression for every row (x-axis) $\hat{\mu}_i$ and the empirical $P(X_i=0)$, which is the probability that for a given transcript $i$, the count is 0. 
 
 I then compute what $P(X_i=0)$ would be under the model assumptions of binomial or poisson, using parameters estimated from the data. In particular, for a $Binom(n, p_i)$, $n$ is the median number of total counts of cells and $p_i$ is the proportion of counts that were in gene $i$.
+
+Generate and save for all combinations by running `distribution_plots.R`.
 
 ```{r}
 # Plot P(X_i = 0) against average expression level
