@@ -87,7 +87,7 @@ print(p)
 ggsave(here("./publication/figures/figure_1.png"), plot = p, width = 12, height = 6)
 ```
 
-# Figure (cell type misclassification)
+# Figure 3 (cell type misclassification)
 
 ```{r}
 celltypemis = readRDS(here("./mouse_cortex/plots/celltypemis_plot.rds"))
@@ -98,6 +98,35 @@ astrocytemgratios = readRDS(here("./mouse_cortex/plots/astrocytemgratios_plot.rd
 p = plot_grid(celltypemis, astrocytemgratios, nrow = 1, rel_widths = c(0.7, 0.3), labels = "auto")
 print(p)
 ggsave(here("./publication/figures/figure_3.png"), plot = p, width = 16, height = 8)
+```
+
+# Supplementary figure (lib size by gene type)
+
+```{r}
+a = readRDS(here("./mouse_cortex/plots/lib_size_protein_coding_comparison.rds")) 
+b = readRDS(here("./mouse_cortex/plots/lib_size_lincRNA_comparison.rds"))
+c = readRDS(here("./mouse_cortex/plots/lib_size_antisense_comparison.rds"))
+d = readRDS(here("./mouse_cortex/plots/lib_size_processed_pseudogene_comparison.rds"))
+
+a = a +
+  labs(title = "Protein coding",
+       y = "Total reads")
+
+b = b +
+  labs(title = "Long non-coding RNA",
+       y = "Total reads")
+
+c = c +
+  labs(title = "Antisense",
+       y = "Total reads")
+
+d = d +
+  labs(title = "Processed pseudogene",
+       y = "Total reads")
+
+p = plot_grid(a, b, c, d, nrow = 2, labels = "auto")
+print(p)
+ggsave(here("./publication/figures/sfigure_1.png"), plot = p, width = 16, height = 8)
 ```
 
 
