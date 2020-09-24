@@ -11,7 +11,7 @@ knitr::opts_chunk$set(echo = TRUE)
 
 ```{r packages}
 library(pacman)
-p_load(cowplot, here, stringr, tidyverse, xtable)
+p_load(cowplot, here, stringr, tidyverse, xtable, janitor)
 ```
 
 
@@ -111,8 +111,12 @@ for(i in seq_along(bic_values)){
   cortex = str_sub(files_ls[i], -12, -5)
   x[[1]]$cortex = cortex
   x[[1]]$pipeline = str_split(files_ls[i], "_")[[1]][4]
+  if("multinomial" %in% names(x[[1]])){
+    print(i)
+    x[[1]] = x[[1]] %>%
+      rename(binomial = multinomial)
+  }
   x[[1]] = x[[1]] %>%
-    rename(binomial = multinomial) %>%
     select(pipeline, cortex, cell_type_name, binomial, poisson, nbinomial, nbinomial_2)
   bic_values[i] = x
 }
@@ -120,6 +124,15 @@ for(i in seq_along(bic_values)){
 bic_values = bind_rows(bic_values) %>%
   arrange(pipeline, cortex, cell_type_name)
 names(bic_values) = c("Pipeline", "Cortex", "Cell type", "Binomial BIC", "Poisson BIC", "Negative binomial BIC", "Negative binomial 2 BIC")
+
+# Print out which distribution has lowest BIC
+bic_values %>% 
+  pivot_longer(cols = ends_with("BIC")) %>%
+  group_by(Pipeline, Cortex, `Cell type`) %>%
+  filter(value == min(value)) %>%
+  ungroup() %>%
+  tabyl(name)
+
 print(xtable(bic_values, digits = 0, label = "table:bic", caption = "BIC log-likelihoods for every pipeline, cell type, and cortex combination. Negative binomial refers to a negative binomial distribution with one overdispersion parameter for all genes. Negative binomial 2 refers to a negative binomial distribution with gene-specific overdispersion parameters."), include.rownames = F)
 ```
 
