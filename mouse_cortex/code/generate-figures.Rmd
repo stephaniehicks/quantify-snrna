@@ -126,7 +126,7 @@ d = d +
 
 p = plot_grid(a, b, c, d, nrow = 2, labels = "auto")
 print(p)
-ggsave(here("./publication/figures/sfigure_1.png"), plot = p, width = 16, height = 8)
+ggsave(here("./publication/figures/sfigure_1.png"), plot = p, width = 16, height = 12)
 ```
 
 
