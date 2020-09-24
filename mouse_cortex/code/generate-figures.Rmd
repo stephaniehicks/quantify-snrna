@@ -100,7 +100,7 @@ print(p)
 ggsave(here("./publication/figures/figure_3.png"), plot = p, width = 16, height = 8)
 ```
 
-# Supplementary figure (lib size by gene type)
+# Supplementary Figure 1 (lib size by gene type)
 
 ```{r}
 a = readRDS(here("./mouse_cortex/plots/lib_size_protein_coding_comparison.rds")) 
@@ -130,7 +130,34 @@ ggsave(here("./publication/figures/sfigure_1.png"), plot = p, width = 16, height
 ```
 
 
-# Table (BIC values)
+# Supplementary Figure 2 (PCA by cell type)
+
+```{r}
+a = readRDS(here("./mouse_cortex/plots/pcading_plot_transcripts.rds"))
+b = readRDS(here("./mouse_cortex/plots/pcading_plot_preandmrna.rds"))
+c = readRDS(here("./mouse_cortex/plots/pcading_plot_introncollapse.rds"))
+d = readRDS(here("./mouse_cortex/plots/pcading_plot_intronseparate.rds"))
+
+p = plot_grid(a, b, c, d, nrow = 2, labels = "auto")
+print(p)
+ggsave(here("./publication/figures/sfigure_2.png"), plot = p, width = 12, height = 8)
+```
+
+
+# Supplementary Figure 3 (PCA by cortex)
+
+```{r}
+a = readRDS(here("./mouse_cortex/plots/pcacortex_plot_transcripts.rds"))
+b = readRDS(here("./mouse_cortex/plots/pcacortex_plot_preandmrna.rds"))
+c = readRDS(here("./mouse_cortex/plots/pcacortex_plot_introncollapse.rds"))
+d = readRDS(here("./mouse_cortex/plots/pcacortex_plot_intronseparate.rds"))
+
+p = plot_grid(a, b, c, d, nrow = 2, labels = "auto")
+print(p)
+ggsave(here("./publication/figures/sfigure_3.png"), plot = p, width = 12, height = 8)
+```
+
+# Supplementary Table (BIC values)
 
 ```{r}
 files_ls = list.files(here("./mouse_cortex/plots"), pattern = "bic_data.*.rds", full.names = T)
