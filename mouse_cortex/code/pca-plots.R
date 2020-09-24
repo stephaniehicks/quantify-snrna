@@ -43,3 +43,22 @@ saveRDS(p, here(paste0("./mouse_cortex/plots/pcading_plot_introncollapse.rds")))
 p = plotReducedDim(sce_ls[["intronseparate"]], "PCA", colour_by = "ding_labels")
 ggsave(file = here(paste0("./mouse_cortex/plots/pcading_plot_intronseparate.png")), plot = p)
 saveRDS(p, here(paste0("./mouse_cortex/plots/pcading_plot_intronseparate.rds")))
+
+#############################
+# Plot PCA with cortex label #
+#############################
+p = plotReducedDim(sce_ls[["transcripts"]], "PCA", colour_by = "cortex")
+ggsave(file = here(paste0("./mouse_cortex/plots/pcacortex_plot_transcripts.png")), plot = p)
+saveRDS(p, here(paste0("./mouse_cortex/plots/pcacortex_plot_transcripts.rds")))
+
+p = plotReducedDim(sce_ls[["preandmrna"]], "PCA", colour_by = "cortex")
+ggsave(file = here(paste0("./mouse_cortex/plots/pcacortex_plot_preandmrna.png")), plot = p)
+saveRDS(p, here(paste0("./mouse_cortex/plots/pcacortex_plot_preandmrna.rds")))
+
+p = plotReducedDim(sce_ls[["introncollapse"]], "PCA", colour_by = "cortex")
+ggsave(file = here(paste0("./mouse_cortex/plots/pcacortex_plot_introncollapse.png")), plot = p)
+saveRDS(p, here(paste0("./mouse_cortex/plots/pcacortex_plot_introncollapse.rds")))
+
+p = plotReducedDim(sce_ls[["intronseparate"]], "PCA", colour_by = "cortex")
+ggsave(file = here(paste0("./mouse_cortex/plots/pcacortex_plot_intronseparate.png")), plot = p)
+saveRDS(p, here(paste0("./mouse_cortex/plots/pcacortex_plot_intronseparate.rds")))
