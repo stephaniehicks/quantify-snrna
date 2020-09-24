@@ -49,7 +49,7 @@ summ = lib_sizes %>%
 
 # Plot library size comparison between pipelines
 lib_sizes %>%
-  ggplot(aes(x = pipeline, y = lib_size)) +
+  ggplot(aes(x = factor(pipeline, levels = c("transcripts", "preandmrna", "introncollapse", "intronseparate")), y = lib_size)) +
   geom_boxplot() + 
   # geom_text(data = summ, aes(x = pipeline, y = median, 
   # label = round(median, 0)), 
@@ -100,7 +100,7 @@ for(gene_type in c("protein_coding", "lincRNA", "antisense", "processed_pseudoge
     summarize(median = median(!!sym(gene_type)))
   
   p = gene_sum_tb %>%
-    ggplot(aes(x = pipeline, y = !!sym(gene_type))) + 
+    ggplot(aes(x = factor(pipeline, levels = c("transcripts", "preandmrna", "introncollapse", "intronseparate")), y = !!sym(gene_type))) + 
     geom_boxplot() +
     # geom_label(data = summ, aes(x = pipeline, y = median, 
     #                             label = round(median, 0))) +
