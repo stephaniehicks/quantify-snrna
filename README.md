@@ -18,6 +18,7 @@ The `/mouse_cortex/` folder contains code to download and process data from this
         - `/mouse_cortex/code/save-sce.R`: run PCA, add cell type labels, and convert to SingleCellExperiment
         - `/mouse_cortex/code/distribution-plots.R`: create distribution plots
         - `/mouse_cortex/code/celltype-plots.R`: create cell type classification plots
+        - `/mouse_cortex/code/pca-plots.R`: create PCA plots
         - `/mouse_cortex/code/generate-figures.Rmd`: create figures and tables for manuscript
 
 ### reference generation
