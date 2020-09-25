@@ -25,35 +25,6 @@ d = readRDS(here("./mouse_cortex/plots/prob0_plot_preandmrna_inhibitory_neuron_c
 e = readRDS(here("./mouse_cortex/plots/meanvar_plot_preandmrna_astrocyte_cortex_1.rds"))
 f = readRDS(here("./mouse_cortex/plots/prob0_plot_preandmrna_astrocyte_cortex_1.rds"))
 
-# Apply plot aesthetics
-apply_fig1_aesthetics = function(p, type){
-  # Line thickness
-  q = ggplot_build(p)  # get plot data
-  q$data[[2]]$size = 1 # change thickness
-  p = ggplot_gtable(q) # gtable object
-  p = as.ggplot(p)     # convert back to ggplot
-
-  # Labels and text sizes
-  p +
-    scale_color_manual(name = "Distribution",
-                       labels = c("Binomial", "Negative binomial", "Poisson"),
-                       values = c("#009E73", "#E69F00", "#56B4E9")) +
-    labs(subtitle = NULL) +
-    theme(legend.position = "none",
-          axis.text.y = element_text(size = 10),
-          axis.text.x = element_text(size = 10),
-          axis.title = element_text(size = 12),
-          plot.title = element_text(size = 14))
-}
-
-# Edit titles and labels
-a = apply_fig1_aesthetics(a) + labs(title = "Excitatory neuron")
-b = apply_fig1_aesthetics(b) + labs(title = "Excitatory neuron", y = "Fraction of zero droplets")
-c = apply_fig1_aesthetics(c) + labs(title = "Inhibitory neuron")
-d = apply_fig1_aesthetics(d) + labs(title = "Inhibitory neuron", y = "Fraction of zero droplets")
-e = apply_fig1_aesthetics(e) + labs(title = "Astrocyte")
-f = apply_fig1_aesthetics(f) + labs(title = "Astrocyte", y = "Fraction of zero droplets")
-
 # Extract legend
 legend <- get_legend(
   a +
@@ -65,6 +36,43 @@ legend <- get_legend(
           legend.title = element_text(size = 14),
           legend.text = element_text(size = 12))
 )
+
+# Apply plot aesthetics
+apply_fig1_aesthetics = function(plt, title, y = NULL){
+  # Labels and text sizes
+  plt = plt +
+    scale_color_manual(name = "Distribution",
+                       labels = c("Binomial", "Negative binomial", "Poisson"),
+                       values = c("#009E73", "#E69F00", "#56B4E9")) +
+    labs(title = title,
+         subtitle = NULL) +
+    theme(legend.position = "none",
+          axis.text.y = element_text(size = 10),
+          axis.text.x = element_text(size = 10),
+          axis.title = element_text(size = 12),
+          plot.title = element_text(size = 14))
+  
+  if(!is.null(y)){
+    plt = plt +
+      labs(y = y)
+  }
+  
+  # Line thickness (must do at the end)
+  q = ggplot_build(plt)    # get plot data
+  q$data[[2]]$size = 1     # change thickness
+  plt = ggplot_gtable(q)   # gtable object
+  plt = as.ggplot(plt)     # convert back to ggplot (doesn't really work)
+  
+  return(plt)
+}
+
+# Edit titles and labels
+a = apply_fig1_aesthetics(a, title = "Excitatory neuron") 
+b = apply_fig1_aesthetics(b, title = "Excitatory neuron", y = "Fraction of zero droplets")
+c = apply_fig1_aesthetics(c, title = "Inhibitory neuron")
+d = apply_fig1_aesthetics(d, title = "Inhibitory neuron", y = "Fraction of zero droplets")
+e = apply_fig1_aesthetics(e, title = "Astrocyte")
+f = apply_fig1_aesthetics(f, title = "Astrocyte", y = "Fraction of zero droplets")
 
 p = plot_grid(legend,
               plot_grid(a, b, c, d, e, f, nrow = 3, labels = "auto"),
