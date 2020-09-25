@@ -513,11 +513,15 @@ source(here("./mouse_cortex/code/distribution-plots-helpers.R"))
 
 
 ```{r}
-sce = sce_ls[["transcripts"]]
+sce = sce_ls[["preandmrna"]]
 
-# Subset to cluster
+# Subset to cell type
 cell_type = "Inhibitory neuron"
 sce_sub = sce[, colData(sce)$ding_labels == cell_type & !is.na(colData(sce)$ding_labels)]
+dim(sce_sub)
+
+# Subset to cortex
+sce_sub = sce_sub[, colData(sce)$cortex == "Cortex1"]
 dim(sce_sub)
 ```
 
@@ -541,7 +545,7 @@ toc()
 colData(sce_sub)$cortex_flow_cell = paste(colData(sce_sub)$cortex,
                                          colData(sce_sub)$flow_cell, sep = "_")
 colData(sce_sub)$log_lib_size = log(colData(sce_sub)$lib_size)
-plotReducedDim(sce_sub, "PCA", colour_by = "log_lib_size", ncomponents = c(1, 2))
+plotReducedDim(sce_sub, "PCA", colour_by = "lane", ncomponents = c(1, 2))
 ```
 
 ```{r eval = F}
@@ -575,13 +579,16 @@ plotReducedDim(sce_sub, "PCA", colour_by="labels_gb")
 First, I make all the column sums comparable by downsampling (this is a stochastic transformation as opposed to scaling).
 
 ```{r}
-cortex = "Cortex1"
-counts_sub = counts(sce_sub)[, colData(sce_sub)$cortex == cortex]
-summary(colSums(counts_sub))
+# Subset to cluster
+i = 2
+counts_sub_cluster = counts(sce_sub)[, colData(sce_sub)$labels_kmeans == i]
+summary(colSums(counts_sub_cluster))
 
-counts_sub_scaled = Down_Sample_Matrix(ceiling(counts_sub))
-counts_sub_scaled = counts_sub_scaled[rowSums(counts_sub_scaled) != 0, ]
-summary(colSums(counts_sub_scaled))
+tic()
+counts_sub_cluster_scaled = Down_Sample_Matrix(ceiling(counts_sub_cluster))
+toc()
+counts_sub_cluster_scaled = counts_sub_cluster_scaled[rowSums(counts_sub_cluster_scaled) != 0, ]
+summary(colSums(counts_sub_cluster_scaled))
 ```
 
 I compute the average expression for every row (x-axis) $\hat{\mu}_i$ and the empirical $P(X_i=0)$, which is the probability that for a given transcript $i$, the count is 0. 
@@ -592,9 +599,63 @@ Generate and save for all combinations by running `distribution_plots.R`.
 
 ```{r}
 # Plot P(X_i = 0) against average expression level
-prob_out = plot_prob(counts_sub_scaled)
-prob_out$plot +
-  labs(title = paste(cell_type, cortex, sep = " - "))
+prob_out = plot_prob(counts_sub_cluster_scaled)
+p = prob_out$plot +
+  labs(title = paste(cell_type, i, sep = " - "))
+print(p)
+saveRDS(p, file = here(paste0("./mouse_cortex/plots/prob0_plot_preandmrna_inhibitory_neuron_cortex_1_cluster_", i, ".rds")))
+```
+
+#### Mean-variance plots
+
+To generate these plots for all combinations, run `distribution-plots.R`.
+
+
+```{r}
+# Empirical mean and variance
+mean_emp = rowMeans(counts_sub_scaled)
+var_emp = genefilter::rowVars(counts_sub_scaled)
+
+# Binomial
+n = round(median(colSums(counts_sub_scaled)))
+emp_props = rowSums(counts_sub_scaled)/sum(colSums(counts_sub_scaled))
+var_binom = n*emp_props*(1-emp_props)
+
+# Poisson
+fit_pois = glmGamPoi::glm_gp(counts_sub_scaled, design = ~ 1, size_factors = FALSE, 
+                             overdispersion = FALSE)
+# Negative binomial
+# Estimate overall size/dispersion parameter
+model = lm(var_emp ~ 1*mean_emp + I(mean_emp^2) + 0, tibble(mean_emp, var_emp))
+phi = 1/coef(model)["I(mean_emp^2)"]
+
+# Estimate size/dispersion parameter for every gene
+# library(glmGamPoi)
+# fit_nb =  glmGamPoi::glm_gp(counts_sub_scaled, design = ~ 1, size_factors = FALSE, 
+#                          overdispersion = TRUE)
+
+# Note: rowMean(fit_pois$Mu) = rowMeans(fit_nb$Mu) = rowMeans(counts)
+mean_var_tb = tibble(mean_emp = mean_emp,
+                     var_emp = var_emp,
+                     binomial = var_binom,
+                     poisson = rowMeans(counts_sub_scaled),
+                     nbinomial = mean_emp + mean_emp^2 * 1/phi) %>%
+  # var_nb_v2 = mean_emp + mean_emp^2 * fit_nb$overdispersions) %>% 
+  tidyr::pivot_longer(cols = -mean_emp, names_to = "model", values_to = "var_value")
+
+# Plot
+p = mean_var_tb %>%
+  filter(model %in% c("var_emp")) %>%
+  ggplot(aes(x = mean_emp, y = var_value)) + 
+  geom_point(alpha = 0.3) + 
+  geom_line(data = mean_var_tb %>% filter(model %in% c("binomial", "poisson", "nbinomial")),
+            aes(x = mean_emp, y = var_value, color = model)) +
+  scale_x_log10() + scale_y_log10() +
+  labs(title = pipeline,
+       subtitle = paste(cell_type, cortex, sep = " - "),
+       x = "Log of mean expression",
+       y = "Log of variance") +
+  theme_bw()
 ```
 
 #### Goodness-of-fit tests
@@ -709,11 +770,4 @@ bic_tb %>%
 
 
 
-#### Mean-variance plots
 
-This section has been moved to `distribution-plots.R`.
-
-
-```{r}
-
-```
