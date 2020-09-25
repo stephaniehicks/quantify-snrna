@@ -166,13 +166,13 @@ ggsave(here("./publication/figures/sfigure_3.png"), plot = p, width = 12, height
 
 ```{r}
 for(pipeline in c("transcripts", "introncollapse", "intronseparate")){
-  a = readRDS(here(paste0("./mouse_cortex/plots/meanvar_plot_", pipeline, "excitatory_neuron_cortex_1.rds")))
+  a = readRDS(here(paste0("./mouse_cortex/plots/meanvar_plot_", pipeline, "_excitatory_neuron_cortex_1.rds")))
   b = readRDS(here(paste0("./mouse_cortex/plots/prob0_plot_", pipeline, "_excitatory_neuron_cortex_1.rds")))
   c = readRDS(here(paste0("./mouse_cortex/plots/meanvar_plot_", pipeline, "_inhibitory_neuron_cortex_1.rds")))
   d = readRDS(here(paste0("./mouse_cortex/plots/prob0_plot_", pipeline, "_inhibitory_neuron_cortex_1.rds")))
   e = readRDS(here(paste0("./mouse_cortex/plots/meanvar_plot_", pipeline, "_astrocyte_cortex_1.rds")))
   f = readRDS(here(paste0("./mouse_cortex/plots/prob0_plot_", pipeline, "_astrocyte_cortex_1.rds")))
-
+  
   # Extract legend
   legend <- get_legend(
     a +
@@ -183,11 +183,19 @@ for(pipeline in c("transcripts", "introncollapse", "intronseparate")){
             legend.text = element_text(size = 10))
   )
   
+  # Edit titles and labels
+  a = apply_fig1_aesthetics(a, title = "Excitatory neuron") 
+  b = apply_fig1_aesthetics(b, title = "Excitatory neuron", y = "Fraction of zero droplets")
+  c = apply_fig1_aesthetics(c, title = "Inhibitory neuron")
+  d = apply_fig1_aesthetics(d, title = "Inhibitory neuron", y = "Fraction of zero droplets")
+  e = apply_fig1_aesthetics(e, title = "Astrocyte")
+  f = apply_fig1_aesthetics(f, title = "Astrocyte", y = "Fraction of zero droplets")
+  
   p = plot_grid(legend,
                 plot_grid(a, b, c, d, e, f, nrow = 3, labels = "auto"),
                 ncol = 1, rel_heights = c(.1, 3))
   print(p)
-  ggsave(here(paste0("./publication/figures/sfigure_4_", pipeline, ".png"), plot = p, width = 12, height = 10))
+  ggsave(here(paste0("./publication/figures/sfigure_4_", pipeline, ".png")), plot = p, width = 12, height = 10)
 }
 ```
 

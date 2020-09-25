@@ -1,7 +1,7 @@
 #$ -cwd
 #$ -o log/
 #$ -e log/
-#$ -l mem_free=35G,h_vmem=35G
+#$ -l mem_free=50G,h_vmem=50G
 #$ -t 1:56
 
 # set project directory path
