@@ -58,7 +58,7 @@ plot_prob = function(dat_sub){
     geom_line(aes(color = model)) + # Add lines for models
     scale_x_log10() +
     labs(x = "Log of mean expression",
-         y = "Fraction of zeros droplets") +
+         y = "Fraction of zero droplets") +
     theme_bw() +
     theme(text = element_text(size = 15))
   
