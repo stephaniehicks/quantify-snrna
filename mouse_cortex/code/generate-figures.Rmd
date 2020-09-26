@@ -205,31 +205,35 @@ for(pipeline in c("transcripts", "introncollapse", "intronseparate")){
 # Supplementary Figure 5 (distribution plots for subset cluster)
 
 ```{r}
-a = readRDS(here(paste0("./mouse_cortex/plots/prob0_plot_preandmrna_inhibitory_neuron_cortex_1_cluster_1.rds")))
-b = readRDS(here(paste0("./mouse_cortex/plots/prob0_plot_preandmrna_inhibitory_neuron_cortex_1_cluster_2.rds")))
-c = readRDS(here(paste0("./mouse_cortex/plots/prob0_plot_preandmrna_inhibitory_neuron_cortex_1_cluster_3.rds")))
-d = readRDS(here(paste0("./mouse_cortex/plots/prob0_plot_preandmrna_inhibitory_neuron_cortex_1_cluster_4.rds")))
+pca = readRDS(here("./mouse_cortex/plots/pca_kmeans_preandmnra_inhibitory_neuron_cortex_1.rds"))
+a = readRDS(here("./mouse_cortex/plots/prob0_plot_preandmrna_inhibitory_neuron_cortex_1_cluster_1.rds"))
+b = readRDS(here("./mouse_cortex/plots/prob0_plot_preandmrna_inhibitory_neuron_cortex_1_cluster_2.rds"))
+c = readRDS(here("./mouse_cortex/plots/prob0_plot_preandmrna_inhibitory_neuron_cortex_1_cluster_3.rds"))
+d = readRDS(here("./mouse_cortex/plots/prob0_plot_preandmrna_inhibitory_neuron_cortex_1_cluster_4.rds"))
 
 legend <- get_legend(
-    a +
-      labs(color = "Distribution") +
-      guides(color = guide_legend(nrow = 1)) +
-      theme(legend.position = "bottom",
-            legend.title = element_text(size = 12),
-            legend.text = element_text(size = 10))
-  )
-  
-  # Edit titles and labels
-  a = apply_fig1_aesthetics(a, title = "Excitatory neuron") 
-  b = apply_fig1_aesthetics(b, title = "Excitatory neuron", y = "Fraction of zero droplets")
-  c = apply_fig1_aesthetics(c, title = "Inhibitory neuron")
-  d = apply_fig1_aesthetics(d, title = "Inhibitory neuron", y = "Fraction of zero droplets")
-  e = apply_fig1_aesthetics(e, title = "Astrocyte")
-  f = apply_fig1_aesthetics(f, title = "Astrocyte", y = "Fraction of zero droplets")
-  
-  p = plot_grid(legend,
-                plot_grid(a, b, c, d, e, f, nrow = 3, labels = "auto"),
-                ncol = 1, rel_heights = c(.1, 3))
+  a +
+    labs(color = "Distribution") +
+    guides(color = guide_legend(nrow = 1)) +
+    theme(legend.position = "bottom",
+          legend.title = element_text(size = 12),
+          legend.text = element_text(size = 10))
+)
+
+# Edit titles and labels
+a = apply_fig1_aesthetics(a, title = "K-means cluster 1") 
+b = apply_fig1_aesthetics(b, title = "K-means cluster 2")
+c = apply_fig1_aesthetics(c, title = "K-means cluster 3")
+d = apply_fig1_aesthetics(d, title = "K-means cluster 4")
+
+
+p = plot_grid(plot_grid(NULL, pca, NULL, nrow = 3, rel_heights = c(.1, .8, .1)),
+              plot_grid(legend,
+                        plot_grid(a, b, c, d, nrow = 2, labels = "auto"),
+                        ncol = 1, rel_heights = c(.1, 3)),
+              nrow = 1)
+print(p)
+ggsave(here(paste0("./publication/figures/sfigure_5.png")), plot = p, width = 15, height = 9)
 ```
 
 
