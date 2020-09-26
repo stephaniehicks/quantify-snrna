@@ -1,7 +1,7 @@
 # celltype-plots.R
 # -----------------------------------------------------------------------------
 # Author:             Albert Kuo
-# Date last modified: Sep 23, 2020
+# Date last modified: Sep 25, 2020
 #
 # Make all cell type classification-related plots
 
@@ -61,7 +61,9 @@ p = tb_misclassify %>%
   geom_bar(position = "stack") +
   facet_wrap(~ ding_labels_match, scales = "free", ncol = 2) +
   labs(x = "Pipeline",
+       y = "# of nuclei",
        fill = "SingleR labels") +
+  coord_flip() +
   theme_bw()
 
 ggsave(file = here(paste0("./mouse_cortex/plots/celltypemis_plot.png")), plot = p)
@@ -119,12 +121,12 @@ gene_sum_tb_2 = gene_sum_tb %>%
 #   summarize(median = median(ratio))
 
 p = gene_sum_tb_2 %>%
-  ggplot(aes(x = pipeline, y = ratio)) +
+  ggplot(aes(x = factor(pipeline, levels = c("transcripts", "preandmrna", "introncollapse", "intronseparate")), y = ratio)) +
   geom_boxplot() +
   # geom_label(data = summ, aes(x = pipeline, y = median, 
   #                             label = round(median, 2))) +
   labs(x = "Pipeline",
-       y = "Astrocyte:qNSC ratio") +
+       y = "Astrocyte:qNSC marker gene ratio") +
   theme_bw() 
 
 ggsave(file = here(paste0("./mouse_cortex/plots/astrocytemgratios_plot.png")), plot = p)

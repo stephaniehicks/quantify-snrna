@@ -84,16 +84,20 @@ ggsave(here("./publication/figures/figure_1.png"), plot = p, width = 12, height 
 # Figure 3 (cell type misclassification)
 
 ```{r}
-celltypemis = readRDS(here("./mouse_cortex/plots/celltypemis_plot.rds"))
-celltypemis = celltypemis +
-  theme(axis.text.x = element_text(size = 7)) +
+a = readRDS(here("./mouse_cortex/plots/celltypemis_plot.rds"))
+a = a +
+  theme(axis.text.x = element_text(size = 9),
+        legend.position = "top",
+        legend.background = element_rect(fill = "#dfdfe5", 
+                                         size = 0.5, linetype = "solid")) +
   scale_fill_manual(values = c("#598335", "#ced566", "#59b84b", "#b95bc1", "#98a958", "#cf4284", "#61c391", "#d67756", "#43c0cc", "#36845f", "#c8585a",
                                "#c1719c", "#d89c49", "#4c97d0", "#8c6f33", "#817dc5"), na.value = "gray") # Colors chosen by https://medialab.github.io/iwanthue/ and adjusted with https://www.color-hex.com/
-astrocytemgratios = readRDS(here("./mouse_cortex/plots/astrocytemgratios_plot.rds"))
 
-p = plot_grid(celltypemis, astrocytemgratios, nrow = 1, rel_widths = c(0.7, 0.3), labels = "auto")
+b = readRDS(here("./mouse_cortex/plots/astrocytemgratios_plot.rds"))
+
+p = plot_grid(a, b, nrow = 1, rel_widths = c(0.55, 0.45), labels = "auto")
 print(p)
-ggsave(here("./publication/figures/figure_3.png"), plot = p, width = 16, height = 8)
+ggsave(here("./publication/figures/figure_3.png"), plot = p, width = 14, height = 7)
 ```
 
 # Supplementary Figure 1 (lib size by gene type)
@@ -229,8 +233,9 @@ d = apply_fig1_aesthetics(d, title = "K-means cluster 4")
 
 p = plot_grid(plot_grid(NULL, pca, NULL, nrow = 3, rel_heights = c(.1, .8, .1)),
               plot_grid(legend,
-                        plot_grid(a, b, c, d, nrow = 2, labels = "auto"),
+                        plot_grid(a, b, c, d, nrow = 2),
                         ncol = 1, rel_heights = c(.1, 3)),
+              labels = "auto",
               nrow = 1)
 print(p)
 ggsave(here(paste0("./publication/figures/sfigure_5.png")), plot = p, width = 15, height = 9)
