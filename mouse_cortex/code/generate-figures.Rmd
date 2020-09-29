@@ -112,12 +112,21 @@ ggsave(here("./publication/figures/figure_1.png"), plot = p, width = 12, height 
 
 ```{r}
 a = readRDS(here("./mouse_cortex/plots/lib_size_comparison.rds"))
+b = readRDS(here("./mouse_cortex/plots/lib_size_protein_coding_comparison.rds"))
 
 a = a +
-  theme(text = element_text(size = 20),
+  theme(text = element_text(size = 18),
+        axis.text = element_text(size = 12))
+b = b +
+  labs(title = "Protein coding genes",
+       y = "# of reads") +
+  theme(text = element_text(size = 18),
         axis.text = element_text(size = 12))
 
-ggsave(here("./publication/figures/figure_2.png"), plot = a, width = 11, height = 6)
+p = plot_grid(a, b, nrow = 2,
+              labels = "auto", label_size = 20)
+print(p)
+ggsave(here("./publication/figures/figure_2.png"), plot = p, width = 11, height = 11)
 ```
 
 
