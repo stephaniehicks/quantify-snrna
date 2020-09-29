@@ -65,8 +65,8 @@ summ = lib_sizes %>%
   summarize(median = median(lib_size))
 
 # Plot library size comparison between pipelines
-lib_sizes %>%
-  ggplot(aes(x = pipeline, y = lib_size)) +
+p = lib_sizes %>%
+  ggplot(aes(x = factor(pipeline, levels = c("transcripts", "preandmrna", "introncollapse", "intronseparate")), y = lib_size)) +
   geom_boxplot() + 
   # geom_text(data = summ, aes(x = pipeline, y = median, 
                               # label = round(median, 0)), 
@@ -76,9 +76,11 @@ lib_sizes %>%
        y = "Library size") +
   theme_bw() +
   theme(axis.text = element_text(size = 8))
+print(p)
 
 ggsave(file = here(paste0("./mouse_cortex/plots/lib_size_comparison.png")),
-       width = 8, height = 5)
+       plot = p, width = 8, height = 5)
+saveRDS(p, here(paste0("./mouse_cortex/plots/lib_size_comparison.rds")))
 ```
 
 ### Mapping differences by gene

@@ -11,33 +11,15 @@ knitr::opts_chunk$set(echo = TRUE)
 
 ```{r packages}
 library(pacman)
-p_load(cowplot, here, stringr, tidyverse, xtable, janitor, ggplotify)
+p_load(cowplot, here, stringr, tidyverse, xtable, janitor, ggplotify, stringr)
 ```
 
 
 # Figure 1 (distributions)
 
 ```{r}
-a = readRDS(here("./mouse_cortex/plots/meanvar_plot_preandmrna_excitatory_neuron_cortex_1.rds"))
-b = readRDS(here("./mouse_cortex/plots/prob0_plot_preandmrna_excitatory_neuron_cortex_1.rds"))
-c = readRDS(here("./mouse_cortex/plots/meanvar_plot_preandmrna_inhibitory_neuron_cortex_1.rds"))
-d = readRDS(here("./mouse_cortex/plots/prob0_plot_preandmrna_inhibitory_neuron_cortex_1.rds"))
-e = readRDS(here("./mouse_cortex/plots/meanvar_plot_preandmrna_astrocyte_cortex_1.rds"))
-f = readRDS(here("./mouse_cortex/plots/prob0_plot_preandmrna_astrocyte_cortex_1.rds"))
-
-# Extract legend
-legend <- get_legend(
-  a +
-    scale_color_manual(name = "Distribution",
-                       labels = c("Binomial", "Negative binomial", "Poisson"),
-                       values = c("#009E73", "#E69F00", "#56B4E9")) +
-    guides(color = guide_legend(nrow = 1)) +
-    theme(legend.position = "bottom",
-          legend.title = element_text(size = 14),
-          legend.text = element_text(size = 12))
-)
-
-# Apply plot aesthetics
+# Helper functions for Figure 1
+# Apply plot aesthetics to mean-var and mean-prop0 plots
 apply_fig1_aesthetics = function(plt, title, y = NULL){
   # Labels and text sizes
   plt = plt +
@@ -47,10 +29,9 @@ apply_fig1_aesthetics = function(plt, title, y = NULL){
     labs(title = title,
          subtitle = NULL) +
     theme(legend.position = "none",
-          axis.text.y = element_text(size = 10),
-          axis.text.x = element_text(size = 10),
-          axis.title = element_text(size = 12),
-          plot.title = element_text(size = 14))
+          axis.text = element_text(size = 14),
+          axis.title = element_text(size = 15),
+          plot.title = element_text(size = 20))
   
   if(!is.null(y)){
     plt = plt +
@@ -59,46 +40,179 @@ apply_fig1_aesthetics = function(plt, title, y = NULL){
   
   # Line thickness (must do at the end)
   q = ggplot_build(plt)    # get plot data
-  q$data[[2]]$size = 1     # change thickness
+  q$data[[2]]$size = 1.5     # change thickness
   plt = ggplot_gtable(q)   # gtable object
   plt = as.ggplot(plt)     # convert back to ggplot (doesn't really work)
   
   return(plt)
 }
 
+# Apply plot aesthetics to BIC plots
+apply_fig1_aesthetics_bic = function(plt){
+  plt = plt +
+    scale_x_discrete(labels = c("NB", "Binom", "Pois", "G-S NB")) +
+    # scale_y_continuous(labels = scales::scientific(digits = 2)) +
+    labs(subtitle = NULL) +
+    theme(axis.text = element_text(size = 14),
+          axis.title = element_text(size = 15),
+          plot.title = element_text(size = 20))
+}
+```
+
+```{r}
+a = readRDS(here("./mouse_cortex/plots/meanvar_plot_preandmrna_excitatory_neuron_cortex_1.rds"))
+b = readRDS(here("./mouse_cortex/plots/prob0_plot_preandmrna_excitatory_neuron_cortex_1.rds"))
+c = readRDS(here("./mouse_cortex/plots/bic_plot_preandmrna_excitatory_neuron_cortex_1.rds")) 
+d = readRDS(here("./mouse_cortex/plots/meanvar_plot_preandmrna_inhibitory_neuron_cortex_1.rds"))
+e = readRDS(here("./mouse_cortex/plots/prob0_plot_preandmrna_inhibitory_neuron_cortex_1.rds"))
+f = readRDS(here("./mouse_cortex/plots/bic_plot_preandmrna_inhibitory_neuron_cortex_1.rds")) 
+g = readRDS(here("./mouse_cortex/plots/meanvar_plot_preandmrna_astrocyte_cortex_1.rds"))
+h = readRDS(here("./mouse_cortex/plots/prob0_plot_preandmrna_astrocyte_cortex_1.rds"))
+i = readRDS(here("./mouse_cortex/plots/bic_plot_preandmrna_astrocyte_cortex_1.rds"))
+
+# Extract legend
+legend <- get_legend(
+  a +
+    scale_color_manual(name = "Distribution",
+                       labels = c("Binomial", "Negative binomial", "Poisson"),
+                       values = c("#009E73", "#E69F00", "#56B4E9")) +
+    guides(color = guide_legend(nrow = 1, override.aes = list(size = 2))) +
+    theme(legend.position = "bottom",
+          legend.title = element_text(size = 24),
+          legend.text = element_text(size = 22))
+)
+
 # Edit titles and labels
 a = apply_fig1_aesthetics(a, title = "Excitatory neuron") 
 b = apply_fig1_aesthetics(b, title = "Excitatory neuron", y = "Fraction of zero droplets")
-c = apply_fig1_aesthetics(c, title = "Inhibitory neuron")
-d = apply_fig1_aesthetics(d, title = "Inhibitory neuron", y = "Fraction of zero droplets")
-e = apply_fig1_aesthetics(e, title = "Astrocyte")
-f = apply_fig1_aesthetics(f, title = "Astrocyte", y = "Fraction of zero droplets")
+c = apply_fig1_aesthetics_bic(c) + labs(title = "Excitatory neuron")
+d = apply_fig1_aesthetics(d, title = "Inhibitory neuron")
+e = apply_fig1_aesthetics(e, title = "Inhibitory neuron", y = "Fraction of zero droplets")
+f = apply_fig1_aesthetics_bic(f) + labs(title = "Inhibitory neuron")
+g = apply_fig1_aesthetics(g, title = "Astrocyte")
+h = apply_fig1_aesthetics(h, title = "Astrocyte", y = "Fraction of zero droplets")
+i = apply_fig1_aesthetics_bic(i) + labs(title = "Astrocyte")
 
 p = plot_grid(legend,
-              plot_grid(a, b, c, d, e, f, nrow = 3, labels = "auto"),
+              plot_grid(a, NULL, b, NULL, c, 
+                        d, NULL, e, NULL, f, 
+                        g, NULL, h, NULL, i, 
+                        nrow = 3, labels = c("a", "", "b", "", "c",
+                                             "d", "", "e", "", "f", 
+                                             "g", "", "h", "", "i"), 
+                        label_size = 20, rel_widths = c(1, 0.02, 1, 0.02, 1,
+                                                        1, 0.02, 1, 0.02, 1,
+                                                        1, 0.02, 1, 0.02, 1)),
               ncol = 1, rel_heights = c(.2, 3))
 print(p)
 ggsave(here("./publication/figures/figure_1.png"), plot = p, width = 12, height = 10)
 ```
+
+# Figure 2 (library size)
+
+```{r}
+a = readRDS(here("./mouse_cortex/plots/lib_size_comparison.rds"))
+
+a = a +
+  theme(text = element_text(size = 20),
+        axis.text = element_text(size = 12))
+
+ggsave(here("./publication/figures/figure_2.png"), plot = a, width = 11, height = 6)
+```
+
 
 # Figure 3 (cell type misclassification)
 
 ```{r}
 a = readRDS(here("./mouse_cortex/plots/celltypemis_plot.rds"))
 a = a +
-  theme(axis.text.x = element_text(size = 9),
-        legend.position = "top",
-        legend.background = element_rect(fill = "#dfdfe5", 
-                                         size = 0.5, linetype = "solid")) +
+  guides(fill = guide_legend(title.position = "top", nrow = 5)) +
   scale_fill_manual(values = c("#598335", "#ced566", "#59b84b", "#b95bc1", "#98a958", "#cf4284", "#61c391", "#d67756", "#43c0cc", "#36845f", "#c8585a",
-                               "#c1719c", "#d89c49", "#4c97d0", "#8c6f33", "#817dc5"), na.value = "gray") # Colors chosen by https://medialab.github.io/iwanthue/ and adjusted with https://www.color-hex.com/
+                               "#c1719c", "#d89c49", "#4c97d0", "#8c6f33", "#817dc5"), na.value = "gray") + # Colors chosen by https://medialab.github.io/iwanthue/ and adjusted with https://www.color-hex.com/
+  theme(text = element_text(size = 18),
+        axis.text = element_text(size = 12),
+        legend.text = element_text(size = 12),
+        legend.title = element_text(size = 15),
+        legend.position = "top",
+        legend.background = element_rect(fill = "#e8e8ec", 
+                                         size = 0.5, linetype = "solid"),
+        legend.key = element_rect(color = "#e8e8ec"),
+        strip.background = element_rect(fill = "#e8e8ec"))
 
 b = readRDS(here("./mouse_cortex/plots/astrocytemgratios_plot.rds"))
+b = b +
+  labs(title = str_wrap("Ratio of reads mapping to astrocyte marker genes versus qNSC marker genes", 40),
+       y = "Ratio of reads") +
+  theme(text = element_text(size = 15),
+        axis.text = element_text(size = 12),
+        axis.title = element_text(size = 17))
 
-p = plot_grid(a, b, nrow = 1, rel_widths = c(0.55, 0.45), labels = "auto")
+p = plot_grid(a, NULL, b, nrow = 1, rel_widths = c(0.6, 0.02, 0.4), 
+              labels = c("a", "", "b"), label_size = 25)
 print(p)
 ggsave(here("./publication/figures/figure_3.png"), plot = p, width = 14, height = 7)
 ```
+
+# Figure 4 (combination of S2/S3)
+
+```{r}
+a = readRDS(here("./mouse_cortex/plots/pcading_plot_transcripts.rds"))
+b = readRDS(here("./mouse_cortex/plots/pcacortex_plot_transcripts.rds"))
+c = readRDS(here("./mouse_cortex/plots/pcading_plot_preandmrna.rds"))
+d = readRDS(here("./mouse_cortex/plots/pcacortex_plot_preandmrna.rds"))
+e = readRDS(here("./mouse_cortex/plots/pcading_plot_introncollapse.rds"))
+f = readRDS(here("./mouse_cortex/plots/pcacortex_plot_introncollapse.rds"))
+g = readRDS(here("./mouse_cortex/plots/pcading_plot_intronseparate.rds"))
+h = readRDS(here("./mouse_cortex/plots/pcacortex_plot_intronseparate.rds"))
+
+# Extract legend
+legend_a <- get_legend(
+  a +
+    guides(fill = guide_legend(nrow = 4, override.aes = list(size = 4))) +
+    theme(legend.position = "bottom",
+          legend.background = element_rect(fill = "#e8e8ec", 
+                                           size = 0.5, linetype = "solid"),
+          legend.key = element_rect(color = "#e8e8ec", fill = "#e8e8ec"),
+          legend.title = element_blank(),
+          legend.text = element_text(size = 12))
+)
+legend_b <- get_legend(
+  b +
+    guides(fill = guide_legend(title = "Cortex", nrow = 1, 
+                               override.aes = list(size = 4))) +
+    theme(legend.position = "bottom",
+          legend.background = element_rect(fill = "#e8e8ec", 
+                                           size = 0.5, linetype = "solid"),
+          legend.key = element_rect(color = "#e8e8ec", fill = "#e8e8ec"),
+          legend.title = element_blank(),
+          legend.text = element_text(size = 12))
+)
+
+plot_grid(legend_a, legend_b)
+
+# Apply plot aesthetics 
+apply_fig4_aesthetics = function(plt){
+  plt = plt +
+    theme(legend.position = "none")
+}
+
+a = apply_fig4_aesthetics(a) + labs(title = "transcripts")
+b = apply_fig4_aesthetics(b) + labs(title = "transcripts")
+c = apply_fig4_aesthetics(c) + labs(title = "preandmrna")
+d = apply_fig4_aesthetics(d) + labs(title = "preandmrna")
+e = apply_fig4_aesthetics(e) + labs(title = "introncollapse")
+f = apply_fig4_aesthetics(f) + labs(title = "introncollapse")
+g = apply_fig4_aesthetics(g) + labs(title = "intronseparate")
+h = apply_fig4_aesthetics(h) + labs(title = "intronseparate")
+
+p = plot_grid(plot_grid(legend_a, legend_b, ncol = 2),
+              plot_grid(a, b, c, d, e, f, g, h, ncol = 2, 
+              labels = "auto"), ncol = 1,
+              rel_heights = c(0.15, 1))
+print(p)
+ggsave(here("./publication/figures/figure_4.png"), plot = p, width = 8, height = 10)
+```
+
 
 # Supplementary Figure 1 (lib size by gene type)
 

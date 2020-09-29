@@ -48,7 +48,7 @@ summ = lib_sizes %>%
   summarize(median = median(lib_size))
 
 # Plot library size comparison between pipelines
-lib_sizes %>%
+p = lib_sizes %>%
   ggplot(aes(x = factor(pipeline, levels = c("transcripts", "preandmrna", "introncollapse", "intronseparate")), y = lib_size)) +
   geom_boxplot() + 
   # geom_text(data = summ, aes(x = pipeline, y = median, 
@@ -61,7 +61,8 @@ lib_sizes %>%
   theme(axis.text = element_text(size = 8))
 
 ggsave(file = here(paste0("./mouse_cortex/plots/lib_size_comparison.png")),
-       width = 8, height = 5)
+       plot = p, width = 8, height = 5)
+saveRDS(p, here(paste0("./mouse_cortex/plots/lib_size_comparison.rds")))
 
 ########################################################################
 # Plot library size comparison grouped by the 4 most common gene types #
@@ -110,6 +111,6 @@ for(gene_type in c("protein_coding", "lincRNA", "antisense", "processed_pseudoge
     theme_bw()
   
   ggsave(file = here(paste0("./mouse_cortex/plots/lib_size_", gene_type, "_comparison.png")),
-         width = 8, height = 5)
+         plot = p, width = 8, height = 5)
   saveRDS(p, here(paste0("./mouse_cortex/plots/lib_size_", gene_type, "_comparison.rds")))
 }
