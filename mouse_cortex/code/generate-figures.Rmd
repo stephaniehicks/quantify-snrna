@@ -113,20 +113,27 @@ ggsave(here("./publication/figures/figure_1.png"), plot = p, width = 12, height 
 ```{r}
 a = readRDS(here("./mouse_cortex/plots/lib_size_comparison.rds"))
 b = readRDS(here("./mouse_cortex/plots/lib_size_protein_coding_comparison.rds"))
+c = readRDS(here("./mouse_cortex/plots/lib_size_processed_pseudogene_comparison.rds"))
 
 a = a +
-  theme(text = element_text(size = 18),
-        axis.text = element_text(size = 12))
+  labs(title = "Library sizes") +
+  theme(text = element_text(size = 14),
+        axis.text = element_text(size = 10))
 b = b +
   labs(title = "Protein coding genes",
        y = "# of reads") +
-  theme(text = element_text(size = 18),
-        axis.text = element_text(size = 12))
+  theme(text = element_text(size = 14),
+        axis.text = element_text(size = 10))
+c = c +
+  labs(title = "Processed pseudogenes",
+       y = "# of reads") +
+  theme(text = element_text(size = 14),
+        axis.text = element_text(size = 10))
 
-p = plot_grid(a, b, nrow = 2,
-              labels = "auto", label_size = 20)
+p = plot_grid(a, b, c, nrow = 3,
+              labels = "auto", label_size = 15)
 print(p)
-ggsave(here("./publication/figures/figure_2.png"), plot = p, width = 11, height = 11)
+ggsave(here("./publication/figures/figure_2.png"), plot = p, width = 9, height = 10)
 ```
 
 
