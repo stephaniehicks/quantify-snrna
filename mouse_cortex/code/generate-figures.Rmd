@@ -105,7 +105,7 @@ p = plot_grid(legend,
                                                         1, 0.02, 1, 0.02, 1)),
               ncol = 1, rel_heights = c(.2, 3))
 print(p)
-ggsave(here("./publication/figures/figure_1.png"), plot = p, width = 12, height = 10)
+ggsave(here("./publication/figures/figure_1_raw.png"), plot = p, width = 12, height = 10)
 ```
 
 # Figure 2 (library size)
