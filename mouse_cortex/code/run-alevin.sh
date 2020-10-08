@@ -7,21 +7,21 @@
 
 # set project directory path
 #d=/fastscratch/myscratch/shicks1/alsf-filbin
-#f=/fastscratch/myscratch/shicks1/sra
 d=/fastscratch/myscratch/akuo/alsf-filbin/mouse_cortex
+pipeline=transcripts
 
 # Albert's
 for sample in `cat $d/files/SRR_files_10x.txt`;
 do
 # sample=SRR9169236
 salmon alevin --libType ISR \
-      --index $d/salmon_files/gencode.vM25_salmon-index-v1.0.0-intronseparate-mouse \
+      --index $d/salmon_files/gencode.vM25_salmon-index-v1.0.0-${pipeline}-mouse \
       -1 $d/sample_data/geo/sra/${sample}.sra_1.fastq \
       -2 $d/sample_data/geo/sra/${sample}.sra_2.fastq \
-      --tgMap $d/salmon_files/gencode.vM25.intronseparate.tx2gene.mouse.txt \
+      --tgMap $d/salmon_files/gencode.vM25.${pipeline}.tx2gene.mouse.txt \
       --chromium \
       --threads 10 \
-      --output $d/salmon_quants/intronseparate_pipeline/${sample}_quant \
+      --output $d/salmon_quants/${pipeline}_pipeline/${sample}_quant \
       --dumpFeatures --dumpBfh
 done
 

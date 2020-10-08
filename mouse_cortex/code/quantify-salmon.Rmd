@@ -46,7 +46,6 @@ We need to download 3 files (mouse):
 3. `gencode.vM25.annotation.gtf.gz` - gene annotation on the reference chromosomes (i.e. for humans, these are chromosomes 1 to 22, X, and Y), i.e. locations of genes and other information about the genes, gene structure
   * Gene transfer format (GTF) is a file format used to hold information about gene structure. It is a tab-delimited text format based on the general feature format (GFF), but contains some additional conventions specific to gene information.
 
-Source: https://www.gencodegenes.org/human/
 
 ```{r}
 library(here)
@@ -279,7 +278,7 @@ names(genome) <- sapply(strsplit(names(genome), " "), .subset, 1) # creates chr1
 # Extract transcript (tx) and intron sequences (takes a few minutes)
 tx <- extractTxSeqs(gtf = gtf_file, genome = genome, type = "spliced")
 isoform_action = "separate"
-flanklength = 50 # default in script
+flanklength = 50 # read length
 intr <- extractIntronSeqs(gtf = gtf_file, genome = genome, type = isoform_action, 
                           flanklength = flanklength,
                           joinOverlappingIntrons = FALSE)
@@ -491,73 +490,5 @@ rowRanges(se)
 
 # Save SummarizedExperiment object
 saveRDS(se, here("mouse_cortex", "salmon_quants", paste0("se_", run_names[i], "_", pipeline, ".rds")))
-```
-
-
-Combine the different SummarizedExperiment files into one SummarizedExperiment for each pipeline.
-
-```{r}
-suppressPackageStartupMessages({
-  library(here)
-  library(tidyverse)
-  library(SummarizedExperiment)
-})
-
-# Get run names
-pipeline = "transcripts" # "transcripts" or "preandmrna" or "introncollapse/separate"
-run_names = gsub("_quant", "", basename(list.dirs(here("mouse_cortex", "salmon_quants", paste0(pipeline, "_pipeline")), recursive = F)))
-run_names = run_names[!grepl("nodecoys", run_names)]
-
-# Get cortex/flow cell metadata for each run
-sra_meta = read_csv(here("mouse_cortex", "files", "SRA_geo_metadata.csv"))
-sra_meta = sra_meta %>%
-  filter(Run %in% run_names) %>%
-  select(Run, title) %>%
-  separate(title, c("cortex", "flow_cell", "seq", "lane"))
-
-# Get t2g metadata for each gene
-tx2gene = readRDS(here("mouse_cortex", "salmon_files", "gencode.vM25.transcripts.tx2gene.mouse.rds"))
-
-# Read in individual rds files
-se_ls = list()
-for(run_name in run_names[1:16]){
-  se = readRDS(here("mouse_cortex", "salmon_quants", paste0(pipeline, "_pipeline"), paste0("se_", run_name, ".rds")))
-  # Add colData
-  column_names = colnames(se)
-  colData(se) = DataFrame(sra_meta %>% 
-                            dplyr::filter(Run == run_name) %>%
-                            dplyr::slice(rep(1, ncol(se))))
-  colnames(se) = column_names
-  
-  # Add rowData
-  match_rows = match(rownames(se), tx2gene$gene_id)
-  t2g = tx2gene[match_rows, ]
-  rowData(se) = t2g
-
-  se_ls[[run_name]] = se
-}
-
-# Use cbind to combine SummarizedExperiments
-se_all = Reduce(cbind, se_ls)
-saveRDS(se_all, here("mouse_cortex", "salmon_quants", paste0(pipeline, "_pipeline"), "se_all.rds"))
-```
-
-```{r}
-run_number = "all" # give run_number or "all" for all of them together
-se_ls = list()
-se_ls[["transcripts"]] = readRDS(here("mouse_cortex", "salmon_quants", "transcripts_pipeline", paste0("se_", run_number, ".rds")))
-se_ls[["preandmrna"]] = readRDS(here("mouse_cortex", "salmon_quants", "preandmrna_pipeline", paste0("se_", run_number, ".rds")))
-se_ls[["introncollapse"]] = readRDS(here("mouse_cortex", "salmon_quants", "introncollapse_pipeline", paste0("se_", run_number, ".rds")))
-se_ls[["intronseparate"]] = readRDS(here("mouse_cortex", "salmon_quants", "intronseparate_pipeline", paste0("se_", run_number, ".rds")))
-
-
-# Extract mapping rate
-for(se in se_ls){
-  p = c()
-  for(i in -4+6*1:16){
-    p = c(p, metadata(se)[i]$quantInfo$percent_mapped)
-  }
-  print(mean(p))
-}
 ```
 

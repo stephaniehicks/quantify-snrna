@@ -17,6 +17,8 @@ library(tidyverse)
 
 # Download data
 
+Run the shell script `download-geo-data.sh`. 
+
 Information about the paper whose data we are downloading:
 
 * https://www.nature.com/articles/s41587-020-0465-8
@@ -96,7 +98,6 @@ write.table(pdata_10x$download_path, file = here("mouse_cortex", "files", "SRR_p
             quote= FALSE,row.names = FALSE, col.names = FALSE)
 ```
 
-
 ### DroNc-seq
 
 Will fill in later. 
@@ -108,8 +109,6 @@ Will fill in later.
 ### Smart-seq2
 
 Will fill in later. 
-
-
 
 ## Download SRA files 
 
@@ -142,7 +141,7 @@ cd /fastscratch/myscratch/shicks1
 prefetch SRR9169228
 ```
 
-Or run the shell script `download-geo-data.sh`.
+Or run the shell script `download-sra-data.sh`.
 
 ```{bash}
 prefetch --option-file SRR_files_10x.txt
@@ -183,6 +182,3 @@ the default output is
 
 So I think the `*_3.fastq` contains the barcodes. 
 The files we want to use are `*_1.fastq` and `*_2.fastq`. 
-
-
-

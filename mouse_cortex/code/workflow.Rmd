@@ -1,0 +1,113 @@
+---
+title: "Workflow"
+author: "Albert Kuo"
+date: "10/8/2020"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+This Rmd is a description of all the steps to run the pipeline.
+
+```{bash summary}
+# Scripts to download data
+qsub download-geo-data.sh
+qsub download-sra-data.sh
+qsub extract-fastq.sh
+qsub download-gencode-files.sh
+
+# Scripts to run alevin
+qsub build-index-salmon.sh
+qsub run-alevin.sh
+
+# Scripts to clean and process data
+qsub run-tximeta.sh
+qsub combine-se.sh
+qsub save-sce.sh
+
+# Scripts for plots
+qsub distribution-plots.sh
+qsub libsize-plots.sh
+qsub celltype-plots.sh
+qsub pca-plots.sh
+```
+
+# Dataset
+
+Information about the paper whose data we are downloading:
+
+* https://www.nature.com/articles/s41587-020-0465-8
+* Systematic comparison of single-cell and single-nucleus RNA-sequencing methods
+* Ding	2020
+* Mouse cortex	~7000?
+* UMIs and reads
+* RNA-seq data generated in this project are available from the Gene Expression Omnibus with accession number **GSE132044** and the Single Cell Portal with accession numbers SCP424, SCP425 and SCP426. https://singlecell.broadinstitute.org/single_cell/study/SCP425/single-cell-comparison-cortex-data#study-summary
+
+In the paper there were the following types of data: 
+
+1. human PBMC, scRNA-seq
+2. mouse cortex, scRNA-seq (processed on 4 platforms), (snRNA?)
+3. human cell line and PBMC, bulk RNA-seq
+4. mouse cell line and cortex, bulk RNA-seq
+5. mixture of human and murine cell line, scRNA-seq
+
+We are going to focus on the mouse cortex, which is single-nucleus RNA.
+
+# Download data
+
+## Download GEO metadata
+
+First, you need to manually download the `SraRunInfo.csv` file. 
+
+* Go here: https://www.ncbi.nlm.nih.gov/bioproject/PRJNA545730. 
+* Then click on `SRA Experiments`. Click `Send to`. Choose `File`. 
+* Change Format to `RunInfo`. Click `Create File`. 
+* This will download a file called `SraRunInfo.csv`.
+
+Then download and create GEO metadata with the shell script `download-geo-data.sh`. 
+
+## Download SRA files
+
+Install the SRA toolkit. Here are some instructions on how to do so:
+
+1. https://www.ncbi.nlm.nih.gov/sra/docs/sradownload/
+2. https://github.com/ncbi/sra-tools/wiki/05.-Toolkit-Configuration (old version is https://ncbi.github.io/sra-tools/install_config.html)
+
+Notes:
+* You will need to add the Toolkit functions to your PATH variable (https://github.com/ncbi/sra-tools/wiki/02.-Installing-SRA-Toolkit). This can be done by adding ~/.../sratoolkit.2.10.6-centos_linux64/bin to the PATH variable in ~/.bash_profile. Check that it worked with `which fastq-dump`.
+* You will also want to specify the default location to download the SRA files to using the toolkit.
+
+Once you have installed the toolkit, run the shell script `download-sra-data.sh`.
+
+## Extract FASTQ files
+
+References:
+1. https://github.com/ncbi/sra-tools/wiki/HowTo:-fasterq-dump
+2. https://trace.ncbi.nlm.nih.gov/Traces/sra/sra.cgi?view=toolkit_doc&f=fastq-dump
+
+After downloading the SRA files, convert them to FASTQ files using the shell script `extract-fastq.sh`.
+
+## Download GENCODE files
+
+Run the shell script `download-gencode-files.sh`. This downloads GENCODE files and creates the files necessary for *alevin*. 
+Note that the decoy-aware transcriptomes are created directly in the shell script `download-gencode-files.sh` and not the R script it calls. Details about these steps are in `quantify-salmon.Rmd`.
+
+# Run alevin
+
+Build the reference index using `build-index-salmon.sh`. This process takes a few hours for each pipeline. Then run alevin using `run-alevin.sh`.
+
+For now, you need to manually specify which pipeline you are running in both of these scripts.
+
+# Clean data
+
+Read in the quant files from alevin into R using `run-tximeta.sh`. Since alevin import only supports one file at a time currently, this creates a separate SummarizedExperiment object for each SRA file. 
+
+Combine the 16 SummarizedExperiment objects together using `combine-se.sh`. 
+
+Then run quality control, PCA, and add cell type labels with `save-sce.R`. This also converts the SummarizedExperiment object into a SingleCellExperiment object.
+
+# Exploratory analysis and plots
+
+Exploratory work and plots is done in `snuc-analysis-bioc.Rmd`. Publication figures are generated using `distribution-plots.sh`, `libsize-plots.sh`, `celltype-plots.sh`, and `pca-plots.sh`, and tweaked with `generate-figures.Rmd`. 
