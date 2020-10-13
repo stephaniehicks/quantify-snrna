@@ -171,8 +171,9 @@ genes_rowsums_tb %>%
   summarize(preandmrna_percent_inc_median = median(preandmrna_percent_inc, na.rm = T))
 
 genes_rowsums_tb %>%
-  ggplot(aes(x = bin, y = preandmrna_percent_inc)) + 
+  ggplot(aes(x = as.factor(bin), y = preandmrna_percent_inc)) + 
   geom_boxplot() +
+  scale_y_log10() +
   theme_bw()
 ```
 
