@@ -1,7 +1,7 @@
 # save-sce.R
 # -----------------------------------------------------------------------------
 # Author:             Albert Kuo
-# Date last modified: Sep 23, 2020
+# Date last modified: Oct 13, 2020
 #
 # Quality control, run PCA, add cell type labels, and save as SingleCellExperiment 
 
@@ -21,6 +21,29 @@ se_ls[["transcripts"]] = readRDS(here("mouse_cortex", "salmon_quants", "transcri
 se_ls[["preandmrna"]] = readRDS(here("mouse_cortex", "salmon_quants", "preandmrna_pipeline", paste0("se_", run_number, ".rds")))
 se_ls[["introncollapse"]] = readRDS(here("mouse_cortex", "salmon_quants", "introncollapse_pipeline", paste0("se_", run_number, ".rds")))
 se_ls[["intronseparate"]] = readRDS(here("mouse_cortex", "salmon_quants", "intronseparate_pipeline", paste0("se_", run_number, ".rds")))
+
+# Combine counts for same cell barcode
+for(i in seq_along(se_ls)){
+  # Sum up counts
+  m = assay(se, "counts")
+  colnames(m) = paste0(colData(se)$cortex, "_", colnames(m)) # colnames format is Cortex1_CGACTTCAGTCTCGGC
+  m = colsum(m, colnames(m))                                 # Sum up counts for same column name
+  
+  # Create new colData
+  col_data = colData(se) %>% 
+    as_tibble() %>%
+    select(-Run, -flow_cell, -lane) %>%
+    mutate(cell_barcode = paste0(cortex, "_", rownames(colData(se)))) %>%
+    distinct() %>%
+    left_join(data.frame(cell_barcode = colnames(m)), . , by = "cell_barcode") # Arrange in same order as m
+  
+  # Create new SE
+  se_new = SummarizedExperiment(assays = SimpleList(counts = m),
+                                colData = col_data,
+                                rowData = rowData(se))
+  
+  se_ls[[i]] = se_new
+}
 
 # Quality control
 sce_ls = list()
@@ -62,7 +85,7 @@ for(i in seq_along(sce_ls)){
 meta_ding = read_tsv(here("mouse_cortex", "files", "meta_combined.txt"))
 meta_ding_10x = meta_ding %>%
   filter(Method == "10x Chromium") %>%
-  mutate(cell_barcode = gsub("Cortex.*10xChromium", "", NAME))
+  mutate(cell_barcode = paste0(Experiment, "_", gsub("Cortex.*10xChromium", "", NAME)))
 
 for(i in seq_along(sce_ls)){
   sce = sce_ls[[i]]
