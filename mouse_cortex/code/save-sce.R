@@ -24,6 +24,7 @@ se_ls[["intronseparate"]] = readRDS(here("mouse_cortex", "salmon_quants", "intro
 
 # Combine counts for same cell barcode
 for(i in seq_along(se_ls)){
+  se = se_ls[[i]]
   # Sum up counts
   m = assay(se, "counts")
   colnames(m) = paste0(colData(se)$cortex, "_", colnames(m)) # colnames format is Cortex1_CGACTTCAGTCTCGGC
