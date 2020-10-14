@@ -80,9 +80,9 @@ p = lib_sizes %>%
   theme(axis.text = element_text(size = 8))
 print(p)
 
-ggsave(file = here(paste0("./mouse_cortex/plots/lib_size_comparison.png")),
-       plot = p, width = 8, height = 5)
-saveRDS(p, here(paste0("./mouse_cortex/plots/lib_size_comparison.rds")))
+# ggsave(file = here(paste0("./mouse_cortex/plots/lib_size_comparison.png")),
+#        plot = p, width = 8, height = 5)
+# saveRDS(p, here(paste0("./mouse_cortex/plots/lib_size_comparison.rds")))
 ```
 
 #### By Gene Type
@@ -184,7 +184,7 @@ PCA done in `save-sce.R`. To generate and save these plots, run `distribution-pl
 
 ```{r}
 # PCA colored by provided attribute
-plotReducedDim(sce_ls[["transcripts"]], "PCA", colour_by = "ding_labels", point_size = 1)
+plotReducedDim(sce_ls[["preandmrna"]], "PCA", colour_by = "ding_labels", point_size = 1)
 ```
 
 
@@ -582,8 +582,8 @@ toc()
 ```
 
 ```{r}
-colData(sce_sub)$cortex_flow_cell = paste(colData(sce_sub)$cortex,
-                                         colData(sce_sub)$flow_cell, sep = "_")
+# colData(sce_sub)$cortex_flow_cell = paste(colData(sce_sub)$cortex,
+#                                          colData(sce_sub)$flow_cell, sep = "_")
 colData(sce_sub)$log_lib_size = log(colData(sce_sub)$lib_size)
 plotReducedDim(sce_sub, "PCA", colour_by = "cortex", ncomponents = c(1, 2))
 ```
@@ -614,6 +614,20 @@ clust <- igraph::cluster_walktrap(g)$membership
 colData(sce_sub)$labels_gb <- factor(clust)
 plotReducedDim(sce_sub, "PCA", colour_by="labels_gb")
 ```
+
+```{r}
+# Use findMarkers (t-test) to identify candidate markers for clusters
+markers = findMarkers(sce_sub, groups = colData(sce_sub)$labels_kmeans)
+
+chosen = "1" # cluster chosen
+interesting = markers[[chosen]]
+best.set <- interesting[interesting$Top <= 6,]
+logFCs <- getMarkerEffects(best.set)
+
+library(pheatmap)
+pheatmap(logFCs, breaks=seq(-5, 5, length.out=101))
+```
+
 
 #### Proportion of zero plots
 
