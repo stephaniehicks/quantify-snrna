@@ -187,6 +187,41 @@ PCA done in `save-sce.R`. To generate and save these plots, run `distribution-pl
 plotReducedDim(sce_ls[["preandmrna"]], "PCA", colour_by = "ding_labels", point_size = 1)
 ```
 
+### HVG
+
+https://osca.bioconductor.org/feature-selection.html
+
+```{r}
+hvg_tb = tibble(gene = rownames(sce_ls[["transcripts"]]))
+
+# Transcripts
+for(i in seq_along(sce_ls)){
+  pipeline = names(sce_ls)[i]
+  sce = sce_ls[[i]]
+  
+  dec_mgv <- modelGeneVar(sce)
+  
+  # Visualizing the fit
+  fit_mgv <- metadata(dec_mgv)
+  # plot(fit_mgv$mean, fit_mgv$var, xlab="Mean of log-expression",
+  #      ylab="Variance of log-expression")
+  # curve(fit_mgv$trend(x), col="dodgerblue", add=TRUE, lwd=2)
+  
+  # Get list of HVGs
+  tmp_tb = tibble(gene = rownames(dec_mgv),
+                  !!pipeline := dec_mgv$p.value)
+  
+  hvg_tb = hvg_tb %>%
+    left_join(., tmp_tb, by = "gene")
+}
+
+
+hvg_tb %>%
+  # filter(transcripts < 0.5) %>%
+  ggplot(aes(x = transcripts, y = preandmrna)) +
+  geom_point(alpha = 0.5) +
+  theme_bw() 
+```
 
 ### Cell types 
 
