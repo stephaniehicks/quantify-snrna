@@ -578,6 +578,26 @@ lib_size_tb %>%
   theme_bw()
 ```
 
+### DE analysis
+
+Here we compare if differential gene analysis differs between pipelines. 
+
+In particular, I will look at the inhibitory neurons versus excitatory neurons and identify genes that are differentially expressed in these two groups.
+
+```{r}
+library(DESeq2)
+
+sce_sub = sce_ls[["transcripts"]][, colData(sce_ls[["transcripts"]])$ding_labels %in% c("Excitatory neuron", "Inhibitory neuron")]
+
+# Store counts and intermediate quantities (dds is a SummarizedExperiment)
+dds = DESeqDataSetFromMatrix(countData = ceiling(counts(sce_sub)), # take integers 
+                             colData = colData(sce_sub),
+                             design = ~ ding_labels + cortex)
+
+# Compute log2fold change and p-values
+dds = DESeq(dds)
+```
+
 ### Distributions
 
 To assess distributions, we want to obtain a homogenous group of cells.
