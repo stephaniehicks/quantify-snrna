@@ -83,6 +83,7 @@ for(i in seq_along(sce_ls)){
 }
 
 # Cell type labels (Ding)
+# downloaded from https://singlecell.broadinstitute.org/single_cell/study/SCP425/single-cell-comparison-cortex-data#study-download
 meta_ding = read_tsv(here("mouse_cortex", "files", "meta_combined.txt"))
 meta_ding_10x = meta_ding %>%
   filter(Method == "10x Chromium") %>%
