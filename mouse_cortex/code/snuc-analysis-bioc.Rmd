@@ -658,7 +658,7 @@ plot(sse)
 clust.kmeans <- kmeans(reducedDim(sce_sub, "PCA"), centers = 4)
 colData(sce_sub)$labels_kmeans <- factor(clust.kmeans$cluster)
 p = plotReducedDim(sce_sub, "PCA", colour_by = "labels_kmeans", ncomponents = c(1, 2))
-saveRDS(p, here("./mouse_cortex/plots/pca_kmeans_preandmnra_inhibitory_neuron_cortex_1.rds"))
+# saveRDS(p, here("./mouse_cortex/plots/pca_kmeans_preandmnra_inhibitory_neuron_cortex_1.rds"))
 ```
 
 ```{r eval = F}
@@ -713,7 +713,7 @@ prob_out = plot_prob(counts_sub_cluster_scaled)
 p = prob_out$plot +
   labs(title = paste(cell_type, i, sep = " - "))
 print(p)
-saveRDS(p, file = here(paste0("./mouse_cortex/plots/prob0_plot_preandmrna_inhibitory_neuron_cortex_1_cluster_", i, ".rds")))
+# saveRDS(p, file = here(paste0("./mouse_cortex/plots/prob0_plot_preandmrna_inhibitory_neuron_cortex_1_cluster_", i, ".rds")))
 ```
 
 #### Mean-variance plots
@@ -723,16 +723,16 @@ To generate these plots for all combinations, run `distribution-plots.R`.
 
 ```{r}
 # Empirical mean and variance
-mean_emp = rowMeans(counts_sub_scaled)
-var_emp = genefilter::rowVars(counts_sub_scaled)
+mean_emp = rowMeans(counts_sub_cluster_scaled)
+var_emp = genefilter::rowVars(counts_sub_cluster_scaled)
 
 # Binomial
-n = round(median(colSums(counts_sub_scaled)))
-emp_props = rowSums(counts_sub_scaled)/sum(colSums(counts_sub_scaled))
+n = round(median(colSums(counts_sub_cluster_scaled)))
+emp_props = rowSums(counts_sub_cluster_scaled)/sum(colSums(counts_sub_cluster_scaled))
 var_binom = n*emp_props*(1-emp_props)
 
 # Poisson
-fit_pois = glmGamPoi::glm_gp(counts_sub_scaled, design = ~ 1, size_factors = FALSE, 
+fit_pois = glmGamPoi::glm_gp(counts_sub_cluster_scaled, design = ~ 1, size_factors = FALSE, 
                              overdispersion = FALSE)
 # Negative binomial
 # Estimate overall size/dispersion parameter
@@ -741,14 +741,14 @@ phi = 1/coef(model)["I(mean_emp^2)"]
 
 # Estimate size/dispersion parameter for every gene
 # library(glmGamPoi)
-# fit_nb =  glmGamPoi::glm_gp(counts_sub_scaled, design = ~ 1, size_factors = FALSE, 
+# fit_nb =  glmGamPoi::glm_gp(counts_sub_cluster_scaled, design = ~ 1, size_factors = FALSE, 
 #                          overdispersion = TRUE)
 
 # Note: rowMean(fit_pois$Mu) = rowMeans(fit_nb$Mu) = rowMeans(counts)
 mean_var_tb = tibble(mean_emp = mean_emp,
                      var_emp = var_emp,
                      binomial = var_binom,
-                     poisson = rowMeans(counts_sub_scaled),
+                     poisson = rowMeans(counts_sub_cluster_scaled),
                      nbinomial = mean_emp + mean_emp^2 * 1/phi) %>%
   # var_nb_v2 = mean_emp + mean_emp^2 * fit_nb$overdispersions) %>% 
   tidyr::pivot_longer(cols = -mean_emp, names_to = "model", values_to = "var_value")
@@ -770,6 +770,8 @@ p = mean_var_tb %>%
 
 #### Goodness-of-fit tests
 
+##### By Count Values
+
 There are 2 issues:
 
 1) Why is quant matrix not all integers?
@@ -781,68 +783,111 @@ library(MASS)
 # Poisson
 tic()
 p_values_pois = c()
-for(i in 1:nrow(counts_sub_scaled)){
+chi_pois = c()
+df_pois = c()
+for(i in 1:nrow(counts_sub_cluster_scaled)){
   # message(i)
-  x = counts_sub_scaled[i,]
+  x = counts_sub_cluster_scaled[i,]
   x = ceiling(x) 
-  poissonfit = fitdistr(x, "poisson")
-  lambda.fit = poissonfit$estimate["lambda"]
-  nsamples = length(x)
-  f.obs = table(x)
-  bins = as.numeric(names(f.obs))
-  f.hyp = dpois(bins, lambda = lambda.fit)*nsamples
-  chiSquare.pois = sum((f.obs-f.hyp)^2/f.hyp)
-  dof = length(bins) - 1
+  
+  poisson_fit = fitdistr(x, "poisson")
+  lambda_fit = poisson_fit$estimate["lambda"]
+  n_samples = length(x)
+  f_obs = table(x)
+  
+  bins = as.numeric(names(f_obs))
+  probs = dpois(bins, lambda = lambda_fit)
+  f_hyp = probs*n_samples
+  other_value = (1 - sum(probs))*n_samples
+  
+  f_obs = c(f_obs, 0) # Observed value
+  f_hyp = c(f_hyp, other_value) # Expected value
+  
+  df = length(bins) - 1
+  chiSquare.pois = sum((f_obs-f_hyp)^2/f_hyp)
+  
+  df_pois = c(df_pois, df)
+  chi_pois = c(chi_pois, chiSquare.pois)
   p_values_pois = c(p_values_pois, 1 - pchisq(chiSquare.pois, df = dof))
 }
 toc()
 
+tibble(p_value = p_values_pois) %>%
+  ggplot(aes(x = p_value)) + 
+  geom_histogram() +
+  theme_bw()
+```
+
+```{r}
 # Negative binomial
 tic()
 p_values_nb = c()
-for(i in 1:nrow(counts_sub_scaled)){
+chi_nb = c()
+df_nb = c()
+for(i in 1:nrow(counts_sub_cluster_scaled)){
   # message(i)
   tryCatch({
-  x = counts_sub_scaled[i,]
+  x = counts_sub_cluster_scaled[i,]
   x = ceiling(x)
-  nbfit = suppressWarnings(fitdistr(x, "negative binomial"))
-  r.fit = nbfit$estimate['size']
-  p.fit = r.fit / (nbfit$estimate['mu'] + r.fit)
-  nsamples = length(x)
-  f.obs = table(x)
-  bins = as.numeric(names(f.obs))
-  f.hyp = dnbinom(bins, size = r.fit, prob = p.fit)*nsamples
-  chiSquare.nb = sum((f.obs-f.hyp)^2/f.hyp)
-  dof = length(bins) - 1
-  p_values_nb = c(p_values_nb, 1 - pchisq(chiSquare.nb, df = dof))}, error = function(e){})
+  
+  nb_fit = suppressWarnings(fitdistr(x, "negative binomial"))
+  r_fit = nb_fit$estimate['size']
+  p_fit = r_fit / (nb_fit$estimate['mu'] + r_fit)
+  n_samples = length(x)
+  f_obs = table(x)
+  
+  bins = as.numeric(names(f_obs))
+  probs = dnbinom(bins, size = r_fit, prob = p_fit)
+  f_hyp = probs*n_samples
+  other_value = (1 - sum(probs))*n_samples
+  
+  f_obs = c(f_obs, 0) # Observed value
+  f_hyp = c(f_hyp, other_value) # Expected value
+  
+  df = length(bins) - 1
+  chiSquare.nb = sum((f_obs-f_hyp)^2/f_hyp)
+  
+  df_nb = c(df_nb, df)
+  chi_nb = c(chi_nb, chiSquare.nb)
+  p_values_nb = c(p_values_nb, 1 - pchisq(chiSquare.nb, df = df))}, 
+  error = function(e){})
 }
 toc()
 
-# Put p-values in tibble
-print(length(p_values_pois) - length(p_values_nb))
-p_value_tb = tibble(distribution = c(rep("Poisson", length(p_values_pois)), rep("NB", length(p_values_nb))),
-       p_value = c(p_values_pois, p_values_nb),
-       gene = rep(rownames(counts_sub_scaled), 2))
 
-# Histogram of p-values
-p_value_tb %>%
+tibble(p_value = p_values_nb) %>%
   ggplot(aes(x = p_value)) + 
   geom_histogram() +
-  facet_wrap(~ distribution) +
-  labs(title = cell_type) +
   theme_bw()
+```
 
-# Scatterplot of p-values
-emp_probs_0 = apply(counts_sub_scaled, MARGIN = 1, function(r) sum(r==0)/ncol(counts_sub_scaled))
-p_value_tb %>%
-  pivot_wider(id_cols = gene,
-              names_from = "distribution",
-              values_from = "p_value") %>%
-  mutate(emp_probs_0 = emp_probs_0) %>%
-  ggplot(aes(x = Poisson, y = NB)) + 
-  geom_point(aes(color = emp_probs_0), alpha = 0.5) +
-  labs(x = "poisson_pvalue",
-       y = "nb_pvalue") +
+#### By Sample
+
+This is based on Figure 2 from this paper: https://genome.cshlp.org/content/18/9/1509.full.html 
+
+```{r}
+# Poisson
+total_sum = sum(counts_sub_cluster_scaled)
+lambda_j = rowSums(counts_sub_cluster_scaled)/total_sum # proportion of counts in gene j
+c_i = colSums(counts_sub_cluster_scaled)/total_sum # proportion of counts in sample i (should be approximately same across i for downsampled matrix)
+mu_ij = outer(lambda_j, c_i)*total_sum
+
+f_obs = counts_sub_cluster_scaled
+f_hyp = mu_ij
+
+chiSquare.pois = rowSums((f_obs-f_hyp)^2/f_hyp) # chi-squared statistic for each gene
+df = ncol(f_obs) - 1
+
+plot_dt = tibble(chi_obs = sort(chiSquare.pois),
+                 chi_quantile = qchisq(p = (1:length(chiSquare.pois))/length(chiSquare.pois),
+                                       df = df))
+
+plot_dt %>%
+  ggplot(aes(x = chi_quantile,
+             y = chi_obs)) + 
+  geom_point() + 
+  geom_abline(slope = 1, intercept = 0) +
+  coord_cartesian(ylim = c(0, 10000)) +
   theme_bw()
 ```
 
@@ -853,7 +898,7 @@ Source: https://github.com/willtownes/scrna2019/blob/028363f04139a58b19143f3058c
 
 
 ```{r eval = F}
-m = counts_sub_scaled
+m = counts_sub_cluster_scaled
 m = ceiling(m)
 summary(colSums(m))
 summary(rowSums(m))
