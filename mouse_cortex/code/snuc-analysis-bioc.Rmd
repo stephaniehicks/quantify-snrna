@@ -702,7 +702,8 @@ First, I make all the column sums comparable by downsampling (this is a stochast
 ```{r}
 # Subset to cluster
 i = 1
-counts_sub_cluster = counts(sce_sub)[, colData(sce_sub)$labels_kmeans == i]
+counts_sub_cluster = counts(sce_sub)
+# counts_sub_cluster = counts(sce_sub)[, colData(sce_sub)$labels_kmeans == i] # Subset to k-means cluster
 summary(colSums(counts_sub_cluster))
 
 tic()
@@ -819,7 +820,7 @@ for(i in 1:nrow(counts_sub_cluster_scaled)){
   
   df_pois = c(df_pois, df)
   chi_pois = c(chi_pois, chiSquare.pois)
-  p_values_pois = c(p_values_pois, 1 - pchisq(chiSquare.pois, df = dof))
+  p_values_pois = c(p_values_pois, 1 - pchisq(chiSquare.pois, df = df))
 }
 toc()
 
@@ -872,7 +873,7 @@ tibble(p_value = p_values_nb) %>%
   theme_bw()
 ```
 
-#### By Sample
+##### By Sample
 
 This is based on Figure 2 from this paper: https://genome.cshlp.org/content/18/9/1509.full.html 
 
