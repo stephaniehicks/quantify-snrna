@@ -13,7 +13,7 @@ output:
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
-## Exploratory Analysis
+  ## Exploratory Analysis
 
 ```{r}
 suppressPackageStartupMessages({
@@ -586,16 +586,27 @@ In particular, I will look at the inhibitory neurons versus excitatory neurons a
 
 ```{r}
 library(DESeq2)
+library(apeglm)
 
-sce_sub = sce_ls[["transcripts"]][, colData(sce_ls[["transcripts"]])$ding_labels %in% c("Excitatory neuron", "Inhibitory neuron")]
+sce_sub = sce_ls[["preandmrna"]][, colData(sce_ls[["preandmrna"]])$ding_labels %in% c("Excitatory neuron", "Inhibitory neuron")]
 
 # Store counts and intermediate quantities (dds is a SummarizedExperiment)
 dds = DESeqDataSetFromMatrix(countData = ceiling(counts(sce_sub)), # take integers 
                              colData = colData(sce_sub),
-                             design = ~ ding_labels + cortex)
+                             design = ~ cortex + ding_labels)
 
 # Compute log2fold change and p-values
 dds = DESeq(dds)
+
+res = results(dds)
+res
+
+# Shrinkage of LFC
+resultsNames(dds)
+resLFC = lfcShrink(dds, coef="ding_labels_Inhibitory.neuron_vs_Excitatory.neuron", type="apeglm")
+
+# MA plot for shrunken log2 fold change
+plotMA(resLFC)
 ```
 
 ### Distributions
