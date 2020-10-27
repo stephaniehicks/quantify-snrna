@@ -79,7 +79,7 @@ Notes:
 * You will need to add the Toolkit functions to your PATH variable (https://github.com/ncbi/sra-tools/wiki/02.-Installing-SRA-Toolkit). This can be done by adding ~/.../sratoolkit.2.10.6-centos_linux64/bin to the PATH variable in ~/.bash_profile. Check that it worked with `which fastq-dump`.
 * You will also want to specify the default location to download the SRA files to using the toolkit.
 
-Once you have installed the toolkit, run the shell script `download-sra-data.sh`. An example of a description of an SRA file is https://www.ncbi.nlm.nih.gov/sra/SRX5943587[accn]. Note that the file name Cortex1.CCJ15ANXX.10X_2B indicates the cortex (Cortex1), flow cell (CCJ15ANXX), sequencing method (10X), and the lane (2B).
+Once you have installed the toolkit, run the shell script `download-sra-data.sh`. An example of a description of an SRA file is https://www.ncbi.nlm.nih.gov/sra/SRX5943587. Note that the file name Cortex1.CCJ15ANXX.10X_2B indicates the cortex (Cortex1), flow cell (CCJ15ANXX), sequencing method (10X), and the lane (2B).
 
 ## Extract FASTQ files
 
@@ -91,7 +91,7 @@ After downloading the SRA files, convert them to FASTQ files using the shell scr
 
 ## Download GENCODE files
 
-Run the shell script `download-gencode-files.sh`. This downloads GENCODE files and creates the files necessary for *alevin*. 
+Run the shell script `download-gencode-files.sh`. This downloads GENCODE files and creates the files necessary for *alevin*. Reference files were obtained for [mouse release M25](https://www.gencodegenes.org/mouse/release_M25.html). 
 Note that the decoy-aware transcriptomes are created directly in the shell script `download-gencode-files.sh` and not the R script it calls. Details about these steps are in `quantify-salmon.Rmd`.
 
 # Run alevin
