@@ -48,7 +48,7 @@ Note that the decoy-aware transcriptomes are created directly in the shell scrip
 
 Build the reference index using `build-index-salmon.sh`. This process takes a few hours for each pipeline. Then run alevin using `run-alevin.sh`.
 
-For now, you need to manually specify which pipeline you are running in both of these scripts.
+For both scripts, you must specify which pipeline you are running by passing the name of the pipeline as a parameter (e.g. `build_index_salmon.sh transcripts`). 
 
 ### Clean data
 

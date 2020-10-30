@@ -8,14 +8,14 @@
 # set project directory path
 #d=/fastscratch/myscratch/shicks1/alsf-filbin
 d=/fastscratch/myscratch/akuo/alsf-filbin/mouse_cortex
-pipeline=transcripts
+pipeline=$1 # first parameter (options are: transcripts, preandmran, introncollapse, or intronseparate)
 
 # Albert's
 cortex_array=(cortex1 cortex2)
 for c in "${cortex_array[@]}"
 do
    samplels=$d/files/SRR_files_10x_$c.txt
-   prepend=$d/sample_data/geo/sra
+   prepend=$d/sample_data/geo/sra/
    fastq_1=`cat $samplels | sed ''s+^+$prepend+'' | sed 's/$/.sra_1.fastq/'`
    fastq_2=`cat $samplels | sed ''s+^+$prepend+'' | sed 's/$/.sra_2.fastq/'`
    salmon alevin --libType ISR \
