@@ -11,20 +11,37 @@ d=/fastscratch/myscratch/akuo/alsf-filbin/mouse_cortex
 pipeline=transcripts
 
 # Albert's
-for sample in `cat $d/files/SRR_files_10x.txt`;
+cortex_array=(cortex1 cortex2)
+for c in "${cortex_array[@]}"
 do
-# sample=SRR9169236
-salmon alevin --libType ISR \
-      --index $d/salmon_files/gencode.vM25_salmon-index-v1.0.0-${pipeline}-mouse \
-      -1 $d/sample_data/geo/sra/${sample}.sra_1.fastq \
-      -2 $d/sample_data/geo/sra/${sample}.sra_2.fastq \
-      --tgMap $d/salmon_files/gencode.vM25.${pipeline}.tx2gene.mouse.txt \
-      --chromium \
-      --threads 10 \
-      --output $d/salmon_quants/${pipeline}_pipeline/${sample}_quant \
-      --dumpFeatures --dumpBfh
+   samplels=$d/files/SRR_files_10x_$c.txt
+   prepend=$d/sample_data/geo/sra
+   fastq_1=`cat $samplels | sed ''s+^+$prepend+'' | sed 's/$/.sra_1.fastq/'`
+   fastq_2=`cat $samplels | sed ''s+^+$prepend+'' | sed 's/$/.sra_2.fastq/'`
+   salmon alevin --libType ISR \
+         --index $d/salmon_files/gencode.vM25_salmon-index-v1.0.0-${pipeline}-mouse \
+         -1 $fastq_1 \
+         -2 $fastq_2 \
+         --tgMap $d/salmon_files/gencode.vM25.${pipeline}.tx2gene.mouse.txt \
+         --chromium \
+         --threads 10 \
+         --output $d/salmon_quants/${pipeline}_pipeline/${c}_quant \
+         --dumpFeatures --dumpBfh
 done
 
+# for sample in `cat $d/files/SRR_files_10x.txt`;
+# do
+# # sample=SRR9169236
+# salmon alevin --libType ISR \
+#       --index $d/salmon_files/gencode.vM25_salmon-index-v1.0.0-${pipeline}-mouse \
+#       -1 $d/sample_data/geo/sra/${sample}.sra_1.fastq \
+#       -2 $d/sample_data/geo/sra/${sample}.sra_2.fastq \
+#       --tgMap $d/salmon_files/gencode.vM25.${pipeline}.tx2gene.mouse.txt \
+#       --chromium \
+#       --threads 10 \
+#       --output $d/salmon_quants/${pipeline}_pipeline/${sample}_quant \
+#       --dumpFeatures --dumpBfh
+# done
 
 
 # Stephanie's
