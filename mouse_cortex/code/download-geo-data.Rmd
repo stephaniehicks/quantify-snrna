@@ -96,6 +96,21 @@ write.table(pdata_10x$Run, file = here("mouse_cortex", "files", "SRR_files_10x.t
             quote= FALSE,row.names = FALSE, col.names = FALSE)
 write.table(pdata_10x$download_path, file = here("mouse_cortex", "files", "SRR_paths_10x.txt"), 
             quote= FALSE,row.names = FALSE, col.names = FALSE)
+
+# Save separate files for cortex1 and cortex2
+cortex1_runs = pdata_10x %>%
+  separate(title, c("cortex", "flow_cell", "seq", "lane")) %>%
+  filter(cortex == "Cortex1") %>%
+  pull(Run)
+write.table(cortex1_runs, file = here("mouse_cortex", "files", "SRR_files_10x_cortex1.txt"), 
+            quote= FALSE,row.names = FALSE, col.names = FALSE)
+
+cortex2_runs = pdata_10x %>%
+  separate(title, c("cortex", "flow_cell", "seq", "lane")) %>%
+  filter(cortex == "Cortex2") %>%
+  pull(Run)
+write.table(cortex2_runs, file = here("mouse_cortex", "files", "SRR_files_10x_cortex2.txt"), 
+            quote= FALSE,row.names = FALSE, col.names = FALSE)
 ```
 
 ### DroNc-seq
