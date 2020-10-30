@@ -102,9 +102,9 @@ For now, you need to manually specify which pipeline you are running in both of 
 
 # Clean data
 
-Read in the quant files from alevin into R using `run-tximeta.sh`. Since alevin import only supports one file at a time currently, this creates a separate SummarizedExperiment object for each SRA file. 
+Read in the quant files from alevin into R using `run-tximeta.sh`. Since alevin import only supports one file at a time currently, this creates a separate SummarizedExperiment object for each library. 
 
-Combine the 16 SummarizedExperiment objects together using `combine-se.sh`. 
+Combine the 2 SummarizedExperiment objects together using `combine-se.sh`. 
 
 Then run quality control, PCA, and add cell type labels with `save-sce.R`. This also converts the SummarizedExperiment object into a SingleCellExperiment object.
 
