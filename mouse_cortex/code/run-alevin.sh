@@ -8,7 +8,7 @@
 # set project directory path
 #d=/fastscratch/myscratch/shicks1/alsf-filbin
 d=/fastscratch/myscratch/akuo/alsf-filbin/mouse_cortex
-pipeline=$1 # first parameter (options are: transcripts, preandmran, introncollapse, or intronseparate)
+pipeline=transcripts # options are: transcripts, preandmran, introncollapse, or intronseparate
 
 # Albert's
 cortex_array=(cortex1 cortex2)

@@ -8,7 +8,7 @@
 # mem_free=25G,h_vmem=25G,h_fsize=30G (intron index)
 # create salmon index (this process takes ~2-3 hours for humans)
 
-pipeline=$1 # first parameter (options are: transcripts, preandmran, introncollapse, or intronseparate)
+pipeline=transcripts # options are: transcripts, preandmran, introncollapse, or intronseparate
 salmon index -t /fastscratch/myscratch/akuo/alsf-filbin/mouse_cortex/salmon_files/gentrome_${pipeline}_mouse.fa.gz \
              -d /fastscratch/myscratch/akuo/alsf-filbin/mouse_cortex/salmon_files/decoys_mouse.txt \
              -i /fastscratch/myscratch/akuo/alsf-filbin/mouse_cortex/salmon_files/gencode.vM25_salmon-index-v1.0.0-${pipeline}-mouse \
