@@ -1,7 +1,7 @@
 # combine-se.R
 # -----------------------------------------------------------------------------
 # Author:             Albert Kuo
-# Date last modified: Oct 8, 2020
+# Date last modified: Nov 2, 2020
 #
 # Combine SummarizedExperiment objects into one 
 
@@ -13,29 +13,19 @@ suppressPackageStartupMessages({
 
 # pipeline = "transcripts" # "transcripts" or "preandmrna" or "introncollapse/separate"
 for(pipeline in c("transcripts", "preandmrna", "introncollapse", "intronseparate")){
-  # Get run names
-  run_names = gsub("_quant", "", basename(list.dirs(here("mouse_cortex", "salmon_quants", paste0(pipeline, "_pipeline")), recursive = F)))
-  run_names = run_names[!grepl("nodecoys", run_names)]
-  
-  # Get cortex/flow cell metadata for each run
-  sra_meta = read_csv(here("mouse_cortex", "files", "SRA_geo_metadata.csv"))
-  sra_meta = sra_meta %>%
-    filter(Run %in% run_names) %>%
-    select(Run, title) %>%
-    separate(title, c("cortex", "flow_cell", "seq", "lane"))
+  cortex_names = c("cortex1", "cortex2")
   
   # Get t2g metadata for each gene
   tx2gene = readRDS(here("mouse_cortex", "salmon_files", "gencode.vM25.transcripts.tx2gene.mouse.rds"))
   
   # Read in individual rds files
   se_ls = list()
-  for(run_name in run_names[1:16]){
-    se = readRDS(here("mouse_cortex", "salmon_quants", paste0(pipeline, "_pipeline"), paste0("se_", run_name, ".rds")))
+  for(cortex_name in cortex_names){
+    se = readRDS(here("mouse_cortex", "salmon_quants", paste0(pipeline, "_pipeline"), paste0("se_", cortex_name, ".rds")))
+    
     # Add colData
     column_names = colnames(se)
-    colData(se) = DataFrame(sra_meta %>% 
-                              dplyr::filter(Run == run_name) %>%
-                              dplyr::slice(rep(1, ncol(se))))
+    colData(se) = DataFrame(cortex = rep(cortex_name, length(column_names)))
     colnames(se) = column_names
     
     # Add rowData
@@ -43,7 +33,7 @@ for(pipeline in c("transcripts", "preandmrna", "introncollapse", "intronseparate
     t2g = tx2gene[match_rows, ]
     rowData(se) = t2g
     
-    se_ls[[run_name]] = se
+    se_ls[[cortex_name]] = se
   }
   
   # Use cbind to combine SummarizedExperiments

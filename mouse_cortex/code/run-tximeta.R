@@ -1,7 +1,7 @@
 # run-tximeta.R
 # -----------------------------------------------------------------------------
 # Author:             Albert Kuo
-# Date last modified: Oct 8, 2020
+# Date last modified: Nov 2, 2020
 #
 # Use tximeta to read in quant files (output from alevin) into SummarizedExperiment files
 
@@ -84,14 +84,13 @@ pipeline = "intronseparate" # "transcripts" or "preandmrna" or "introncollapse/s
 # Import with tximeta
 # Note: alevin import currently only supports a single experiment at a time
 for(pipeline in c("transcripts", "preandmrna", "introncollapse", "intronseparate")){
-  run_names = gsub("_quant", "", basename(list.dirs(here("mouse_cortex", "salmon_quants", paste0(pipeline, "_pipeline")), recursive = F)))
-  run_names = run_names[!grepl("nodecoys", run_names)]
+  cortex_names = c("cortex1", "cortex2")
   
-  file_paths = here("mouse_cortex", "salmon_quants", paste0(pipeline, "_pipeline"), paste0(run_names, "_quant"), "alevin", "quants_mat.gz") 
+  file_paths = here("mouse_cortex", "salmon_quants", paste0(pipeline, "_pipeline"), paste0(cortex_names, "_quant"), "alevin", "quants_mat.gz") 
   
-  for(i in 1:length(run_names)){
+  for(i in 1:length(cortex_names)){
     print(file_paths[i])
-    se = tximeta(coldata = data.frame(names = run_names[i],
+    se = tximeta(coldata = data.frame(names = cortex_names[i],
                                       files = file_paths[i],
                                       stringsAsFactors = FALSE),
                  type = "alevin")
@@ -102,6 +101,6 @@ for(pipeline in c("transcripts", "preandmrna", "introncollapse", "intronseparate
     rowRanges(se)
     
     # Save SummarizedExperiment object
-    saveRDS(se, here("mouse_cortex", "salmon_quants", paste0(pipeline, "_pipeline"), paste0("se_", run_names[i], ".rds")))
+    saveRDS(se, here("mouse_cortex", "salmon_quants", paste0(pipeline, "_pipeline"), paste0("se_", cortex_names[i], ".rds")))
   }
 }

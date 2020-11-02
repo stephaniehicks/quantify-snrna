@@ -23,28 +23,28 @@ se_ls[["introncollapse"]] = readRDS(here("mouse_cortex", "salmon_quants", "intro
 se_ls[["intronseparate"]] = readRDS(here("mouse_cortex", "salmon_quants", "intronseparate_pipeline", paste0("se_", run_number, ".rds")))
 
 # Combine counts for same cell barcode
-for(i in seq_along(se_ls)){
-  se = se_ls[[i]]
-  # Sum up counts
-  m = assay(se, "counts")
-  colnames(m) = paste0(colData(se)$cortex, "_", colnames(m)) # colnames format is Cortex1_CGACTTCAGTCTCGGC
-  m = colsum(m, colnames(m))                                 # Sum up counts for same column name
-  
-  # Create new colData
-  col_data = colData(se) %>% 
-    as_tibble() %>%
-    select(-Run, -flow_cell, -lane) %>%
-    mutate(cell_barcode = paste0(cortex, "_", rownames(colData(se)))) %>%
-    distinct() %>%
-    left_join(data.frame(cell_barcode = colnames(m)), . , by = "cell_barcode") # Arrange in same order as m
-  
-  # Create new SE
-  se_new = SummarizedExperiment(assays = SimpleList(counts = m),
-                                colData = col_data,
-                                rowData = rowData(se))
-  
-  se_ls[[i]] = se_new
-}
+# for(i in seq_along(se_ls)){
+#   se = se_ls[[i]]
+#   # Sum up counts
+#   m = assay(se, "counts")
+#   colnames(m) = paste0(colData(se)$cortex, "_", colnames(m)) # colnames format is Cortex1_CGACTTCAGTCTCGGC
+#   m = colsum(m, colnames(m))                                 # Sum up counts for same column name
+#   
+#   # Create new colData
+#   col_data = colData(se) %>% 
+#     as_tibble() %>%
+#     select(-Run, -flow_cell, -lane) %>%
+#     mutate(cell_barcode = paste0(cortex, "_", rownames(colData(se)))) %>%
+#     distinct() %>%
+#     left_join(data.frame(cell_barcode = colnames(m)), . , by = "cell_barcode") # Arrange in same order as m
+#   
+#   # Create new SE
+#   se_new = SummarizedExperiment(assays = SimpleList(counts = m),
+#                                 colData = col_data,
+#                                 rowData = rowData(se))
+#   
+#   se_ls[[i]] = se_new
+# }
 
 # Quality control
 sce_ls = list()
