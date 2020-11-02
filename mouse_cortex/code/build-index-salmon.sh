@@ -2,7 +2,7 @@
 #$ -cwd
 #$ -o log/
 #$ -e log/
-#$ -l mem_free=30G,h_vmem=30G,h_fsize=30G
+#$ -l mem_free=10G,h_vmem=10G,h_fsize=30G
 
 # mem_free=30G,h_vmem=30G,h_fsize=30G (preandmrna index)
 # mem_free=25G,h_vmem=25G,h_fsize=30G (intron index)
