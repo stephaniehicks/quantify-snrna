@@ -7,5 +7,5 @@
 d=/fastscratch/myscratch/akuo/alsf-filbin
 
 # run script
-module load conda_R
+module load conda_R/4.0
 R CMD BATCH pca-plots.R
