@@ -66,20 +66,10 @@ pipeline = "intronseparate" # "transcripts" or "preandmrna" or "introncollapse/s
 #                 jsonFile=json_file) # this command will add the index to the cache automatically
 # 
 # load linkedTxome json file if not already in cache (it should automatically be in cache when you create it)
-# if(pipeline == "transcripts"){
-#   json_file = here("mouse_cortex", "salmon_files", "gencode.vM25_salmon-index-v1.0.0-transcripts-mouse.json")
-#   json_file = "/fastscratch/myscratch/akuo/alsf-filbin/mouse_cortex/salmon_files/gencode.vM25_salmon-index-v1.0.0-transcripts-mouse.json"
-#   loadLinkedTxome(json_file)
-# } else if(pipeline == "preandmrna"){
-#   json_file = here("mouse_cortex", "salmon_files", "gencode.vM25_salmon-index-v1.0.0-preandmrna-mouse.json")
-#   loadLinkedTxome(json_file)
-# } else if(pipeline == "introncollapse"){
-#   json_file = here("mouse_cortex", "salmon_files", "gencode.vM25_salmon-index-v1.0.0-introncollapse-mouse.json")
-#   loadLinkedTxome(json_file)
-# } else if(pipeline == "intronseparate"){
-#   json_file = here("mouse_cortex", "salmon_files", "gencode.vM25_salmon-index-v1.0.0-intronseparate-mouse.json")
-#   loadLinkedTxome(json_file)
-# }
+for(pipeline in c("transcripts", "preandmrna", "introncollapse", "intronseparate")){
+  json_file = here("mouse_cortex", "salmon_files", paste0("gencode.vM25_salmon-index-v1.0.0-", pipeline, "-mouse.json"))
+  loadLinkedTxome(json_file)
+} 
 
 # Import with tximeta
 # Note: alevin import currently only supports a single experiment at a time
