@@ -1,7 +1,7 @@
 # save-sce.R
 # -----------------------------------------------------------------------------
 # Author:             Albert Kuo
-# Date last modified: Oct 13, 2020
+# Date last modified: Nov 4, 2020
 #
 # Quality control, run PCA, add cell type labels, and save as SingleCellExperiment 
 
@@ -89,8 +89,13 @@ meta_ding_10x = meta_ding %>%
   filter(Method == "10x Chromium") %>%
   mutate(cell_barcode = paste0(Experiment, "_", gsub("Cortex.*10xChromium", "", NAME)))
 
+capFirst <- function(s){
+  paste0(toupper(substring(s, 1, 1)), substring(s, 2))
+}
+
 for(i in seq_along(sce_ls)){
   sce = sce_ls[[i]]
+  colnames(sce) = paste0(capFirst(colData(sce)$cortex), "_", colnames(sce)) # colnames format is Cortex1_CGACTTCAGTCTCGGC
   
   match_cols = match(colnames(sce), meta_ding_10x$cell_barcode)
   colData(sce)$ding_labels = meta_ding_10x$CellType[match_cols]
