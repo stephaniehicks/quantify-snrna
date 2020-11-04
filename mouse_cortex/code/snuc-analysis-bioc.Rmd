@@ -128,8 +128,7 @@ for(gene_type in c("protein_coding", "lincRNA", "antisense", "processed_pseudoge
     geom_boxplot() +
     # geom_label(data = summ, aes(x = pipeline, y = median, 
     #                             label = round(median, 0))) +
-    labs(x = "Pipeline",
-         y = "Library size") +
+    labs(x = "Pipeline") +
     facet_wrap(~ cortex) +
     theme_bw()
   
@@ -184,14 +183,14 @@ PCA done in `save-sce.R`. To generate and save these plots, run `distribution-pl
 
 ```{r}
 # PCA colored by provided attribute
-plotReducedDim(sce_ls[["preandmrna"]], "PCA", colour_by = "ding_labels", point_size = 1)
+plotReducedDim(sce_ls[["preandmrna"]], "PCA", colour_by = "singleR_labels_pruned", point_size = 1)
 ```
 
 ### HVG
 
 https://osca.bioconductor.org/feature-selection.html
 
-```{r}
+```{r fig.width=5, fig.height=5}
 hvg_tb = tibble(gene = rownames(sce_ls[["transcripts"]]))
 
 # Transcripts
@@ -274,7 +273,7 @@ Some of these plots can be generated and saved by running `celltype-plots.R`.
 
 ```{r}
 # Get overlap with singleR labels
-tb = as_tibble(colData(sce_ls[["transcripts"]]))
+tb = as_tibble(colData(sce_ls[["preandmrna"]]))
 overlap = table(tb$singleR_labels_pruned, tb$ding_labels, useNA = "ifany") %>%
   as.data.frame()
 
@@ -627,7 +626,7 @@ sce_sub = sce[, colData(sce)$ding_labels == cell_type & !is.na(colData(sce)$ding
 dim(sce_sub)
 
 # Subset to cortex
-sce_sub = sce_sub[, colData(sce_sub)$cortex == "Cortex1"]
+sce_sub = sce_sub[, colData(sce_sub)$cortex == "cortex1"]
 dim(sce_sub)
 ```
 
@@ -829,7 +828,7 @@ tibble(p_value = p_values_pois) %>%
   geom_histogram() +
   theme_bw()
 
-sum(p_values_pois < 0.05/length(p_values_pois), na.rm = T)/length(p_values_pois)
+sum(p_values_pois < 0.05, na.rm = T)/length(p_values_pois)
 ```
 
 ```{r}
@@ -874,7 +873,7 @@ tibble(p_value = p_values_nb) %>%
   geom_histogram() +
   theme_bw()
 
-sum(p_values_nb < 0.05/length(p_values_nb), na.rm = T)/length(p_values_nb)
+sum(p_values_nb < 0.05, na.rm = T)/length(p_values_nb)
 ```
 
 ##### By Sample
@@ -908,7 +907,7 @@ plot_dt %>%
              color = percentile_color)) + 
   geom_point(size = 0.5) + 
   geom_abline(slope = 1, intercept = 0) +
-  # coord_cartesian(ylim = c(0, 10000)) +
+  coord_cartesian(ylim = c(250, 1000)) +
   theme_bw()
 ```
 
