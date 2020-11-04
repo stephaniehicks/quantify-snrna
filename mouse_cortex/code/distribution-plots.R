@@ -22,7 +22,7 @@ source(here("./mouse_cortex/code/distribution-plots-helpers.R"))
 task_id = as.integer(Sys.getenv("SGE_TASK_ID"))
 pipeline_ls = c("transcripts", "preandmrna", "intronseparate", "introncollapse")
 cell_type_ls = c("Excitatory neuron", "Inhibitory neuron", "Astrocyte", "Oligodendrocyte", "OPC", "Endothelial", "Microglia")
-cortex_ls = c("Cortex1", "Cortex2")
+cortex_ls = c("cortex1", "cortex2")
 
 pipeline = pipeline_ls[ceiling(task_id/(length(cortex_ls)*length(cell_type_ls)))]
 cell_type = cell_type_ls[ceiling(task_id/length(cortex_ls)) %% length(cell_type_ls) + 1]
