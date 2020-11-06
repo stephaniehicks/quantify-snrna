@@ -814,7 +814,8 @@ for(i in 1:nrow(counts_sub_cluster_scaled)){
   f_obs = c(f_obs, 0) # Observed value
   f_hyp = c(f_hyp, other_value) # Expected value
   
-  df = length(bins) - 1
+  p = 1 
+  df = (length(bins) + 1) - p - 1
   chiSquare.pois = sum((f_obs-f_hyp)^2/f_hyp)
   
   df_pois = c(df_pois, df)
@@ -857,7 +858,8 @@ for(i in 1:nrow(counts_sub_cluster_scaled)){
   f_obs = c(f_obs, 0) # Observed value
   f_hyp = c(f_hyp, other_value) # Expected value
   
-  df = length(bins) - 1
+  p = 2
+  df = (length(bins) + 1) - p - 1
   chiSquare.nb = sum((f_obs-f_hyp)^2/f_hyp)
   
   df_nb = c(df_nb, df)
