@@ -177,6 +177,69 @@ genes_rowsums_tb %>%
 ```
 
 
+#### Binned by GC content
+
+```{r}
+library(EDASeq)
+
+id = rownames(sce_ls[["transcripts"]])[1]
+id = sub("\\..*", "", id)
+org = "mmu"
+getGeneLengthAndGCContent(id, org, mode=c("biomart"))
+getGeneLengthAndGCContent(id, org, mode=c("org.db"))
+```
+
+
+#### Binned by length
+
+```{r}
+genes_rowsums_tb = tibble(gene = rownames(sce_ls[["transcripts"]]))
+common_cells = Reduce(intersect, sapply(sce_ls, colnames)) 
+for(i in seq_along(sce_ls)){
+  pipeline_name = names(sce_ls)[i]
+  sce = sce_ls[[i]]
+  m = counts(sce)
+  genes_rowsums = rowSums(m)
+  tmp_tb = tibble(gene = names(genes_rowsums),
+                  !!pipeline_name := genes_rowsums)
+  genes_rowsums_tb = genes_rowsums_tb %>%
+    left_join(., tmp_tb, by = "gene")
+}
+
+# Calculate overall expression and increase
+genes_rowsums_tb = genes_rowsums_tb %>%
+  mutate(median_exp = median(transcripts, preandmrna, introncollapse, intronseparate),
+         preandmrna_percent_inc = (preandmrna - transcripts)/transcripts)
+
+# Bin by length
+genes_length_tb = rowData(sce_ls[["transcripts"]]) %>%
+  as_tibble() %>%
+  select(start, end) %>%
+  mutate(length = end - start,
+         gene = rownames(rowData(sce_ls[["transcripts"]]))) %>%
+  select(gene, length)
+
+genes_rowsums_tb = genes_rowsums_tb %>%
+  left_join(genes_length_tb, by = "gene")
+  
+# Median % increase in each bin
+genes_rowsums_tb = genes_rowsums_tb %>%
+  mutate(bin = ntile(length, 10))
+
+genes_rowsums_tb %>%
+  group_by(bin) %>%
+  summarize(preandmrna_percent_inc_median = median(preandmrna_percent_inc, na.rm = T))
+
+genes_rowsums_tb %>%
+  ggplot(aes(x = as.factor(bin), y = preandmrna_percent_inc)) + 
+  geom_boxplot() +
+  scale_y_log10() +
+  labs(x = "Bin (by gene length)") +
+  theme_bw()
+```
+
+
+
 ### PCA
 
 PCA done in `save-sce.R`. To generate and save these plots, run `distribution-plots.R`.
