@@ -653,12 +653,14 @@ library(apeglm)
 sce_sub = sce_ls[["preandmrna"]][, colData(sce_ls[["preandmrna"]])$ding_labels %in% c("Excitatory neuron", "Inhibitory neuron")]
 
 # Store counts and intermediate quantities (dds is a SummarizedExperiment)
-dds = DESeqDataSetFromMatrix(countData = ceiling(counts(sce_sub)), # take integers 
+dds = DESeqDataSetFromMatrix(countData = ceiling(counts(sce_sub)[1:10, ]), # take integers 
                              colData = colData(sce_sub),
                              design = ~ cortex + ding_labels)
 
 # Compute log2fold change and p-values
+tic()
 dds = DESeq(dds)
+toc()
 
 res = results(dds)
 res
@@ -669,6 +671,19 @@ resLFC = lfcShrink(dds, coef="ding_labels_Inhibitory.neuron_vs_Excitatory.neuron
 
 # MA plot for shrunken log2 fold change
 plotMA(resLFC)
+
+# Add gene length to table
+genes_length_tb = rowData(sce_ls[["preandmrna"]]) %>%
+  as_tibble() %>%
+  select(start, end) %>%
+  mutate(length = end - start,
+         gene = rownames(rowData(sce_ls[["preandmrna"]]))) %>%
+  select(gene, length)
+
+res = res %>%
+  as_tibble() %>%
+  mutate(gene = rownames(res)) %>%
+  left_join(., genes_length_tb, by = "gene")
 ```
 
 ### Distributions
