@@ -24,7 +24,7 @@ sce_ls[["intronseparate"]] = readRDS(here("mouse_cortex", "salmon_quants", "intr
 
 
 
-pipeline = "preandmnra"
+pipeline = "preandmrna"
 sce_sub = sce_ls[[pipeline]][, colData(sce_ls[[pipeline]])$ding_labels %in% c("Excitatory neuron", "Inhibitory neuron")]
 
 # Store counts and intermediate quantities (dds is a SummarizedExperiment)
