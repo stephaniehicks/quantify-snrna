@@ -11,6 +11,7 @@ suppressPackageStartupMessages({
   library(SingleCellExperiment)
   library(DESeq2)
   library(apeglm)
+  library(tictoc)
 })
 
 
