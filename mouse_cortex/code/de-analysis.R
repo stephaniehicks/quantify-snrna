@@ -25,7 +25,7 @@ sce_ls[["intronseparate"]] = readRDS(here("mouse_cortex", "salmon_quants", "intr
 
 
 
-pipeline = "preandmrna"
+pipeline = "transcripts"
 sce_sub = sce_ls[[pipeline]][, colData(sce_ls[[pipeline]])$ding_labels %in% c("Excitatory neuron", "Inhibitory neuron")]
 
 # Store counts and intermediate quantities (dds is a SummarizedExperiment)
@@ -61,4 +61,4 @@ res = res %>%
   mutate(gene = rownames(res)) %>%
   left_join(., genes_length_tb, by = "gene")
 
-saveRDS(res, here("./mouse_cortex/output/res.rds"))
+saveRDS(res, here("./mouse_cortex/output/de_transcripts.rds"))

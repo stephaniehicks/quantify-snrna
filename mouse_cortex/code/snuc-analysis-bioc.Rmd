@@ -686,6 +686,36 @@ res = res %>%
   left_join(., genes_length_tb, by = "gene")
 ```
 
+
+* The adjusted pvalue, `padj`, comes from the "BH" method of the p.adjust() function in the stats package. Sources: https://support.bioconductor.org/p/74097/, https://www.biostars.org/p/325750/ 
+* deseq does "independent filtering" to filter out lowly expressed genes before calculating padj
+
+
+```{r}
+res = readRDS(here("./mouse_cortex/output/de_preandmrna.rds"))
+res %>%
+  ggplot(aes(x = length, y = pvalue)) + 
+  geom_point(alpha = 0.01) +
+  geom_smooth() +
+  scale_x_log10() +
+  theme_bw()
+
+res %>%
+  ggplot(aes(x = length, y = padj)) + 
+  geom_point(alpha = 0.01) +
+  geom_smooth() +
+  scale_x_log10() +
+  theme_bw()
+
+res %>%
+  ggplot(aes(x = length, y = log2FoldChange)) + 
+  geom_point(alpha = 0.01) +
+  geom_smooth() +
+  scale_x_log10() +
+  theme_bw()
+```
+
+
 ### Distributions
 
 To assess distributions, we want to obtain a homogenous group of cells.
