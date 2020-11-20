@@ -692,22 +692,46 @@ res = res %>%
 
 
 ```{r}
-res = readRDS(here("./mouse_cortex/output/de_preandmrna.rds"))
+pipeline = "preandmrna"
+res = readRDS(here(paste0("./mouse_cortex/output/de_", pipeline, ".rds")))
+
+res = res %>%
+  left_join(., genes_rowsums_tb, by = "gene") # from binned by overall expression
+
+# Raw p-values
 res %>%
+  filter(!is.na(preandmrna)) %>%
   ggplot(aes(x = length, y = pvalue)) + 
-  geom_point(alpha = 0.01) +
+  geom_point(aes(color = log1p(preandmrna)), alpha = 0.05) +
   geom_smooth() +
+  scale_colour_gradientn(colours = terrain.colors(10)) +
   scale_x_log10() +
   theme_bw()
 
+# DESeq adjusted p-values (BH)
 res %>%
+  filter(!is.na(preandmrna)) %>%
   ggplot(aes(x = length, y = padj)) + 
-  geom_point(alpha = 0.01) +
+  geom_point(aes(color = log1p(preandmrna)), alpha = 0.05) +
   geom_smooth() +
+  scale_colour_gradientn(colours = terrain.colors(10)) +
   scale_x_log10() +
   theme_bw()
 
+# Manually adjusted p-values (BH)
 res %>%
+  filter(!is.na(preandmrna)) %>%
+  mutate(padj_manual = p.adjust(pvalue, method = "BH")) %>%
+  ggplot(aes(x = length, y = padj_manual)) + 
+  geom_point(aes(color = log1p(preandmrna)), alpha = 0.05) +
+  geom_smooth() +
+  scale_colour_gradientn(colours = terrain.colors(10)) +
+  scale_x_log10() +
+  theme_bw()
+
+# Log2Fold Change
+res %>%
+  filter(!is.na(preandmrna)) %>%
   ggplot(aes(x = length, y = log2FoldChange)) + 
   geom_point(alpha = 0.01) +
   geom_smooth() +
