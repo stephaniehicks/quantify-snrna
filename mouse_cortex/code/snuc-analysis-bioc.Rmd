@@ -159,12 +159,12 @@ for(i in seq_along(sce_ls)){
 
 # Calculate overall expression and increase
 genes_rowsums_tb = genes_rowsums_tb %>%
-  mutate(median_exp = median(transcripts, preandmrna, introncollapse, intronseparate),
+  mutate(mean_exp = rowMeans(select(genes_rowsums_tb, c("transcripts", "preandmrna", "introncollapse", "intronseparate")), na.rm = T),
          preandmrna_percent_inc = (preandmrna - transcripts)/transcripts)
 
 # Median % increase in each bin
 genes_rowsums_tb = genes_rowsums_tb %>%
-  mutate(bin = ntile(median_exp, 10))
+  mutate(bin = ntile(mean_exp, 10))
 genes_rowsums_tb %>%
   group_by(bin) %>%
   summarize(preandmrna_percent_inc_median = median(preandmrna_percent_inc, na.rm = T))
@@ -206,10 +206,9 @@ for(i in seq_along(sce_ls)){
     left_join(., tmp_tb, by = "gene")
 }
 
-# Calculate overall expression and increase
+# Calculate % increase
 genes_rowsums_tb = genes_rowsums_tb %>%
-  mutate(median_exp = median(transcripts, preandmrna, introncollapse, intronseparate),
-         preandmrna_percent_inc = (preandmrna - transcripts)/transcripts)
+  mutate(preandmrna_percent_inc = (preandmrna - transcripts)/transcripts)
 
 # Bin by length
 genes_length_tb = rowData(sce_ls[["transcripts"]]) %>%
