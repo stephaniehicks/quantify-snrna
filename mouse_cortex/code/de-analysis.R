@@ -85,4 +85,4 @@ res = res %>%
   mutate(gene = rownames(res)) %>%
   left_join(., genes_length_tb, by = "gene")
 
-saveRDS(res, here("./mouse_cortex/output/de_transcripts.rds"))
+saveRDS(res, here("./mouse_cortex/output/de_transcripts_norm.rds"))

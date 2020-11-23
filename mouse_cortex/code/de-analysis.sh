@@ -1,7 +1,7 @@
 #$ -cwd
 #$ -o log/
 #$ -e log/
-#$ -l mem_free=25G,h_vmem=25G
+#$ -l mem_free=35G,h_vmem=35G
 
 # set project directory path
 d=/fastscratch/myscratch/akuo/alsf-filbin
