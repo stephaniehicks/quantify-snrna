@@ -1,7 +1,7 @@
 # de-analysis.R
 # -----------------------------------------------------------------------------
 # Author:             Albert Kuo
-# Date last modified: Nov 23, 2020
+# Date last modified: Dec 2, 2020
 #
 # Differential expression analysis
 
@@ -32,7 +32,7 @@ genes_length_tb = rowData(sce_sub) %>%
   as_tibble() %>%
   select(start, end) %>%
   mutate(length = end - start,
-         gene = rownames(rowData(sce_ls[["transcripts"]]))) %>%
+         gene = rownames(rowData(sce_ls[[pipeline]]))) %>%
   select(gene, length)
 genes_length_tb = as.data.frame(genes_length_tb)
 rownames(genes_length_tb) = genes_length_tb$gene
@@ -43,6 +43,7 @@ seq_data = newSeqExpressionSet(counts = as.matrix(counts(sce_sub)),
                                phenoData = as.data.frame(colData(sce_sub)))
 tic("normalize with EDASeq")
 seq_data_within = withinLaneNormalization(seq_data, "length", which = "full", offset = TRUE)
+seq_data_norm = betweenLaneNormalization(seq_data_within, which = "full")
 toc()
 
 # Store counts and intermediate quantities (dds is a SummarizedExperiment)
@@ -50,10 +51,10 @@ toc()
 #                              colData = colData(sce_sub),
 #                              design = ~ cortex + ding_labels)
 
-dds = DESeqDataSetFromMatrix(countData = ceiling(counts(seq_data_within)[, ]), # take integers 
-                             colData = pData(seq_data_within),
+dds = DESeqDataSetFromMatrix(countData = ceiling(counts(seq_data_norm)[, ]), # take integers 
+                             colData = pData(seq_data_norm),
                              design = ~ cortex + ding_labels)
-normFactors <- exp(-1 * offst(seq_data_within))
+normFactors <- exp(-1 * offst(seq_data_norm))
 normFactors <- normFactors / exp(rowMeans(log(normFactors)))
 normalizationFactors(dds) <- normFactors
 
@@ -85,4 +86,4 @@ res = res %>%
   mutate(gene = rownames(res)) %>%
   left_join(., genes_length_tb, by = "gene")
 
-saveRDS(res, here("./mouse_cortex/output/de_transcripts_norm.rds"))
+saveRDS(res, here(paste0("./mouse_cortex/output/de_", pipeline, "_norm.rds")))
