@@ -934,7 +934,7 @@ df_pois = c()
 for(i in 1:nrow(counts_sub_cluster_scaled)){
   # message(i)
   x = counts_sub_cluster_scaled[i,]
-  x = ceiling(x) 
+  # x = ceiling(x) 
   
   poisson_fit = fitdistr(x, "poisson")
   lambda_fit = poisson_fit$estimate["lambda"]
@@ -950,7 +950,7 @@ for(i in 1:nrow(counts_sub_cluster_scaled)){
   f_hyp = c(f_hyp, other_value) # Expected value
   
   p = 1 
-  df = (length(bins) + 1) - p - 1
+  df = (length(bins) + 1) - p
   chiSquare.pois = sum((f_obs-f_hyp)^2/f_hyp)
   
   df_pois = c(df_pois, df)
@@ -994,7 +994,7 @@ for(i in 1:nrow(counts_sub_cluster_scaled)){
   f_hyp = c(f_hyp, other_value) # Expected value
   
   p = 2
-  df = (length(bins) + 1) - p - 1
+  df = (length(bins) + 1) - p
   chiSquare.nb = sum((f_obs-f_hyp)^2/f_hyp)
   
   df_nb = c(df_nb, df)
@@ -1044,7 +1044,7 @@ plot_dt %>%
              color = percentile_color)) + 
   geom_point(size = 0.5) + 
   geom_abline(slope = 1, intercept = 0) +
-  coord_cartesian(ylim = c(250, 1000)) +
+  # coord_cartesian(ylim = c(250, 1000)) +
   theme_bw()
 ```
 
