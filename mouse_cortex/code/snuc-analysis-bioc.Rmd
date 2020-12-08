@@ -1048,6 +1048,16 @@ plot_dt %>%
   theme_bw()
 ```
 
+```{r}
+# Histogram of p-values
+plot_dt = plot_dt %>%
+  mutate(p_value = 1 - pchisq(chi_obs, df = ncol(counts_sub_cluster_scaled) - 1))
+plot_dt %>%
+  ggplot(aes(x = p_value)) + 
+  geom_histogram() +
+  theme_bw()
+```
+
 
 #### BIC log-likelihood
 
