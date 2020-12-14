@@ -959,9 +959,21 @@ for(i in 1:nrow(counts_sub_cluster_scaled)){
 }
 toc()
 
-tibble(p_value = p_values_pois) %>%
+plot_dt = tibble(p_value = p_values_pois,
+                 expression = rowSums(counts_sub_cluster_scaled))
+
+plot_dt %>%
+  filter(expression > 50) %>%
   ggplot(aes(x = p_value)) + 
   geom_histogram() +
+  theme_bw()
+
+plot_dt %>%
+  # filter(expression > 50) %>%
+  ggplot(aes(x = p_value, y = expression)) + 
+  geom_point(size = 0.1, alpha = 0.1) +
+  geom_smooth() +
+  scale_y_log10() +
   theme_bw()
 
 sum(p_values_pois < 0.05, na.rm = T)/length(p_values_pois)
@@ -975,6 +987,7 @@ chi_nb = c()
 df_nb = c()
 for(i in 1:nrow(counts_sub_cluster_scaled)){
   # message(i)
+  if(i == 4061) next
   tryCatch({
   x = counts_sub_cluster_scaled[i,]
   x = ceiling(x)
@@ -1005,9 +1018,21 @@ for(i in 1:nrow(counts_sub_cluster_scaled)){
 toc()
 
 
-tibble(p_value = p_values_nb) %>%
+plot_dt = tibble(p_value = p_values_nb,
+                 expression = rowSums(counts_sub_cluster_scaled)[setdiff(1:nrow(counts_sub_cluster_scaled), 4061)])
+
+plot_dt %>%
+  filter(expression > 50) %>%
   ggplot(aes(x = p_value)) + 
   geom_histogram() +
+  theme_bw()
+
+plot_dt %>%
+  # filter(expression > 50) %>%
+  ggplot(aes(x = p_value, y = expression)) + 
+  geom_point(size = 0.1, alpha = 0.1) +
+  geom_smooth() +
+  scale_y_log10() +
   theme_bw()
 
 sum(p_values_nb < 0.05, na.rm = T)/length(p_values_nb)
@@ -1036,7 +1061,8 @@ plot_dt = tibble(chi_obs = sort(chiSquare.pois),
                  percentile_color = case_when(chi_obs > quantile(chi_obs, 0.995) ~ "> 99.5",
                                         chi_obs > quantile(chi_obs, 0.95) ~ "> 95",
                                         chi_obs > quantile(chi_obs, 0.90) ~ "> 90",
-                                        T ~ "rest"))
+                                        T ~ "rest"),
+                 expression = rowSums(counts_sub_cluster_scaled))
 
 plot_dt %>%
   ggplot(aes(x = chi_quantile,
@@ -1045,6 +1071,16 @@ plot_dt %>%
   geom_point(size = 0.5) + 
   geom_abline(slope = 1, intercept = 0) +
   # coord_cartesian(ylim = c(250, 1000)) +
+  theme_bw()
+
+plot_dt %>%
+  filter(expression > 50) %>%
+  ggplot(aes(x = chi_quantile,
+             y = chi_obs,
+             color = expression)) + 
+  geom_point(size = 0.5) + 
+  geom_abline(slope = 1, intercept = 0) +
+  coord_cartesian(ylim = c(250, 1000)) +
   theme_bw()
 ```
 
