@@ -1,0 +1,33 @@
+---
+title: "droplet single-cell RNA data"
+author: "Albert Kuo"
+date: "12/14/2020"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+Investigate distributions in single-cell RNA data:
+
+* https://www.nature.com/articles/s41587-019-0379-5 
+* https://www.nxn.se/valent/2017/11/16/droplet-scrna-seq-is-not-zero-inflated
+* https://data.caltech.edu/records/1264
+
+How to read in H5AD files into R:
+* http://www.bioconductor.org/packages/devel/bioc/vignettes/zellkonverter/inst/doc/zellkonverter.html
+
+We want to apply goodness-of-fit tests to the negative control single-cell RNA data used by Valentine and see how it compares to results for our single-nucleus RNA mouse cortex data.
+
+## Data
+
+```{r}
+library(zellkonverter)
+library(here)
+```
+
+```{r}
+svensson_1 = readH5AD(here("./scrna/Svensson et al 2017 (1).h5ad"))
+```
+
