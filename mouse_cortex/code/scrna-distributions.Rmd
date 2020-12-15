@@ -23,11 +23,206 @@ We want to apply goodness-of-fit tests to the negative control single-cell RNA d
 ## Data
 
 ```{r}
-library(zellkonverter)
-library(here)
+suppressPackageStartupMessages({
+  library(zellkonverter)
+  library(here)
+  library(SingleCellExperiment)
+  library(tictoc)
+  library(tidyverse)
+})
+source(here("./mouse_cortex/code/distribution-plots-helpers.R"))
 ```
 
 ```{r}
 svensson_1 = readH5AD(here("./scrna/Svensson et al 2017 (1).h5ad"))
+counts_sub_cluster = assay(svensson_1, "X")
+tic("downsample")
+counts_sub_cluster_scaled = Down_Sample_Matrix(ceiling(counts_sub_cluster))
+toc()
+counts_sub_cluster_scaled = counts_sub_cluster_scaled[, 1:500]
+counts_sub_cluster_scaled = counts_sub_cluster_scaled[rowSums(counts_sub_cluster_scaled) != 0, ]
 ```
 
+#### Goodness-of-fit tests
+
+##### By Count Values
+
+There are 2 issues:
+
+1) Why is quant matrix not all integers?
+2) Why are NaNs produced/non-finite finite-difference value errors occur in fitdistr("negative binomial")?
+
+```{r eval = F}
+library(MASS)
+
+# Poisson
+tic()
+p_values_pois = c()
+chi_pois = c()
+df_pois = c()
+for(i in 1:nrow(counts_sub_cluster_scaled)){
+  # message(i)
+  if(i %% 1000 == 0) print(i)
+  x = counts_sub_cluster_scaled[i,]
+  # x = ceiling(x) 
+  
+  poisson_fit = fitdistr(x, "poisson")
+  lambda_fit = poisson_fit$estimate["lambda"]
+  n_samples = length(x)
+  f_obs = table(x)
+  
+  bins = as.numeric(names(f_obs))
+  probs = dpois(bins, lambda = lambda_fit)
+  f_hyp = probs*n_samples
+  other_value = (1 - sum(probs))*n_samples
+  
+  f_obs = c(f_obs, 0) # Observed value
+  f_hyp = c(f_hyp, other_value) # Expected value
+  
+  p = 1 
+  df = (length(bins) + 1) - p
+  chiSquare.pois = sum((f_obs-f_hyp)^2/f_hyp)
+  
+  df_pois = c(df_pois, df)
+  chi_pois = c(chi_pois, chiSquare.pois)
+  p_values_pois = c(p_values_pois, 1 - pchisq(chiSquare.pois, df = df))
+}
+toc()
+
+plot_dt = tibble(p_value = p_values_pois,
+                 expression = rowSums(counts_sub_cluster_scaled))
+
+plot_dt %>%
+  # filter(expression > 50) %>%
+  ggplot(aes(x = p_value)) + 
+  geom_histogram() +
+  theme_bw()
+
+plot_dt %>%
+  filter(expression > 50) %>%
+  ggplot(aes(x = p_value, y = expression)) + 
+  geom_point(size = 0.1, alpha = 0.1) +
+  geom_smooth() +
+  scale_y_log10() +
+  theme_bw()
+
+sum(p_values_pois < 0.05, na.rm = T)/length(p_values_pois)
+```
+
+```{r}
+# Negative binomial
+tic()
+p_values_nb = c()
+chi_nb = c()
+df_nb = c()
+ind = c()
+for(i in 1:nrow(counts_sub_cluster_scaled)){
+  # message(i)
+  t = tryCatch({
+    x = counts_sub_cluster_scaled[i,]
+    x = ceiling(x)
+    
+    nb_fit = suppressWarnings(fitdistr(x, "negative binomial"))
+    r_fit = nb_fit$estimate['size']
+    p_fit = r_fit / (nb_fit$estimate['mu'] + r_fit)
+    n_samples = length(x)
+    f_obs = table(x)
+    
+    bins = as.numeric(names(f_obs))
+    probs = dnbinom(bins, size = r_fit, prob = p_fit)
+    f_hyp = probs*n_samples
+    other_value = (1 - sum(probs))*n_samples
+    
+    f_obs = c(f_obs, 0) # Observed value
+    f_hyp = c(f_hyp, other_value) # Expected value
+    
+    p = 2
+    df = (length(bins) + 1) - p
+    chiSquare.nb = sum((f_obs-f_hyp)^2/f_hyp)
+    
+    df_nb = c(df_nb, df)
+    chi_nb = c(chi_nb, chiSquare.nb)
+    p_values_nb = c(p_values_nb, 1 - pchisq(chiSquare.nb, df = df))}, 
+    error = function(e){})
+  if("NULL" %in% class(t)){
+    ind = c(ind, i)
+  }
+}
+toc()
+
+
+plot_dt = tibble(p_value = p_values_nb,
+                 expression = rowSums(counts_sub_cluster_scaled)[setdiff(1:nrow(counts_sub_cluster_scaled), ind)])
+
+plot_dt %>%
+  # filter(expression > 50) %>%
+  ggplot(aes(x = p_value)) + 
+  geom_histogram() +
+  theme_bw()
+
+plot_dt %>%
+  # filter(expression > 50) %>%
+  ggplot(aes(x = p_value, y = expression)) + 
+  geom_point(size = 0.1, alpha = 0.1) +
+  geom_smooth() +
+  scale_y_log10() +
+  theme_bw()
+
+sum(p_values_nb < 0.05, na.rm = T)/length(p_values_nb)
+```
+
+##### By Sample
+
+This is based on Figure 2 from this paper: https://genome.cshlp.org/content/18/9/1509.full.html 
+
+```{r}
+# Poisson
+total_sum = sum(counts_sub_cluster_scaled)
+lambda_j = rowSums(counts_sub_cluster_scaled)/total_sum # proportion of counts in gene j
+c_i = colSums(counts_sub_cluster_scaled)/total_sum # proportion of counts in sample i (should be approximately same across i for downsampled matrix)
+mu_ij = outer(lambda_j, c_i)*total_sum
+
+f_obs = counts_sub_cluster_scaled
+f_hyp = mu_ij
+
+chiSquare.pois = rowSums((f_obs-f_hyp)^2/f_hyp) # chi-squared statistic for each gene
+df = ncol(f_obs) - 1
+
+plot_dt = tibble(chi_obs = sort(chiSquare.pois),
+                 chi_quantile = qchisq(p = (1:length(chiSquare.pois))/length(chiSquare.pois),
+                                       df = df),
+                 percentile_color = case_when(chi_obs > quantile(chi_obs, 0.995) ~ "> 99.5",
+                                        chi_obs > quantile(chi_obs, 0.95) ~ "> 95",
+                                        chi_obs > quantile(chi_obs, 0.90) ~ "> 90",
+                                        T ~ "rest"),
+                 expression = rowSums(counts_sub_cluster_scaled))
+
+plot_dt %>%
+  ggplot(aes(x = chi_quantile,
+             y = chi_obs,
+             color = percentile_color)) + 
+  geom_point(size = 0.5) + 
+  geom_abline(slope = 1, intercept = 0) +
+  coord_cartesian(ylim = c(250, 1000)) +
+  theme_bw()
+
+plot_dt %>%
+  filter(expression > 50) %>%
+  ggplot(aes(x = chi_quantile,
+             y = chi_obs,
+             color = percentile_color)) + 
+  geom_point(size = 0.5) + 
+  geom_abline(slope = 1, intercept = 0) +
+  # coord_cartesian(ylim = c(250, 1000)) +
+  theme_bw()
+
+# Histogram of p-values
+plot_dt = plot_dt %>%
+  mutate(p_value = 1 - pchisq(chi_obs, df = ncol(counts_sub_cluster_scaled) - 1))
+
+plot_dt %>%
+  # filter(expression > 50) %>%
+  ggplot(aes(x = p_value)) + 
+  geom_histogram() +
+  theme_bw()
+```
