@@ -35,7 +35,15 @@ source(here("./mouse_cortex/code/distribution-plots-helpers.R"))
 
 ```{r}
 svensson_1 = readH5AD(here("./scrna/Svensson et al 2017 (1).h5ad"))
-counts_sub_cluster = assay(svensson_1, "X")
+svensson_2 = readH5AD(here("./scrna/Svensson et al 2017 (2).h5ad"))
+zheng = readH5AD(here("./scrna/Zheng et al 2017.h5ad"))
+klein = readH5AD(here("./scrna/Klein et al 2015.h5ad"))
+```
+
+
+```{r}
+counts_sub_cluster = assay(svensson_2, "X")
+
 tic("downsample")
 counts_sub_cluster_scaled = Down_Sample_Matrix(ceiling(counts_sub_cluster))
 toc()
