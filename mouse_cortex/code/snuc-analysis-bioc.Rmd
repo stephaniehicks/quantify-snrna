@@ -927,43 +927,8 @@ There are 2 issues:
 library(MASS)
 
 # Poisson
-tic()
-p_values_pois = c()
-chi_pois = c()
-df_pois = c()
-prop5 = c()
-for(i in 1:nrow(counts_sub_cluster_scaled)){
-  # message(i)
-  x = counts_sub_cluster_scaled[i,]
-  # x = ceiling(x) 
-  
-  poisson_fit = fitdistr(x, "poisson")
-  lambda_fit = poisson_fit$estimate["lambda"]
-  n_samples = length(x)
-  f_obs = table(x)
-  
-  bins = as.numeric(names(f_obs))
-  probs = dpois(bins, lambda = lambda_fit)
-  f_hyp = probs*n_samples
-  other_value = (1 - sum(probs))*n_samples
-  
-  f_obs = c(f_obs, 0) # Observed value
-  f_hyp = c(f_hyp, other_value) # Expected value
-  prop5 = c(prop5, sum(f_hyp > 5)/length(f_hyp)) # Proportion of expected counts > 5
-  
-  
-  p = 1 
-  df = (length(bins) + 1) - p
-  chiSquare.pois = sum((f_obs-f_hyp)^2/f_hyp)
-  
-  df_pois = c(df_pois, df)
-  chi_pois = c(chi_pois, chiSquare.pois)
-  p_values_pois = c(p_values_pois, 1 - pchisq(chiSquare.pois, df = df))
-}
-toc()
-
-plot_dt = tibble(p_value = p_values_pois,
-                 prop_over_5 = prop5,
+p_values_pois = p_chisq_test(counts_sub_cluster_scaled, distribution = "poisson")
+plot_dt = tibble(p_value = p_values_pois[[1]],
                  expression = rowSums(counts_sub_cluster_scaled))
 
 plot_dt %>%
@@ -979,55 +944,13 @@ plot_dt %>%
   geom_smooth() +
   scale_y_log10() +
   theme_bw()
-
-sum(p_values_pois < 0.05, na.rm = T)/length(p_values_pois)
 ```
 
 ```{r}
 # Negative binomial
-tic()
-p_values_nb = c()
-chi_nb = c()
-df_nb = c()
-ind = c()
-for(i in 1:nrow(counts_sub_cluster_scaled)){
-  # message(i)
-  t = tryCatch({
-    x = counts_sub_cluster_scaled[i,]
-    x = ceiling(x)
-    
-    nb_fit = suppressWarnings(fitdistr(x, "negative binomial"))
-    r_fit = nb_fit$estimate['size']
-    p_fit = r_fit / (nb_fit$estimate['mu'] + r_fit)
-    n_samples = length(x)
-    f_obs = table(x)
-    
-    bins = as.numeric(names(f_obs))
-    probs = dnbinom(bins, size = r_fit, prob = p_fit)
-    f_hyp = probs*n_samples
-    other_value = (1 - sum(probs))*n_samples
-    
-    f_obs = c(f_obs, 0) # Observed value
-    f_hyp = c(f_hyp, other_value) # Expected value
-    
-    p = 2
-    df = (length(bins) + 1) - p
-    chiSquare.nb = sum((f_obs-f_hyp)^2/f_hyp)
-    
-    df_nb = c(df_nb, df)
-    chi_nb = c(chi_nb, chiSquare.nb)
-    p_values_nb = c(p_values_nb, 1 - pchisq(chiSquare.nb, df = df))}, 
-    error = function(e){})
-  
-  if("NULL" %in% class(t)){
-    ind = c(ind, i)
-  }
-}
-toc()
-
-
-plot_dt = tibble(p_value = p_values_nb,
-                 expression = rowSums(counts_sub_cluster_scaled)[setdiff(1:nrow(counts_sub_cluster_scaled), ind)])
+p_values_nb = p_chisq_test(counts_sub_cluster_scaled, distribution = "nb")
+plot_dt_nb_ls[[i]] = tibble(p_value = p_values_nb[[1]],
+                            expression = rowSums(counts_sub_cluster_scaled)[setdiff(1:nrow(counts_sub_cluster_scaled), p_values_nb[[2]])])
 
 plot_dt %>%
   filter(expression > 50) %>%

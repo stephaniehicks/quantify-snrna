@@ -187,3 +187,69 @@ nb_bic_2<-function(m,X=NULL,prefit=NULL){
   -2*ll+df*log(prod(dim(m)))
 }
 
+# Pearson's chi-squared test
+library(MASS)
+
+p_chisq_test = function(m, distribution = "poisson"){
+  ind = c() # rows that fail
+  p_values = c() # p-values for every row
+  
+  if(distribution == "poisson"){
+    for(i in 1:nrow(m)){
+      x = m[i, ]
+      poisson_fit = fitdistr(x, "poisson")
+      lambda_fit = poisson_fit$estimate["lambda"]
+      n_samples = length(x)
+      f_obs = table(x)
+      
+      bins = as.numeric(names(f_obs))
+      probs = dpois(bins, lambda = lambda_fit)
+      f_hyp = probs*n_samples
+      other_value = (1 - sum(probs))*n_samples
+      
+      f_obs = c(f_obs, 0) # Observed value
+      f_hyp = c(f_hyp, other_value) # Expected value
+      
+      p = 1 
+      df = (length(bins) + 1) - p
+      chiSquare = sum((f_obs-f_hyp)^2/f_hyp)
+      
+      p_values = c(p_values, 1 - pchisq(chiSquare, df = df))
+    }
+  } else if (distribution == "nb"){
+    for(i in 1:nrow(m)){
+      t = tryCatch({
+        x = m[i, ]
+        
+        nb_fit = suppressWarnings(fitdistr(x, "negative binomial"))
+        r_fit = nb_fit$estimate['size']
+        p_fit = r_fit / (nb_fit$estimate['mu'] + r_fit)
+        n_samples = length(x)
+        f_obs = table(x)
+        
+        bins = as.numeric(names(f_obs))
+        probs = dnbinom(bins, size = r_fit, prob = p_fit)
+        f_hyp = probs*n_samples
+        other_value = (1 - sum(probs))*n_samples
+        
+        f_obs = c(f_obs, 0) # Observed value
+        f_hyp = c(f_hyp, other_value) # Expected value
+        
+        p = 2
+        df = (length(bins) + 1) - p
+        chiSquare = sum((f_obs-f_hyp)^2/f_hyp)
+
+        p_values = c(p_values, 1 - pchisq(chiSquare, df = df))}, 
+        error = function(e){})
+      if("NULL" %in% class(t)){
+        ind = c(ind, i)
+      }
+    }
+  }
+  
+  return(list(p_values, ind))
+}
+
+
+
+

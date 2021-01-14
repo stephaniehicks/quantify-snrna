@@ -1,7 +1,7 @@
 ---
 title: "droplet single-cell RNA data"
 author: "Albert Kuo"
-date: "12/14/2020"
+date: "1/14/2021"
 output: html_document
 ---
 
@@ -40,143 +40,89 @@ zheng = readH5AD(here("./scrna/Zheng et al 2017.h5ad"))
 klein = readH5AD(here("./scrna/Klein et al 2015.h5ad"))
 ```
 
+```{r}
+h5ad_ls = list(svensson_1, svensson_2, zheng, klein)
+```
+
 
 ```{r}
-counts_sub_cluster = assay(svensson_2, "X")
-
-tic("downsample")
-counts_sub_cluster_scaled = Down_Sample_Matrix(ceiling(counts_sub_cluster))
-toc()
-counts_sub_cluster_scaled = counts_sub_cluster_scaled[, 1:500]
-counts_sub_cluster_scaled = counts_sub_cluster_scaled[rowSums(counts_sub_cluster_scaled) != 0, ]
+set.seed(1)
+counts_ls = list()
+for(i in seq_along(h5ad_ls)){
+  counts = assay(h5ad_ls[[i]], "X")
+  
+  tic("downsample")
+  counts_scaled = Down_Sample_Matrix(ceiling(counts))
+  toc()
+  
+  counts_scaled = counts_scaled[rowSums(counts_scaled) != 0, ]
+  counts_ls[[i]] = counts_scaled
+}
 ```
 
 #### Goodness-of-fit tests
 
 ##### By Count Values
 
-There are 2 issues:
-
-1) Why is quant matrix not all integers?
-2) Why are NaNs produced/non-finite finite-difference value errors occur in fitdistr("negative binomial")?
-
 ```{r eval = F}
-library(MASS)
-
-# Poisson
-tic()
-p_values_pois = c()
-chi_pois = c()
-df_pois = c()
-for(i in 1:nrow(counts_sub_cluster_scaled)){
-  # message(i)
-  if(i %% 1000 == 0) print(i)
-  x = counts_sub_cluster_scaled[i,]
-  # x = ceiling(x) 
+plot_dt_pois_ls = list()
+plot_dt_nb_ls = list()
+for(i in seq_along(counts_ls)){
+  counts = counts_ls[[i]]
   
-  poisson_fit = fitdistr(x, "poisson")
-  lambda_fit = poisson_fit$estimate["lambda"]
-  n_samples = length(x)
-  f_obs = table(x)
+  # Poisson
+  p_values_pois = p_chisq_test(counts, distribution = "poisson")
+  plot_dt_pois_ls[[i]] = tibble(p_value = p_values_pois[[1]],
+                             expression = rowSums(counts),
+                             i = i)
   
-  bins = as.numeric(names(f_obs))
-  probs = dpois(bins, lambda = lambda_fit)
-  f_hyp = probs*n_samples
-  other_value = (1 - sum(probs))*n_samples
-  
-  f_obs = c(f_obs, 0) # Observed value
-  f_hyp = c(f_hyp, other_value) # Expected value
-  
-  p = 1 
-  df = (length(bins) + 1) - p
-  chiSquare.pois = sum((f_obs-f_hyp)^2/f_hyp)
-  
-  df_pois = c(df_pois, df)
-  chi_pois = c(chi_pois, chiSquare.pois)
-  p_values_pois = c(p_values_pois, 1 - pchisq(chiSquare.pois, df = df))
+  # Negative binomial
+  p_values_nb = p_chisq_test(counts, distribution = "nb")
+  plot_dt_nb_ls[[i]] = tibble(p_value = p_values_nb[[1]],
+                           expression = rowSums(counts)[setdiff(1:nrow(counts), p_values_nb[[2]])],
+                           i = i)
 }
-toc()
-
-plot_dt = tibble(p_value = p_values_pois,
-                 expression = rowSums(counts_sub_cluster_scaled))
-
-plot_dt %>%
-  # filter(expression > 50) %>%
-  ggplot(aes(x = p_value)) + 
-  geom_histogram() +
-  theme_bw()
-
-plot_dt %>%
-  filter(expression > 50) %>%
-  ggplot(aes(x = p_value, y = expression)) + 
-  geom_point(size = 0.1, alpha = 0.1) +
-  geom_smooth() +
-  scale_y_log10() +
-  theme_bw()
-
-sum(p_values_pois < 0.05, na.rm = T)/length(p_values_pois)
 ```
 
 ```{r}
-# Negative binomial
-tic()
-p_values_nb = c()
-chi_nb = c()
-df_nb = c()
-ind = c()
-for(i in 1:nrow(counts_sub_cluster_scaled)){
-  # message(i)
-  t = tryCatch({
-    x = counts_sub_cluster_scaled[i,]
-    x = ceiling(x)
-    
-    nb_fit = suppressWarnings(fitdistr(x, "negative binomial"))
-    r_fit = nb_fit$estimate['size']
-    p_fit = r_fit / (nb_fit$estimate['mu'] + r_fit)
-    n_samples = length(x)
-    f_obs = table(x)
-    
-    bins = as.numeric(names(f_obs))
-    probs = dnbinom(bins, size = r_fit, prob = p_fit)
-    f_hyp = probs*n_samples
-    other_value = (1 - sum(probs))*n_samples
-    
-    f_obs = c(f_obs, 0) # Observed value
-    f_hyp = c(f_hyp, other_value) # Expected value
-    
-    p = 2
-    df = (length(bins) + 1) - p
-    chiSquare.nb = sum((f_obs-f_hyp)^2/f_hyp)
-    
-    df_nb = c(df_nb, df)
-    chi_nb = c(chi_nb, chiSquare.nb)
-    p_values_nb = c(p_values_nb, 1 - pchisq(chiSquare.nb, df = df))}, 
-    error = function(e){})
-  if("NULL" %in% class(t)){
-    ind = c(ind, i)
-  }
-}
-toc()
-
-
-plot_dt = tibble(p_value = p_values_nb,
-                 expression = rowSums(counts_sub_cluster_scaled)[setdiff(1:nrow(counts_sub_cluster_scaled), ind)])
-
-plot_dt %>%
+# Poisson plots
+plot_dt_pois = bind_rows(plot_dt_pois_ls)
+plot_dt_pois %>%
   # filter(expression > 50) %>%
   ggplot(aes(x = p_value)) + 
-  geom_histogram() +
+  facet_wrap(~ i) +
+  geom_histogram() + 
   theme_bw()
 
-plot_dt %>%
+plot_dt_pois %>%
   # filter(expression > 50) %>%
   ggplot(aes(x = p_value, y = expression)) + 
+  facet_wrap(~ i) +
   geom_point(size = 0.1, alpha = 0.1) +
   geom_smooth() +
   scale_y_log10() +
   theme_bw()
+```
 
-sum(p_values_nb < 0.05, na.rm = T)/length(p_values_nb)
+
+```{r}
+# Negative binomial plots
+plot_dt_nb = bind_rows(plot_dt_nb_ls)
+plot_dt_nb %>%
+  # filter(expression > 50) %>%
+  ggplot(aes(x = p_value)) + 
+  facet_wrap(~ i) +
+  geom_histogram() + 
+  theme_bw()
+
+plot_dt_nb %>%
+  # filter(expression > 50) %>%
+  ggplot(aes(x = p_value, y = expression)) + 
+  facet_wrap(~ i) +
+  geom_point(size = 0.1, alpha = 0.1) +
+  geom_smooth() +
+  scale_y_log10() +
+  theme_bw()
 ```
 
 ##### By Sample
