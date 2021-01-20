@@ -949,8 +949,8 @@ plot_dt %>%
 ```{r}
 # Negative binomial
 p_values_nb = p_chisq_test(counts_sub_cluster_scaled, distribution = "nb")
-plot_dt_nb_ls[[i]] = tibble(p_value = p_values_nb[[1]],
-                            expression = rowSums(counts_sub_cluster_scaled)[setdiff(1:nrow(counts_sub_cluster_scaled), p_values_nb[[2]])])
+plot_dt = tibble(p_value = p_values_nb[[1]],
+                 expression = rowSums(counts_sub_cluster_scaled)[setdiff(1:nrow(counts_sub_cluster_scaled), p_values_nb[[2]])])
 
 plot_dt %>%
   filter(expression > 50) %>%
@@ -965,8 +965,6 @@ plot_dt %>%
   geom_smooth() +
   scale_y_log10() +
   theme_bw()
-
-sum(p_values_nb < 0.05, na.rm = T)/length(p_values_nb)
 ```
 
 ##### By Sample
@@ -975,106 +973,49 @@ This is based on Figure 2 from this paper: https://genome.cshlp.org/content/18/9
 
 ```{r}
 # Poisson
-total_sum = sum(counts_sub_cluster_scaled)
-lambda_j = rowSums(counts_sub_cluster_scaled)/total_sum # proportion of counts in gene j
-c_i = colSums(counts_sub_cluster_scaled)/total_sum # proportion of counts in sample i (should be approximately same across i for downsampled matrix)
-mu_ij = outer(lambda_j, c_i)*total_sum
-
-f_obs = counts_sub_cluster_scaled
-f_hyp = mu_ij
-
-chiSquare.pois = rowSums((f_obs-f_hyp)^2/f_hyp) # chi-squared statistic for each gene
-df = ncol(f_obs) - 1
-
-plot_dt = tibble(chi_obs = sort(chiSquare.pois),
-                 chi_obs_nb = sort(chiSquare.nb),
-                 chi_quantile = qchisq(p = (1:length(chiSquare.pois))/length(chiSquare.pois),
-                                       df = df),
+chi_obs_pois = p_chisq_test_2(counts_sub_cluster_scaled, distribution = "poisson")
+plot_dt = tibble(chi_obs = sort(chi_obs_pois),
+                 chi_quantile = qchisq(p = (1:length(chi_obs))/length(chi_obs), df = ncol(counts_sub_cluster_scaled) - 1),
                  percentile_color = case_when(chi_obs > quantile(chi_obs, 0.995) ~ "> 99.5",
-                                        chi_obs > quantile(chi_obs, 0.95) ~ "> 95",
-                                        chi_obs > quantile(chi_obs, 0.90) ~ "> 90",
-                                        T ~ "rest"),
-                 expression = rowSums(counts_sub_cluster_scaled))
-
-plot_dt %>%
-  ggplot(aes(x = chi_quantile,
-             y = chi_obs_nb,
-             color = percentile_color)) + 
-  geom_point(size = 0.5) + 
-  geom_abline(slope = 1, intercept = 0) +
-  # coord_cartesian(ylim = c(250, 1000)) +
-  theme_bw()
+                                              chi_obs > quantile(chi_obs, 0.95) ~ "> 95",
+                                              chi_obs > quantile(chi_obs, 0.90) ~ "> 90",
+                                              T ~ "rest"),
+                 i = i)
 
 plot_dt %>%
   # filter(expression > 50) %>%
-  ggplot(aes(x = chi_quantile,
+    ggplot(aes(x = chi_quantile,
              y = chi_obs,
-             color = expression)) + 
+             color = percentile_color)) + 
   geom_point(size = 0.5) + 
   geom_abline(slope = 1, intercept = 0) +
   coord_cartesian(ylim = c(250, 1000)) +
   theme_bw()
 ```
+
 
 ```{r}
 # Negative binomial
-total_sum = sum(counts_sub_cluster_scaled)
-lambda_j = rowSums(counts_sub_cluster_scaled)/total_sum # proportion of counts in gene j
-c_i = colSums(counts_sub_cluster_scaled)/total_sum # proportion of counts in sample i (should be approximately same across i for downsampled matrix)
-mu_ij = outer(lambda_j, c_i)*total_sum
-
-f_obs = counts_sub_cluster_scaled
-f_hyp = mu_ij
-
-nb_var = function(x){
-  estimates = suppressWarnings(fitdistr(x, "negative binomial")$estimate)
-  var = estimates['mu'] + estimates['mu']^2/estimates['size']
-  return(var)
-}
-chiSquare.nb = rowSums((f_obs-f_hyp)^2)/apply(counts_sub_cluster_scaled, 1, nb_var) # chi-squared statistic for each gene
-df = ncol(f_obs) - 1
-
-plot_dt = tibble(chi_obs = sort(chiSquare.nb),
-                 chi_quantile = qchisq(p = (1:length(chiSquare.nb))/length(chiSquare.nb),
-                                       df = df),
+chi_obs_nb = p_chisq_test_2(counts_sub_cluster_scaled, distribution = "nb")
+plot_dt = tibble(chi_obs = sort(chi_obs_nb),
+                 chi_quantile = qchisq(p = (1:length(chi_obs))/length(chi_obs), df = ncol(counts_sub_cluster_scaled) - 1),
                  percentile_color = case_when(chi_obs > quantile(chi_obs, 0.995) ~ "> 99.5",
-                                        chi_obs > quantile(chi_obs, 0.95) ~ "> 95",
-                                        chi_obs > quantile(chi_obs, 0.90) ~ "> 90",
-                                        T ~ "rest"),
-                 expression = rowSums(counts_sub_cluster_scaled))
+                                              chi_obs > quantile(chi_obs, 0.95) ~ "> 95",
+                                              chi_obs > quantile(chi_obs, 0.90) ~ "> 90",
+                                              T ~ "rest"),
+                 i = i)
 
 plot_dt %>%
-  ggplot(aes(x = chi_quantile,
+  # filter(expression > 50) %>%
+    ggplot(aes(x = chi_quantile,
              y = chi_obs,
              color = percentile_color)) + 
   geom_point(size = 0.5) + 
   geom_abline(slope = 1, intercept = 0) +
   # coord_cartesian(ylim = c(250, 1000)) +
   theme_bw()
-
-plot_dt %>%
-  # filter(expression > 50) %>%
-  ggplot(aes(x = chi_quantile,
-             y = chi_obs,
-             color = expression)) + 
-  geom_point(size = 0.5) + 
-  geom_abline(slope = 1, intercept = 0) +
-  coord_cartesian(ylim = c(250, 1000)) +
-  theme_bw()
 ```
 
-
-```{r}
-# Histogram of p-values
-plot_dt = plot_dt %>%
-  mutate(p_value = 1 - pchisq(chi_obs, df = ncol(counts_sub_cluster_scaled) - 1))
-
-plot_dt %>%
-  # filter(expression > 50) %>%
-  ggplot(aes(x = p_value)) + 
-  geom_histogram() +
-  theme_bw()
-```
 
 ##### Likelihood-Ratio
 
@@ -1155,7 +1096,4 @@ bic_tb %>%
        y = "BIC") +
   theme_bw()
 ```
-
-
-
 
