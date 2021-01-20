@@ -190,6 +190,7 @@ nb_bic_2<-function(m,X=NULL,prefit=NULL){
 # Pearson's chi-squared test
 library(MASS)
 
+# Bin by unique value
 p_chisq_test = function(m, distribution = "poisson"){
   ind = c() # rows that fail
   p_values = c() # p-values for every row
@@ -250,6 +251,31 @@ p_chisq_test = function(m, distribution = "poisson"){
   return(list(p_values, ind))
 }
 
+# Bin by sample
+p_chisq_test_2 = function(m, distribution = "poisson"){
+  total_sum = sum(m)
+  lambda_j = rowSums(m)/total_sum # proportion of counts in gene j
+  c_i = colSums(m)/total_sum # proportion of counts in sample i (should be approximately same across i for downsampled matrix)
+  mu_ij = outer(lambda_j, c_i)*total_sum
+  
+  f_obs = m
+  f_hyp = mu_ij
+  
+  if(distribution == "poisson"){
+    chi_square = rowSums((f_obs-f_hyp)^2/f_hyp)
+  } else if(distribution == "nb"){
+    # nb_var = function(x){
+    #   estimates = suppressWarnings(fitdistr(x, "negative binomial")$estimate)
+    #   var = estimates['mu'] + estimates['mu']^2/estimates['size']
+    #   return(var)
+    # }
+    chi_square = rowSums((f_obs-f_hyp)^2)/apply(m, 1, var)
+  }
+  
+  df = ncol(f_obs) - 1
+  
+  return(chi_square)
+}
 
 
 
