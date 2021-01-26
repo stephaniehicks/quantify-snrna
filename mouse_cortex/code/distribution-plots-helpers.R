@@ -272,8 +272,6 @@ p_chisq_test_2 = function(m, distribution = "poisson"){
     chi_square = rowSums((f_obs-f_hyp)^2)/apply(m, 1, var)
   }
   
-  df = ncol(f_obs) - 1
-  
   return(chi_square)
 }
 
