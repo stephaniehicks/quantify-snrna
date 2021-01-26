@@ -60,8 +60,15 @@ for(i in seq_along(h5ad_ls)){
 }
 
 # Simulated datasets with same dimensions as snRNA data
-counts_ls[[i+1]] = matrix(rnbinom(n = 347*21434, size = 1.5, mu = 0.5), ncol = 347, nrow  = 21434) # negative binomial
-counts_ls[[i+2]] = matrix(rpois(n = 347*21434, lambda = 0.5), ncol = 347, nrow = 21434) # poisson 
+counts_ls[[i+1]] = matrix(rnbinom(n = 347*21434, size = 63, mu = 0.1), ncol = 347, nrow  = 21434) # negative binomial
+counts_ls[[i+2]] = matrix(rpois(n = 347*21434, lambda = 0.1), ncol = 347, nrow = 21434) # poisson 
+emp_values = readRDS(here("./mouse_cortex/output/emp_values.rds"))
+means = sample(emp_values$means, replace = TRUE)
+sizes = sample(emp_values$sizes, replace = TRUE)
+counts_ls[[i+3]] = t(sapply(seq_len(length(means)), function(i) 
+  rnbinom(n = 347, size = sizes[i], mu = means[i]))) # negative binomial with different parameters for each gene
+counts_ls[[i+4]] = t(sapply(seq_len(length(means)), function(i) 
+  rpois(n = 347, lambda = means[i]))) # poisson with different parameters for each gene
 ```
 
 #### Goodness-of-fit tests

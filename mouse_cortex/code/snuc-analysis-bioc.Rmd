@@ -845,6 +845,15 @@ counts_sub_cluster_scaled = Down_Sample_Matrix(ceiling(counts_sub_cluster))
 toc()
 counts_sub_cluster_scaled = counts_sub_cluster_scaled[rowSums(counts_sub_cluster_scaled) != 0, ]
 summary(colSums(counts_sub_cluster_scaled))
+
+# Save values for simulation datasets
+nb_size = function(x){
+  estimates = suppressWarnings(fitdistr(x, "negative binomial")$estimate)
+  return(estimates['size'])
+}
+emp_values = list(means = apply(counts_sub_cluster_scaled, 1, mean),
+                  sizes = apply(counts_sub_cluster_scaled, 1, nb_size))
+saveRDS(emp_values, here("./mouse_cortex/output/emp_values.rds"))
 ```
 
 I compute the average expression for every row (x-axis) $\hat{\mu}_i$ and the empirical $P(X_i=0)$, which is the probability that for a given transcript $i$, the count is 0. 
