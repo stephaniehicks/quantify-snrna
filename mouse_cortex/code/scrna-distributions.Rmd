@@ -75,7 +75,7 @@ counts_ls[[i+4]] = t(sapply(seq_len(length(means)), function(i)
 
 ##### By Count Values
 
-```{r eval = F}
+```{r}
 plot_dt_pois_ls = list()
 plot_dt_nb_ls = list()
 for(i in seq_along(counts_ls)){
