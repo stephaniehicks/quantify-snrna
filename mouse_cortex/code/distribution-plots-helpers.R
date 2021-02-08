@@ -269,7 +269,17 @@ p_chisq_test_2 = function(m, distribution = "poisson"){
     #   var = estimates['mu'] + estimates['mu']^2/estimates['size']
     #   return(var)
     # }
-    chi_square = rowSums((f_obs-f_hyp)^2)/apply(m, 1, var)
+    # chi_square = rowSums((f_obs-f_hyp)^2)/apply(m, 1, var)
+    nb_phi = function(x){
+      suppressWarnings(try({estimates = fitdistr(x, "negative binomial")$estimate}, silent = TRUE))
+      if(!exists("estimates")) return(NA)
+      size = estimates['size']
+      return(size)
+    }
+    f_phi = as.numeric(apply(m, 1, nb_phi))
+    remove_na_rows = which(!is.na(f_phi))
+    f_var = mu_ij[remove_na_rows, ] + mu_ij[remove_na_rows, ]^2/f_phi[remove_na_rows]
+    chi_square = rowSums((f_obs[remove_na_rows, ]-f_hyp[remove_na_rows, ])^2/f_var)
   }
   
   return(chi_square)
