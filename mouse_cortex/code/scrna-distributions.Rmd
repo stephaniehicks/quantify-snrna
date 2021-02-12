@@ -58,20 +58,41 @@ for(i in seq_along(h5ad_ls)){
   counts_scaled = counts_scaled[rowSums(counts_scaled) != 0, ]
   counts_ls[[i]] = counts_scaled
 }
+```
 
+```{r}
 # Simulated datasets with same dimensions as snRNA data
+emp_values = readRDS(here("./mouse_cortex/output/emp_values.rds"))
 means = sample(emp_values$means, replace = TRUE)
 sizes = sample(emp_values$sizes, replace = TRUE)
-counts_ls[[i+1]] = matrix(rpois(n = 347*21434, lambda = 0.1), ncol = 347, nrow = 21434) # poisson 
-emp_values = readRDS(here("./mouse_cortex/output/emp_values.rds"))
-counts_ls[[i+2]] = t(sapply(seq_len(length(means)), function(i) 
+counts_ls[[i+1]] = matrix(rpois(n = 347*21434, lambda = 0.1), ncol = 347, nrow = 21434) # poisson
+counts_ls[[i+2]] = matrix(rpois(n = 347*21434, lambda = 0.3), ncol = 347, nrow = 21434) # poisson 
+counts_ls[[i+3]] = matrix(rpois(n = 347*21434, lambda = 0.5), ncol = 347, nrow = 21434) # poisson 
+counts_ls[[i+4]] = matrix(rpois(n = 347*21434, lambda = 0.7), ncol = 347, nrow = 21434) # poisson 
+counts_ls[[i+5]] = matrix(rpois(n = 347*21434, lambda = 1), ncol = 347, nrow = 21434) # poisson 
+counts_ls[[i+6]] = t(sapply(seq_len(length(means)), function(i) 
   rpois(n = 347, lambda = means[i]))) # poisson with different parameters for each gene
-counts_ls[[i+3]] = matrix(rnbinom(n = 347*21434, size = 63, mu = 0.1), ncol = 347, nrow  = 21434) # negative binomial
-counts_ls[[i+4]] = t(sapply(seq_len(length(means)), function(i) 
+counts_ls[[i+7]] = matrix(rnbinom(n = 347*21434, size = 63, mu = 0.1), ncol = 347, nrow  = 21434) # negative binomial
+counts_ls[[i+8]] = matrix(rnbinom(n = 347*21434, size = 63, mu = 0.3), ncol = 347, nrow  = 21434) # negative binomial
+counts_ls[[i+9]] = matrix(rnbinom(n = 347*21434, size = 63, mu = 0.5), ncol = 347, nrow  = 21434) # negative binomial
+counts_ls[[i+10]] = matrix(rnbinom(n = 347*21434, size = 63, mu = 0.7), ncol = 347, nrow  = 21434) # negative binomial
+counts_ls[[i+11]] = matrix(rnbinom(n = 347*21434, size = 63, mu = 1), ncol = 347, nrow  = 21434) # negative binomial
+counts_ls[[i+12]] = t(sapply(seq_len(length(means)), function(i) 
   rnbinom(n = 347, size = sizes[i], mu = means[i]))) # negative binomial with different parameters for each gene
-# counts_ls[[i+5]] = matrix(rpois(n = 347*21434, lambda = 1), ncol = 347, nrow = 21434) # poisson 
-# counts_ls[[i+6]] = matrix(rnbinom(n = 347*21434, size = 63, mu = 1), ncol = 347, nrow  = 21434) # negative binomial
+
+for(j in (i+1):length(counts_ls)){
+  tic("downsample")
+  counts_ls[[j]] = Down_Sample_Matrix(ceiling(counts_ls[[j]]))
+  toc()
+}
+
+saveRDS(counts_ls, here("./scrna/counts_ls.rds"))
 ```
+
+```{r}
+counts_ls = readRDS(here("./scrna/counts_ls.rds"))
+```
+
 
 #### Goodness-of-fit tests
 
