@@ -263,7 +263,17 @@ p_chisq_test_2 = function(m, distribution = "poisson"){
   
   if(distribution == "poisson"){
     chi_square = rowSums((f_obs-f_hyp)^2/f_hyp)
-  } else if(distribution == "nb"){
+  } else if(distribution == "nb 1"){ # single overdispersion parameter
+    # estimate phi
+    means = rowMeans(m)
+    vars = apply(m, MARGIN = 1, var)
+    model = lm(vars ~ 1*means + I(means^2) + 0, tibble(means, vars))
+    phi = 1/coef(model)["I(means^2)"]
+    
+    f_var = mu_ij + mu_ij^2/phi
+    chi_square = rowSums((f_obs-f_hyp)^2/f_var)
+    
+  } else if(distribution == "nb 2"){
     # nb_var = function(x){
     #   estimates = suppressWarnings(fitdistr(x, "negative binomial")$estimate)
     #   var = estimates['mu'] + estimates['mu']^2/estimates['size']
@@ -280,7 +290,7 @@ p_chisq_test_2 = function(m, distribution = "poisson"){
     remove_na_rows = which(!is.na(f_phi))
     f_var = mu_ij[remove_na_rows, ] + mu_ij[remove_na_rows, ]^2/f_phi[remove_na_rows]
     chi_square = rowSums((f_obs[remove_na_rows, ]-f_hyp[remove_na_rows, ])^2/f_var)
-  }
+  } 
   
   return(chi_square)
 }

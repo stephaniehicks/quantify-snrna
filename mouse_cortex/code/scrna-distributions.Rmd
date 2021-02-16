@@ -165,8 +165,10 @@ This is based on Figure 2 from this paper: https://genome.cshlp.org/content/18/9
 
 ```{r}
 plot_dt_pois_ls = list()
-plot_dt_nb_ls = list()
+plot_dt_nb_1_ls = list()
+plot_dt_nb_2_ls = list()
 for(i in seq_along(counts_ls)){
+  print(i)
   counts = counts_ls[[i]]
   
   # Poisson
@@ -182,9 +184,21 @@ for(i in seq_along(counts_ls)){
                                         T ~ "rest"),
            i = i)
   
-  # Negative binomial
-  chi_obs_nb = p_chisq_test_2(counts, distribution = "nb")
-  plot_dt_nb_ls[[i]] = tibble(chi_obs = chi_obs_nb) %>%
+  # Negative binomial (single overdispersion parameter)
+  chi_obs_nb = p_chisq_test_2(counts, distribution = "nb 1")
+  plot_dt_nb_1_ls[[i]] = tibble(chi_obs = chi_obs_nb) %>%
+    arrange(chi_obs) %>%
+    drop_na() %>%
+    mutate(chi_quantile = qchisq(p = (1:length(chi_obs))/length(chi_obs), df = ncol(counts) - 2),
+           percentile_color = case_when(chi_obs > quantile(chi_obs, 0.995) ~ "> 99.5",
+                                        chi_obs > quantile(chi_obs, 0.95) ~ "> 95",
+                                        chi_obs > quantile(chi_obs, 0.90) ~ "> 90",
+                                        T ~ "rest"),
+           i = i)
+  
+  # Negative binomial (gene-specific overdispersion parameter)
+  chi_obs_nb = p_chisq_test_2(counts, distribution = "nb 2")
+  plot_dt_nb_2_ls[[i]] = tibble(chi_obs = chi_obs_nb) %>%
     arrange(chi_obs) %>%
     drop_na() %>%
     mutate(chi_quantile = qchisq(p = (1:length(chi_obs))/length(chi_obs), df = ncol(counts) - 2),
@@ -213,9 +227,24 @@ plot_dt_pois %>%
 ```
 
 ```{r}
-# Negative binomial plots
-plot_dt_nb = bind_rows(plot_dt_nb_ls)
-plot_dt_nb %>%
+# Negative binomial plots (single overdispersion parameter)
+plot_dt_nb_1 = bind_rows(plot_dt_nb_1_ls)
+plot_dt_nb_1 %>%
+  # filter(expression > 50) %>%
+    ggplot(aes(x = chi_quantile,
+             y = chi_obs,
+             color = percentile_color)) + 
+  facet_wrap(~ i, scales = "free") +
+  geom_point(size = 0.5) + 
+  geom_abline(slope = 1, intercept = 0) +
+  # coord_cartesian(ylim = c(250, 1000)) +
+  theme_bw()
+```
+
+```{r}
+# Negative binomial plots (gene-specific overdispersion parameter)
+plot_dt_nb_2 = bind_rows(plot_dt_nb_2_ls)
+plot_dt_nb_2 %>%
   # filter(expression > 50) %>%
     ggplot(aes(x = chi_quantile,
              y = chi_obs,
