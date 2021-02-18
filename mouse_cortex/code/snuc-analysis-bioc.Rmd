@@ -838,7 +838,11 @@ First, I make all the column sums comparable by downsampling (this is a stochast
 i = 1
 counts_sub_cluster = counts(sce_sub)
 # counts_sub_cluster = counts(sce_sub)[, colData(sce_sub)$labels_kmeans == i] # Subset to k-means cluster
+# group into 3 groups by colSums
+terciles = quantile(colSums(counts_sub_cluster), c(1/3, 2/3))
+terciles
 summary(colSums(counts_sub_cluster))
+# counts_sub_cluster = counts_sub_cluster[, (colSums(counts_sub_cluster) > terciles[2])]
 
 tic()
 counts_sub_cluster_scaled = Down_Sample_Matrix(ceiling(counts_sub_cluster))
@@ -853,7 +857,7 @@ nb_size = function(x){
 }
 emp_values = list(means = apply(counts_sub_cluster_scaled, 1, mean),
                   sizes = apply(counts_sub_cluster_scaled, 1, nb_size))
-saveRDS(emp_values, here("./mouse_cortex/output/emp_values.rds"))
+# saveRDS(emp_values, here("./mouse_cortex/output/emp_values.rds"))
 ```
 
 I compute the average expression for every row (x-axis) $\hat{\mu}_i$ and the empirical $P(X_i=0)$, which is the probability that for a given transcript $i$, the count is 0. 
@@ -941,13 +945,13 @@ plot_dt = tibble(p_value = p_values_pois[[1]],
                  expression = rowSums(counts_sub_cluster_scaled))
 
 plot_dt %>%
-  filter(expression > 50) %>%
+  # filter(expression > 50) %>%
   ggplot(aes(x = p_value)) + 
   geom_histogram() +
   theme_bw()
 
 plot_dt %>%
-  filter(expression > 50) %>%
+  # filter(expression > 50) %>%
   ggplot(aes(x = p_value, y = expression)) + 
   geom_point(size = 0.1, alpha = 0.1) +
   geom_smooth() +
@@ -962,13 +966,13 @@ plot_dt = tibble(p_value = p_values_nb[[1]],
                  expression = rowSums(counts_sub_cluster_scaled)[setdiff(1:nrow(counts_sub_cluster_scaled), p_values_nb[[2]])])
 
 plot_dt %>%
-  filter(expression > 50) %>%
+  # filter(expression > 50) %>%
   ggplot(aes(x = p_value)) + 
   geom_histogram() +
   theme_bw()
 
 plot_dt %>%
-  filter(expression > 50) %>%
+  # filter(expression > 50) %>%
   ggplot(aes(x = p_value, y = expression)) + 
   geom_point(size = 0.1, alpha = 0.1) +
   geom_smooth() +
@@ -1001,7 +1005,7 @@ plot_dt %>%
              color = percentile_color)) + 
   geom_point(size = 0.5) + 
   geom_abline(slope = 1, intercept = 0) +
-  coord_cartesian(ylim = c(250, 1000)) +
+  # coord_cartesian(ylim = c(250, 1000)) +
   theme_bw()
 ```
 
