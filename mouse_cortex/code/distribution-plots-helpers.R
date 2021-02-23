@@ -265,30 +265,41 @@ p_chisq_test_2 = function(m, distribution = "poisson"){
     chi_square = rowSums((f_obs-f_hyp)^2/f_hyp)
   } else if(distribution == "nb 1"){ # single overdispersion parameter
     # estimate phi
-    means = rowMeans(m)
-    vars = apply(m, MARGIN = 1, var)
-    model = lm(vars ~ 1*means + I(means^2) + 0, tibble(means, vars))
-    phi = 1/coef(model)["I(means^2)"]
+    # Option 1
+    # means = rowMeans(m)
+    # vars = apply(m, MARGIN = 1, var)
+    # model = lm(vars ~ 1*means + I(means^2) + 0, tibble(means, vars))
+    # phi = 1/coef(model)["I(means^2)"]
+    
+    # Option 2 (edgeR)
+    phi = 1/edgeR::estimateCommonDisp(m)
     
     f_var = mu_ij + mu_ij^2/phi
     chi_square = rowSums((f_obs-f_hyp)^2/f_var)
-    
   } else if(distribution == "nb 2"){
+    # Option 1
     # nb_var = function(x){
     #   estimates = suppressWarnings(fitdistr(x, "negative binomial")$estimate)
     #   var = estimates['mu'] + estimates['mu']^2/estimates['size']
     #   return(var)
     # }
     # chi_square = rowSums((f_obs-f_hyp)^2)/apply(m, 1, var)
-    nb_phi = function(x){
-      suppressWarnings(try({estimates = fitdistr(x, "negative binomial")$estimate}, silent = TRUE))
-      if(!exists("estimates")) return(NA)
-      size = estimates['size']
-      return(size)
-    }
-    f_phi = as.numeric(apply(m, 1, nb_phi))
+    
+    # Option 2
+    # nb_phi = function(x){
+    #   suppressWarnings(try({estimates = fitdistr(x, "negative binomial")$estimate}, silent = TRUE))
+    #   if(!exists("estimates")) return(NA)
+    #   size = estimates['size']
+    #   return(size)
+    # }
+    # f_phi = as.numeric(apply(m, 1, nb_phi))
+
+    # Option 3 (edgeR)
+    f_phi = 1/edgeR::estimateDisp(m)$tagwise.dispersion
+    
     remove_na_rows = which(!is.na(f_phi))
     f_var = mu_ij[remove_na_rows, ] + mu_ij[remove_na_rows, ]^2/f_phi[remove_na_rows]
+    
     chi_square = rowSums((f_obs[remove_na_rows, ]-f_hyp[remove_na_rows, ])^2/f_var)
   } 
   
