@@ -265,7 +265,7 @@ p_chisq_test_2 = function(m, distribution = "poisson"){
     chi_square = rowSums((f_obs-f_hyp)^2/f_hyp)
   } else if(distribution == "nb 1"){ # single overdispersion parameter
     # estimate phi
-    # Option 1
+    # Option 1 (regression)
     # means = rowMeans(m)
     # vars = apply(m, MARGIN = 1, var)
     # model = lm(vars ~ 1*means + I(means^2) + 0, tibble(means, vars))
@@ -296,6 +296,9 @@ p_chisq_test_2 = function(m, distribution = "poisson"){
 
     # Option 3 (edgeR)
     f_phi = 1/edgeR::estimateDisp(m)$tagwise.dispersion
+    
+    # Option 4 (glmGamPoi)
+    # f_phi = 1/glmGamPoi::glm_gp(m, design = ~ 1, size_factors = "deconvolution", overdispersion = TRUE)$overdispersions
     
     remove_na_rows = which(!is.na(f_phi))
     f_var = mu_ij[remove_na_rows, ] + mu_ij[remove_na_rows, ]^2/f_phi[remove_na_rows]
