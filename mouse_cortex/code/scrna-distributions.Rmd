@@ -174,7 +174,10 @@ for(i in seq_along(counts_ls)){
   # Poisson
   chi_obs_pois = p_chisq_test_2(counts, distribution = "poisson")
   plot_dt_pois_ls[[i]] = tibble(chi_obs = chi_obs_pois,
-                                expression = rowSums(counts)) %>%
+                                expression = rowSums(counts),
+                                var = apply(counts, 1, var),
+                                prop_0 = apply(counts, 1, function(x) sum(x == 0))) %>%
+    mutate(id = 1:n()) %>%
     arrange(chi_obs) %>%
     drop_na() %>%
     mutate(chi_quantile = qchisq(p = (1:length(chi_obs))/length(chi_obs), df = ncol(counts) - 1),
@@ -186,7 +189,11 @@ for(i in seq_along(counts_ls)){
   
   # Negative binomial (single overdispersion parameter)
   chi_obs_nb = p_chisq_test_2(counts, distribution = "nb 1")
-  plot_dt_nb_1_ls[[i]] = tibble(chi_obs = chi_obs_nb) %>%
+  plot_dt_nb_1_ls[[i]] = tibble(chi_obs = chi_obs_nb,
+                                expression = rowSums(counts),
+                                var = apply(counts, 1, var),
+                                prop_0 = apply(counts, 1, function(x) sum(x == 0))) %>%
+    mutate(id = 1:n()) %>%
     arrange(chi_obs) %>%
     drop_na() %>%
     mutate(chi_quantile = qchisq(p = (1:length(chi_obs))/length(chi_obs), df = ncol(counts) - 2),
@@ -198,7 +205,11 @@ for(i in seq_along(counts_ls)){
   
   # Negative binomial (gene-specific overdispersion parameter)
   chi_obs_nb = p_chisq_test_2(counts, distribution = "nb 2")
-  plot_dt_nb_2_ls[[i]] = tibble(chi_obs = chi_obs_nb) %>%
+  plot_dt_nb_2_ls[[i]] = tibble(chi_obs = chi_obs_nb,
+                                expression = rowSums(counts),
+                                var = apply(counts, 1, var),
+                                prop_0 = apply(counts, 1, function(x) sum(x == 0))) %>%
+    mutate(id = 1:n()) %>%
     arrange(chi_obs) %>%
     drop_na() %>%
     mutate(chi_quantile = qchisq(p = (1:length(chi_obs))/length(chi_obs), df = ncol(counts) - 2),
@@ -225,6 +236,25 @@ plot_dt_pois %>%
   # coord_cartesian(ylim = c(250, 1000)) +
   theme_bw()
 ```
+```{r}
+plot_dt_pois %>%
+  ggplot(aes(x = expression, color = percentile_color)) +
+  geom_density() +
+  scale_x_log10() +
+  facet_wrap(~ i, ncol = 1, scales = "free_y") +
+  theme_bw()
+plot_dt_pois %>%
+  ggplot(aes(x = prop_0, color = percentile_color)) +
+  geom_density() +
+  facet_wrap(~ i, ncol = 1, scales = "free_y") +
+  theme_bw()
+plot_dt_pois %>%
+  ggplot(aes(x = var, color = percentile_color)) +
+  geom_density() +
+  scale_x_log10() +
+  facet_wrap(~ i, ncol = 1, scales = "free_y") +
+  theme_bw()
+```
 
 ```{r}
 # Negative binomial plots (single overdispersion parameter)
@@ -242,6 +272,27 @@ plot_dt_nb_1 %>%
 ```
 
 ```{r}
+plot_dt_nb_1 %>%
+  ggplot(aes(x = expression, color = percentile_color)) +
+  geom_density() +
+  scale_x_log10() +
+  facet_wrap(~ i, ncol = 1, scales = "free_y") +
+  theme_bw()
+plot_dt_nb_1 %>%
+  ggplot(aes(x = prop_0, color = percentile_color)) +
+  geom_density() +
+  # scale_x_log10() + 
+  facet_wrap(~ i, ncol = 1, scales = "free_y") +
+  theme_bw()
+plot_dt_nb_1 %>%
+  ggplot(aes(x = var, color = percentile_color)) +
+  geom_density() +
+  scale_x_log10() +
+  facet_wrap(~ i, ncol = 1, scales = "free_y") +
+  theme_bw()
+```
+
+```{r}
 # Negative binomial plots (gene-specific overdispersion parameter)
 plot_dt_nb_2 = bind_rows(plot_dt_nb_2_ls)
 plot_dt_nb_2 %>%
@@ -253,5 +304,26 @@ plot_dt_nb_2 %>%
   geom_point(size = 0.5) + 
   geom_abline(slope = 1, intercept = 0) +
   # coord_cartesian(ylim = c(250, 1000)) +
+  theme_bw()
+```
+
+```{r}
+plot_dt_nb_2 %>%
+  ggplot(aes(x = expression, color = percentile_color)) +
+  geom_density() +
+  scale_x_log10() +
+  facet_wrap(~ i, ncol = 1, scales = "free_y") +
+  theme_bw()
+plot_dt_nb_2 %>%
+  ggplot(aes(x = prop_0, color = percentile_color)) +
+  geom_density() +
+  # scale_x_log10() + 
+  facet_wrap(~ i, ncol = 1, scales = "free_y") +
+  theme_bw()
+plot_dt_nb_2 %>%
+  ggplot(aes(x = var, color = percentile_color)) +
+  geom_density() +
+  scale_x_log10() +
+  facet_wrap(~ i, ncol = 1, scales = "free_y") +
   theme_bw()
 ```
