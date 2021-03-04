@@ -851,13 +851,18 @@ counts_sub_cluster_scaled = counts_sub_cluster_scaled[rowSums(counts_sub_cluster
 summary(colSums(counts_sub_cluster_scaled))
 
 # Save values for simulation datasets
-nb_size = function(x){
-  estimates = suppressWarnings(fitdistr(x, "negative binomial")$estimate)
-  return(estimates['size'])
-}
-emp_values = list(means = apply(counts_sub_cluster_scaled, 1, mean),
-                  sizes = apply(counts_sub_cluster_scaled, 1, nb_size))
+# nb_size = function(x){
+#   estimates = suppressWarnings(fitdistr(x, "negative binomial")$estimate)
+#   return(estimates['size'])
+# }
+# emp_values = list(means = apply(counts_sub_cluster_scaled, 1, mean),
+#                   sizes = apply(counts_sub_cluster_scaled, 1, nb_size))
 # saveRDS(emp_values, here("./mouse_cortex/output/emp_values.rds"))
+
+# edgeR
+emp_values = list(means = apply(counts_sub_cluster_scaled, 1, mean),
+                  sizes = 1/edgeR::estimateDisp(counts_sub_cluster_scaled)$tagwise.dispersion)
+saveRDS(emp_values, here("./mouse_cortex/output/emp_values_edger.rds"))
 ```
 
 I compute the average expression for every row (x-axis) $\hat{\mu}_i$ and the empirical $P(X_i=0)$, which is the probability that for a given transcript $i$, the count is 0. 
@@ -1048,7 +1053,7 @@ plot_dt = tibble(chi_obs = chi_obs_nb) %>%
 
 plot_dt %>%
   # filter(expression > 50) %>%
-    ggplot(aes(x = chi_quantile,
+  ggplot(aes(x = chi_quantile,
              y = chi_obs,
              color = percentile_color)) + 
   geom_point(size = 0.5) + 
