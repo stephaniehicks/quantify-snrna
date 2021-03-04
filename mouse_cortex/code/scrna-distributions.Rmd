@@ -63,22 +63,22 @@ for(i in seq_along(h5ad_ls)){
 ```{r}
 # Simulated datasets with same dimensions as snRNA data
 emp_values = readRDS(here("./mouse_cortex/output/emp_values.rds"))
-means = sample(emp_values$means, replace = TRUE)
-sizes = sample(emp_values$sizes, replace = TRUE)
-counts_ls[[i+1]] = matrix(rpois(n = 347*21434, lambda = 0.1), ncol = 347, nrow = 21434) # poisson
-counts_ls[[i+2]] = matrix(rpois(n = 347*21434, lambda = 0.3), ncol = 347, nrow = 21434) # poisson 
-counts_ls[[i+3]] = matrix(rpois(n = 347*21434, lambda = 0.5), ncol = 347, nrow = 21434) # poisson 
-counts_ls[[i+4]] = matrix(rpois(n = 347*21434, lambda = 0.7), ncol = 347, nrow = 21434) # poisson 
-counts_ls[[i+5]] = matrix(rpois(n = 347*21434, lambda = 1), ncol = 347, nrow = 21434) # poisson 
+means = emp_values$means
+sizes = emp_values$sizes
+counts_ls[[i+1]] = matrix(rpois(n = 347*21483, lambda = 0.1), ncol = 347, nrow = 21483) # poisson
+counts_ls[[i+2]] = matrix(rpois(n = 347*21483, lambda = 0.3), ncol = 347, nrow = 21483) # poisson 
+counts_ls[[i+3]] = matrix(rpois(n = 347*21483, lambda = 0.5), ncol = 347, nrow = 21483) # poisson 
+counts_ls[[i+4]] = matrix(rpois(n = 347*21483, lambda = 0.7), ncol = 347, nrow = 21483) # poisson 
+counts_ls[[i+5]] = matrix(rpois(n = 347*21483, lambda = 1), ncol = 347, nrow = 21483) # poisson 
 counts_ls[[i+6]] = t(sapply(seq_len(length(means)), function(i) 
   rpois(n = 347, lambda = means[i]))) # poisson with different parameters for each gene
-counts_ls[[i+7]] = matrix(rnbinom(n = 347*21434, size = 63, mu = 0.1), ncol = 347, nrow  = 21434) # negative binomial
-counts_ls[[i+8]] = matrix(rnbinom(n = 347*21434, size = 63, mu = 0.3), ncol = 347, nrow  = 21434) # negative binomial
-counts_ls[[i+9]] = matrix(rnbinom(n = 347*21434, size = 63, mu = 0.5), ncol = 347, nrow  = 21434) # negative binomial
-counts_ls[[i+10]] = matrix(rnbinom(n = 347*21434, size = 63, mu = 0.7), ncol = 347, nrow  = 21434) # negative binomial
-counts_ls[[i+11]] = matrix(rnbinom(n = 347*21434, size = 63, mu = 1), ncol = 347, nrow  = 21434) # negative binomial
-counts_ls[[i+12]] = t(sapply(seq_len(length(means)), function(i) 
-  rnbinom(n = 347, size = sizes[i], mu = means[i]))) # negative binomial with different parameters for each gene
+counts_ls[[i+7]] = matrix(rnbinom(n = 347*21483, size = 63, mu = 0.1), ncol = 347, nrow  = 21483) # negative binomial
+counts_ls[[i+8]] = matrix(rnbinom(n = 347*21483, size = 63, mu = 0.3), ncol = 347, nrow  = 21483) # negative binomial
+counts_ls[[i+9]] = matrix(rnbinom(n = 347*21483, size = 63, mu = 0.5), ncol = 347, nrow  = 21483) # negative binomial
+counts_ls[[i+10]] = matrix(rnbinom(n = 347*21483, size = 63, mu = 0.7), ncol = 347, nrow  = 21483) # negative binomial
+counts_ls[[i+11]] = matrix(rnbinom(n = 347*21483, size = 63, mu = 1), ncol = 347, nrow  = 21483) # negative binomial
+counts_ls[[i+12]] = t(sapply(seq_len(length(means)), function(k) 
+  rnbinom(n = 347, size = sizes[k], mu = means[k]))) # negative binomial with different parameters for each gene
 
 for(j in (i+1):length(counts_ls)){
   tic("downsample")
@@ -181,9 +181,9 @@ for(i in seq_along(counts_ls)){
     arrange(chi_obs) %>%
     drop_na() %>%
     mutate(chi_quantile = qchisq(p = (1:length(chi_obs))/length(chi_obs), df = ncol(counts) - 1),
-           percentile_color = case_when(chi_obs > quantile(chi_obs, 0.995) ~ "> 99.5",
-                                        chi_obs > quantile(chi_obs, 0.95) ~ "> 95",
-                                        chi_obs > quantile(chi_obs, 0.90) ~ "> 90",
+           percentile_color = case_when(chi_obs > quantile(chi_obs, 0.995, na.rm = TRUE) ~ "> 99.5",
+                                        chi_obs > quantile(chi_obs, 0.95, na.rm = TRUE) ~ "> 95",
+                                        chi_obs > quantile(chi_obs, 0.90, na.rm = TRUE) ~ "> 90",
                                         T ~ "rest"),
            i = i)
   
@@ -197,15 +197,16 @@ for(i in seq_along(counts_ls)){
     arrange(chi_obs) %>%
     drop_na() %>%
     mutate(chi_quantile = qchisq(p = (1:length(chi_obs))/length(chi_obs), df = ncol(counts) - 2),
-           percentile_color = case_when(chi_obs > quantile(chi_obs, 0.995) ~ "> 99.5",
-                                        chi_obs > quantile(chi_obs, 0.95) ~ "> 95",
-                                        chi_obs > quantile(chi_obs, 0.90) ~ "> 90",
+           percentile_color = case_when(chi_obs > quantile(chi_obs, 0.995, na.rm = TRUE) ~ "> 99.5",
+                                        chi_obs > quantile(chi_obs, 0.95, na.rm = TRUE) ~ "> 95",
+                                        chi_obs > quantile(chi_obs, 0.90, na.rm = TRUE) ~ "> 90",
                                         T ~ "rest"),
            i = i)
   
   # Negative binomial (gene-specific overdispersion parameter)
   chi_obs_nb = p_chisq_test_2(counts, distribution = "nb 2")
-  plot_dt_nb_2_ls[[i]] = tibble(chi_obs = chi_obs_nb,
+  plot_dt_nb_2_ls[[i]] = tibble(chi_obs = chi_obs_nb[[1]],
+                                f_phi = chi_obs_nb[[2]],
                                 expression = rowSums(counts),
                                 var = apply(counts, 1, var),
                                 prop_0 = apply(counts, 1, function(x) sum(x == 0))) %>%
@@ -213,9 +214,9 @@ for(i in seq_along(counts_ls)){
     arrange(chi_obs) %>%
     drop_na() %>%
     mutate(chi_quantile = qchisq(p = (1:length(chi_obs))/length(chi_obs), df = ncol(counts) - 2),
-           percentile_color = case_when(chi_obs > quantile(chi_obs, 0.995) ~ "> 99.5",
-                                        chi_obs > quantile(chi_obs, 0.95) ~ "> 95",
-                                        chi_obs > quantile(chi_obs, 0.90) ~ "> 90",
+           percentile_color = case_when(chi_obs > quantile(chi_obs, 0.995, na.rm = TRUE) ~ "> 99.5",
+                                        chi_obs > quantile(chi_obs, 0.95, na.rm = TRUE) ~ "> 95",
+                                        chi_obs > quantile(chi_obs, 0.90, na.rm = TRUE) ~ "> 90",
                                         T ~ "rest"),
            i = i)
 }
@@ -327,3 +328,45 @@ plot_dt_nb_2 %>%
   facet_wrap(~ i, ncol = 1, scales = "free_y") +
   theme_bw()
 ```
+
+Diagnosing parameter estimates
+
+```{r}
+emp_values = readRDS(here("./mouse_cortex/output/emp_values.rds"))
+means = emp_values$means
+sizes = emp_values$sizes
+params = tibble(means = means,
+                sizes = sizes,
+                id = 1:length(means))
+```
+
+
+```{r}
+plot_dt_nb_2 = plot_dt_nb_2 %>%
+  left_join(., params, by = "id")
+
+# Mean vs size (emp parameters)
+plot_dt_nb_2 %>%
+  ggplot(aes(x = means, y = sizes)) +
+  geom_point(alpha = 0.01) +
+  scale_x_log10() +
+  scale_y_log10() +
+  theme_bw()
+
+# Mean vs phi
+plot_dt_nb_2 %>%
+  ggplot(aes(x = means, y = f_phi)) +
+  geom_point(alpha = 0.01) +
+  scale_x_log10() +
+  scale_y_log10() +
+  theme_bw()
+
+# Size vs phi
+plot_dt_nb_2 %>%
+  ggplot(aes(x = sizes, y = f_phi)) +
+  geom_point(alpha = 0.01) +
+  scale_x_log10() +
+  scale_y_log10() +
+  theme_bw()
+```
+
