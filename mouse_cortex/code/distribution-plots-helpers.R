@@ -304,6 +304,7 @@ p_chisq_test_2 = function(m, distribution = "poisson"){
     f_var = mu_ij[remove_na_rows, ] + mu_ij[remove_na_rows, ]^2/f_phi[remove_na_rows]
     
     chi_square = rowSums((f_obs[remove_na_rows, ]-f_hyp[remove_na_rows, ])^2/f_var)
+    # return(list(chi_square, f_phi)) # diagnosing purposes
   } 
   
   return(chi_square)
