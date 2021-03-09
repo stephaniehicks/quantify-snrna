@@ -62,7 +62,7 @@ for(i in seq_along(h5ad_ls)){
 
 ```{r}
 # Simulated datasets with same dimensions as snRNA data
-emp_values = readRDS(here("./mouse_cortex/output/emp_values.rds"))
+emp_values = readRDS(here("./mouse_cortex/output/emp_values_edger.rds"))
 means = emp_values$means
 sizes = emp_values$sizes
 counts_ls[[i+1]] = matrix(rpois(n = 347*21483, lambda = 0.1), ncol = 347, nrow = 21483) # poisson
@@ -332,7 +332,7 @@ plot_dt_nb_2 %>%
 Diagnosing parameter estimates
 
 ```{r}
-emp_values = readRDS(here("./mouse_cortex/output/emp_values.rds"))
+emp_values = readRDS(here("./mouse_cortex/output/emp_values_edger.rds"))
 means = emp_values$means
 sizes = emp_values$sizes
 params = tibble(means = means,
@@ -363,10 +363,78 @@ plot_dt_nb_2 %>%
 
 # Size vs phi
 plot_dt_nb_2 %>%
+  # filter(!(sizes %in% common_sizes_1) & !(f_phi %in% common_sizes_2)) %>%
   ggplot(aes(x = sizes, y = f_phi)) +
   geom_point(alpha = 0.01) +
   scale_x_log10() +
   scale_y_log10() +
   theme_bw()
 ```
+
+```{r}
+# Common size estimates (note that the overall phi estimate is 2.16)
+common_sizes_1 = plot_dt_nb_2 %>% count(sizes) %>% filter(n > 1) %>% pull(sizes) # 0.339 and 10240 occurs in 6600 and 4000 genes
+common_sizes_2 = plot_dt_nb_2 %>% count(f_phi) %>% filter(n > 1) %>% pull(f_phi) # 0.501 and 10240 occurs in 6600 and 5000 genes
+```
+
+```{r}
+# What are the genes that get assigned these size estimates?
+size_param_groups = tibble(size_label = c("size_0.339", "size_10240"),
+                           sizes = common_sizes_1)
+f_phi_param_groups = tibble(f_phi_label = c("f_phi_0.501", "f_phi_10240"),
+                            f_phi = common_sizes_2)
+                           
+plot_dt_nb_2 = plot_dt_nb_2 %>%
+  left_join(., size_param_groups, by = "sizes") %>%
+  left_join(., f_phi_param_groups, by = "f_phi")
+```
+
+```{r}
+plot_dt_nb_2 %>%
+  ggplot(aes(x = prop_0, y = expression)) +
+  geom_point(size = 0.1) +
+  facet_wrap(~ size_label + f_phi_label) +
+  scale_y_log10() +
+  theme_bw()
+
+plot_dt_nb_2 %>%
+  ggplot(aes(x = var, y = expression)) +
+  geom_point(size = 0.1) +
+  facet_wrap(~ size_label + f_phi_label) +
+  scale_y_log10() +
+  scale_x_log10() +
+  theme_bw()
+```
+
+
+```{r}
+# Remove common size parameters
+plot_dt_nb_2 %>%
+  filter(!(sizes %in% common_sizes_1[2]) & !(f_phi %in% common_sizes_2[2])) %>%
+  ggplot(aes(x = sizes, y = f_phi)) +
+  geom_point(alpha = 0.01) +
+  scale_x_log10() +
+  scale_y_log10() +
+  theme_bw()
+
+plot_dt_nb_2_filter = plot_dt_nb_2 %>% 
+  filter(!(sizes %in% common_sizes_1[2]) & !(f_phi %in% common_sizes_2[2])) %>%
+  arrange(chi_obs) %>%
+  mutate(chi_quantile = qchisq(p = (1:length(chi_obs))/length(chi_obs), df = ncol(counts) - 2),
+         percentile_color = case_when(chi_obs > quantile(chi_obs, 0.995, na.rm = TRUE) ~ "> 99.5",
+                                      chi_obs > quantile(chi_obs, 0.95, na.rm = TRUE) ~ "> 95",
+                                      chi_obs > quantile(chi_obs, 0.90, na.rm = TRUE) ~ "> 90",
+                                      T ~ "rest"))
+plot_dt_nb_2_filter %>%
+  # filter(expression > 50) %>%
+  ggplot(aes(x = chi_quantile,
+             y = chi_obs,
+             color = percentile_color)) + 
+  facet_wrap(~ i, scales = "free") +
+  geom_point(size = 0.5) + 
+  geom_abline(slope = 1, intercept = 0) +
+  # coord_cartesian(ylim = c(250, 1000)) +
+  theme_bw()
+```
+
 
