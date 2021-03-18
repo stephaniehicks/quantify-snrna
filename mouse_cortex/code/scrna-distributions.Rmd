@@ -167,6 +167,7 @@ This is based on Figure 2 from this paper: https://genome.cshlp.org/content/18/9
 plot_dt_pois_ls = list()
 plot_dt_nb_1_ls = list()
 plot_dt_nb_2_ls = list()
+plot_dt_nb_3_ls = list()
 for(i in seq_along(counts_ls)){
   print(i)
   counts = counts_ls[[i]]
@@ -207,6 +208,32 @@ for(i in seq_along(counts_ls)){
   chi_obs_nb = p_chisq_test_2(counts, distribution = "nb 2")
   plot_dt_nb_2_ls[[i]] = tibble(chi_obs = chi_obs_nb[[1]],
                                 f_phi = chi_obs_nb[[2]],
+                                expression = rowSums(counts),
+                                var = apply(counts, 1, var),
+                                prop_0 = apply(counts, 1, function(x) sum(x == 0))) %>%
+    mutate(id = 1:n()) %>%
+    arrange(chi_obs) %>%
+    drop_na() %>%
+    mutate(chi_quantile = qchisq(p = (1:length(chi_obs))/length(chi_obs), df = ncol(counts) - 2),
+           percentile_color = case_when(chi_obs > quantile(chi_obs, 0.995, na.rm = TRUE) ~ "> 99.5",
+                                        chi_obs > quantile(chi_obs, 0.95, na.rm = TRUE) ~ "> 95",
+                                        chi_obs > quantile(chi_obs, 0.90, na.rm = TRUE) ~ "> 90",
+                                        T ~ "rest"),
+           i = i)
+  
+  # Negative binomial with true size parameter
+  m = counts
+  total_sum = sum(m)
+  lambda_j = rowSums(m)/total_sum # proportion of counts in gene j
+  c_i = colSums(m)/total_sum # proportion of counts in sample i (should be approximately same across i for downsampled matrix)
+  mu_ij = outer(lambda_j, c_i)*total_sum
+  
+  f_obs = m
+  f_hyp = mu_ij
+  f_var = mu_ij + mu_ij^2/sizes
+  
+  chi_obs_nb = rowSums((f_obs-f_hyp)^2/f_var)
+  plot_dt_nb_3_ls[[i]] = tibble(chi_obs = chi_obs_nb,
                                 expression = rowSums(counts),
                                 var = apply(counts, 1, var),
                                 prop_0 = apply(counts, 1, function(x) sum(x == 0))) %>%
@@ -306,6 +333,10 @@ plot_dt_nb_2 %>%
   geom_abline(slope = 1, intercept = 0) +
   # coord_cartesian(ylim = c(250, 1000)) +
   theme_bw()
+```
+
+```{r}
+plot_dt_nb_3_ls[[1]] %>% ggplot(aes(x = chi_quantile, y = chi_obs, color = percentile_color)) + geom_point(size = 0.5) + geom_abline(slope = 1, intercept = 0) + theme_bw()
 ```
 
 ```{r}
