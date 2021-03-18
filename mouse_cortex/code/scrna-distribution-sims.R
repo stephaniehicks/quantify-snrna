@@ -12,6 +12,7 @@ source(here("./mouse_cortex/code/distribution-plots-helpers.R"))
 # Get task ID
 task_id = as.integer(Sys.getenv("SGE_TASK_ID")) 
 i = task_id
+print(i)
 
 # Run chi-squared tests
 counts_ls = readRDS(here("./scrna/counts_more_ls.rds"))
@@ -68,5 +69,5 @@ plot_dt_nb_2 = tibble(chi_obs = chi_obs_nb[[1]],
 
 # Save results
 saveRDS(plot_dt_pois, here(paste0("./scrna/output/plot_dt_pois_ls_", i, ".rds")))
-saveRDS(plot_dt_nb, here(paste0("./scrna/output/plot_dt_nb_1_ls_", i, ".rds")))
+saveRDS(plot_dt_nb_1, here(paste0("./scrna/output/plot_dt_nb_1_ls_", i, ".rds")))
 saveRDS(plot_dt_nb_2, here(paste0("./scrna/output/plot_dt_nb_2_ls_", i, ".rds")))

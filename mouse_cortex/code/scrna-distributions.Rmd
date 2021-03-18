@@ -71,7 +71,7 @@ lambdas = c(0.1, 0.3, 0.5, 0.7, 1.0)
 for(i in seq_along(lambdas)){
   counts_ls[[i+4]] = matrix(rpois(n = 347*21483, lambda = lambdas[i]), ncol = 347, nrow = 21483)
 }
-counts_ls[[i+4+1]] = t(sapply(seq_len(length(means)), function(i) 
+counts_ls[[10]] = t(sapply(seq_len(length(means)), function(i) 
   rpois(n = 347, lambda = means[i]))) # poisson with different parameters for each gene
 
 
@@ -79,11 +79,11 @@ counts_ls[[i+4+1]] = t(sapply(seq_len(length(means)), function(i)
 phis = c(0.3, 1, 10, 100) # the empirical 1st quartile is 0.33, median is 0.88, 3rd quartile is 2.24, mean is 6.1, excluding outliers
 for(i in seq_along(lambdas)){
   for(j in seq_along(phis)){
-    counts_ls[[(i-1)*length(phis)+j+11]] = matrix(rnbinom(n = 347*21483, size = phis[j], mu = lambdas[i]), ncol = 347, nrow = 21483)
+    counts_ls[[(i-1)*length(phis)+j+10]] = matrix(rnbinom(n = 347*21483, size = phis[j], mu = lambdas[i]), ncol = 347, nrow = 21483)
   }
 }
 
-counts_ls[[32]] = t(sapply(seq_len(length(means)), function(k) 
+counts_ls[[31]] = t(sapply(seq_len(length(means)), function(k) 
   rnbinom(n = 347, size = sizes[k], mu = means[k]))) # negative binomial with different parameters for each gene
 
 for(j in 5:length(counts_ls)){
@@ -233,24 +233,25 @@ for(i in seq_along(counts_ls)){
 ```{r}
 # Read results from cluster
 plot_dt_pois_ls = list()
-plot_dt_nb_ls = list()
-plot_dt_nb_2 = list()
-for(i in 1:31){
+plot_dt_nb_1_ls = list()
+plot_dt_nb_2_ls = list()
+for(i in 1:32){
   plot_dt_pois_ls[[i]] = readRDS(here(paste0("./scrna/output/plot_dt_pois_ls_", i, ".rds")))
-  plot_dt_nb_ls[[i]] = readRDS(here(paste0("./scrna/output/plot_dt_nb_1_ls_", i, ".rds")))
+  plot_dt_nb_1_ls[[i]] = readRDS(here(paste0("./scrna/output/plot_dt_nb_1_ls_", i, ".rds")))
   plot_dt_nb_2_ls[[i]] = readRDS(here(paste0("./scrna/output/plot_dt_nb_2_ls_", i, ".rds")))
 }
 ```
 
-```{r}
+```{r fig.height = 10, fig.width = 10}
 # Poisson plots
 plot_dt_pois = bind_rows(plot_dt_pois_ls)
 plot_dt_pois %>%
+  filter(i %in% 11:31) %>%
   # filter(expression > 50) %>%
     ggplot(aes(x = chi_quantile,
              y = chi_obs,
              color = percentile_color)) + 
-  facet_wrap(~ i, scales = "free") +
+  facet_wrap(~ i, scales = "free", ncol = 4) +
   geom_point(size = 0.5) + 
   geom_abline(slope = 1, intercept = 0) +
   # coord_cartesian(ylim = c(250, 1000)) +
@@ -276,15 +277,17 @@ plot_dt_pois %>%
   theme_bw()
 ```
 
-```{r}
+```{r fig.height = 2.5, fig.width = 10}
 # Negative binomial plots (single overdispersion parameter)
 plot_dt_nb_1 = bind_rows(plot_dt_nb_1_ls)
+
 plot_dt_nb_1 %>%
+  filter(i %in% 1:4) %>%
   # filter(expression > 50) %>%
     ggplot(aes(x = chi_quantile,
              y = chi_obs,
              color = percentile_color)) + 
-  facet_wrap(~ i, scales = "free") +
+  facet_wrap(~ i, scales = "free", ncol = 4) +
   geom_point(size = 0.5) + 
   geom_abline(slope = 1, intercept = 0) +
   # coord_cartesian(ylim = c(250, 1000)) +
@@ -312,15 +315,16 @@ plot_dt_nb_1 %>%
   theme_bw()
 ```
 
-```{r}
+```{r fig.height = 10, fig.width = 10}
 # Negative binomial plots (gene-specific overdispersion parameter)
 plot_dt_nb_2 = bind_rows(plot_dt_nb_2_ls)
 plot_dt_nb_2 %>%
+  filter(i %in% 11:31) %>%
   # filter(expression > 50) %>%
     ggplot(aes(x = chi_quantile,
              y = chi_obs,
              color = percentile_color)) + 
-  facet_wrap(~ i, scales = "free") +
+  facet_wrap(~ i, scales = "free", ncol = 4) +
   geom_point(size = 0.5) + 
   geom_abline(slope = 1, intercept = 0) +
   # coord_cartesian(ylim = c(250, 1000)) +
