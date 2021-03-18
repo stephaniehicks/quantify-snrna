@@ -65,28 +65,34 @@ for(i in seq_along(h5ad_ls)){
 emp_values = readRDS(here("./mouse_cortex/output/emp_values_edger.rds"))
 means = emp_values$means
 sizes = emp_values$sizes
-counts_ls[[i+1]] = matrix(rpois(n = 347*21483, lambda = 0.1), ncol = 347, nrow = 21483) # poisson
-counts_ls[[i+2]] = matrix(rpois(n = 347*21483, lambda = 0.3), ncol = 347, nrow = 21483) # poisson 
-counts_ls[[i+3]] = matrix(rpois(n = 347*21483, lambda = 0.5), ncol = 347, nrow = 21483) # poisson 
-counts_ls[[i+4]] = matrix(rpois(n = 347*21483, lambda = 0.7), ncol = 347, nrow = 21483) # poisson 
-counts_ls[[i+5]] = matrix(rpois(n = 347*21483, lambda = 1), ncol = 347, nrow = 21483) # poisson 
-counts_ls[[i+6]] = t(sapply(seq_len(length(means)), function(i) 
+
+# Poisson simulations
+lambdas = c(0.1, 0.3, 0.5, 0.7, 1.0)
+for(i in seq_along(lambdas)){
+  counts_ls[[i+4]] = matrix(rpois(n = 347*21483, lambda = lambdas[i]), ncol = 347, nrow = 21483)
+}
+counts_ls[[i+4+1]] = t(sapply(seq_len(length(means)), function(i) 
   rpois(n = 347, lambda = means[i]))) # poisson with different parameters for each gene
-counts_ls[[i+7]] = matrix(rnbinom(n = 347*21483, size = 63, mu = 0.1), ncol = 347, nrow  = 21483) # negative binomial
-counts_ls[[i+8]] = matrix(rnbinom(n = 347*21483, size = 63, mu = 0.3), ncol = 347, nrow  = 21483) # negative binomial
-counts_ls[[i+9]] = matrix(rnbinom(n = 347*21483, size = 63, mu = 0.5), ncol = 347, nrow  = 21483) # negative binomial
-counts_ls[[i+10]] = matrix(rnbinom(n = 347*21483, size = 63, mu = 0.7), ncol = 347, nrow  = 21483) # negative binomial
-counts_ls[[i+11]] = matrix(rnbinom(n = 347*21483, size = 63, mu = 1), ncol = 347, nrow  = 21483) # negative binomial
-counts_ls[[i+12]] = t(sapply(seq_len(length(means)), function(k) 
+
+
+# Negative binomial simulations
+phis = c(0.3, 1, 10, 100) # the empirical 1st quartile is 0.33, median is 0.88, 3rd quartile is 2.24, mean is 6.1, excluding outliers
+for(i in seq_along(lambdas)){
+  for(j in seq_along(phis)){
+    counts_ls[[(i-1)*length(phis)+j+11]] = matrix(rnbinom(n = 347*21483, size = phis[j], mu = lambdas[i]), ncol = 347, nrow = 21483)
+  }
+}
+
+counts_ls[[32]] = t(sapply(seq_len(length(means)), function(k) 
   rnbinom(n = 347, size = sizes[k], mu = means[k]))) # negative binomial with different parameters for each gene
 
-for(j in (i+1):length(counts_ls)){
+for(j in 5:length(counts_ls)){
   tic("downsample")
   counts_ls[[j]] = Down_Sample_Matrix(ceiling(counts_ls[[j]]))
   toc()
 }
 
-saveRDS(counts_ls, here("./scrna/counts_ls.rds"))
+saveRDS(counts_ls, here("./scrna/counts_more_ls.rds"))
 ```
 
 ```{r}
@@ -161,13 +167,13 @@ plot_dt_nb %>%
 
 ##### By Sample
 
-This is based on Figure 2 from this paper: https://genome.cshlp.org/content/18/9/1509.full.html 
+This is based on Figure 2 from this paper: https://genome.cshlp.org/content/18/9/1509.full.html.
+Run the following code chunk on the cluster with `scrna-distribution-sims.R`.
 
 ```{r}
 plot_dt_pois_ls = list()
 plot_dt_nb_1_ls = list()
 plot_dt_nb_2_ls = list()
-plot_dt_nb_3_ls = list()
 for(i in seq_along(counts_ls)){
   print(i)
   counts = counts_ls[[i]]
@@ -220,35 +226,21 @@ for(i in seq_along(counts_ls)){
                                         chi_obs > quantile(chi_obs, 0.90, na.rm = TRUE) ~ "> 90",
                                         T ~ "rest"),
            i = i)
-  
-  # Negative binomial with true size parameter
-  m = counts
-  total_sum = sum(m)
-  lambda_j = rowSums(m)/total_sum # proportion of counts in gene j
-  c_i = colSums(m)/total_sum # proportion of counts in sample i (should be approximately same across i for downsampled matrix)
-  mu_ij = outer(lambda_j, c_i)*total_sum
-  
-  f_obs = m
-  f_hyp = mu_ij
-  f_var = mu_ij + mu_ij^2/sizes
-  
-  chi_obs_nb = rowSums((f_obs-f_hyp)^2/f_var)
-  plot_dt_nb_3_ls[[i]] = tibble(chi_obs = chi_obs_nb,
-                                expression = rowSums(counts),
-                                var = apply(counts, 1, var),
-                                prop_0 = apply(counts, 1, function(x) sum(x == 0))) %>%
-    mutate(id = 1:n()) %>%
-    arrange(chi_obs) %>%
-    drop_na() %>%
-    mutate(chi_quantile = qchisq(p = (1:length(chi_obs))/length(chi_obs), df = ncol(counts) - 2),
-           percentile_color = case_when(chi_obs > quantile(chi_obs, 0.995, na.rm = TRUE) ~ "> 99.5",
-                                        chi_obs > quantile(chi_obs, 0.95, na.rm = TRUE) ~ "> 95",
-                                        chi_obs > quantile(chi_obs, 0.90, na.rm = TRUE) ~ "> 90",
-                                        T ~ "rest"),
-           i = i)
 }
 ```
 
+
+```{r}
+# Read results from cluster
+plot_dt_pois_ls = list()
+plot_dt_nb_ls = list()
+plot_dt_nb_2 = list()
+for(i in 1:31){
+  plot_dt_pois_ls[[i]] = readRDS(here(paste0("./scrna/output/plot_dt_pois_ls_", i, ".rds")))
+  plot_dt_nb_ls[[i]] = readRDS(here(paste0("./scrna/output/plot_dt_nb_1_ls_", i, ".rds")))
+  plot_dt_nb_2_ls[[i]] = readRDS(here(paste0("./scrna/output/plot_dt_nb_2_ls_", i, ".rds")))
+}
+```
 
 ```{r}
 # Poisson plots
@@ -335,9 +327,6 @@ plot_dt_nb_2 %>%
   theme_bw()
 ```
 
-```{r}
-plot_dt_nb_3_ls[[1]] %>% ggplot(aes(x = chi_quantile, y = chi_obs, color = percentile_color)) + geom_point(size = 0.5) + geom_abline(slope = 1, intercept = 0) + theme_bw()
-```
 
 ```{r}
 plot_dt_nb_2 %>%
