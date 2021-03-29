@@ -229,14 +229,83 @@ genes_rowsums_tb %>%
   group_by(bin) %>%
   summarize(preandmrna_percent_inc_median = median(preandmrna_percent_inc, na.rm = T))
 
+# % Increase in reads
 genes_rowsums_tb %>%
   ggplot(aes(x = as.factor(bin), y = preandmrna_percent_inc)) + 
   geom_boxplot() +
   scale_y_log10() +
   labs(x = "Bin (by gene length)") +
   theme_bw()
+
+# Transcripts gene rowsum
+genes_rowsums_tb %>%
+  filter(!is.na(transcripts) & !is.na(preandmrna)) %>%
+  ggplot(aes(x = as.factor(bin), y = transcripts)) + 
+  geom_boxplot() +
+  scale_y_log10() +
+  labs(x = "Bin (by gene length)") +
+  theme_bw()
+
+# Preandmrna gene rowsum
+genes_rowsums_tb %>%
+  filter(!is.na(transcripts) & !is.na(preandmrna)) %>%
+  ggplot(aes(x = as.factor(bin), y = preandmrna)) + 
+  geom_boxplot() +
+  scale_y_log10() +
+  labs(x = "Bin (by gene length)") +
+  theme_bw()
+
+# Gene length by bin
+genes_rowsums_tb %>%
+  filter(!is.na(transcripts) & !is.na(preandmrna)) %>%
+  ggplot(aes(x = as.factor(bin), y = length)) +
+  scale_y_log10() +
+  geom_boxplot() +
+  theme_bw()
 ```
 
+```{r}
+library(mgcv)
+# GAM model to correct for gene length bias
+model_tb = tibble(gene = genes_rowsums_tb$gene,         # gene names
+                  t = log10(genes_rowsums_tb$length),   # gene lengths
+                  m1 = genes_rowsums_tb$preandmrna,     # the expression you want to correct (e.g. nucleic expression)
+                  m2 = genes_rowsums_tb$transcripts)    # the expected expression (e.g. whole-cell expression)
+model_tb = model_tb %>%
+  mutate(M = log2(m1/m2)) %>% # calculate log2-fold expression ratio for each gene
+  filter(!is.na(M) & !is.infinite(M)) # remove missing or infinite ratios
+
+# Fit GAM model
+model = gam(M ~ s(t), family = gaussian(link = "identity"), data = model_tb)
+model_tb$fitted = predict(model, newdata = model_tb)
+
+# Calculate gene length corrected expression
+model_tb = model_tb %>%
+  mutate(m1_corrected = m1/(2^fitted))
+```
+
+
+```{r}
+# Plot gene length (x) vs log2-fold ratio (y), along with GAM model fit (line)
+model_tb %>%
+ggplot(aes(x = t, y = M)) +
+  geom_point(size = 0.1, alpha = 0.1) +
+  geom_line(aes(y = fitted), color = "blue") +
+  labs(x = "Log10(gene length)",
+       y = "Log2-fold ratio") +
+  theme_bw()
+
+# Compare gene length bias in original vs corrected vs expected expression
+model_tb %>%
+  pivot_longer(cols = c("m1", "m1_corrected", "m2")) %>%
+  ggplot(aes(x = t, y = value, color = name)) +
+  geom_point(size = 0.1, alpha = 0.01) +
+  geom_smooth() +
+  scale_y_log10() +
+  labs(x = "Log10(gene length)",
+       y = "Expression") +
+  theme_bw()
+```
 
 
 ### PCA
