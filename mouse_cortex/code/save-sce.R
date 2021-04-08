@@ -1,7 +1,7 @@
 # save-sce.R
 # -----------------------------------------------------------------------------
 # Author:             Albert Kuo
-# Date last modified: Nov 4, 2020
+# Date last modified: Apr 8, 2021
 #
 # Quality control, run PCA, add cell type labels, and save as SingleCellExperiment 
 
@@ -106,7 +106,7 @@ for(i in seq_along(sce_ls)){
 # Cell type labels (singleR)
 # Built-in reference mouse dataset
 library(SingleR)
-mouse_se = MouseRNAseqData() # inclusion in singleR is deprecated, obtain from celldex
+mouse_se = celldex::MouseRNAseqData()
 
 for(i in seq_along(sce_ls)){
   sce = sce_ls[[i]]

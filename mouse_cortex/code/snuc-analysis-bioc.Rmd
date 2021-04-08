@@ -317,7 +317,7 @@ model_tb %>%
   theme_bw()
 ```
 
-#### Length bias by cell type
+#### By cell type
 
 ```{r}
 # Get rowsums for every pipeline and cell type group
@@ -378,6 +378,48 @@ genes_rowsums_tb %>%
   theme_bw()
 ```
 
+#### By marker genes
+
+Do different marker genes have different lengths?
+
+```{r}
+pred_celltypes = readRDS(here("mouse_cortex", "salmon_quants", "transcripts_pipeline", "singler_results.rds"))
+all.markers <- metadata(pred_celltypes)$de.genes
+
+# Subset to singleR labels that appear in (transcripts pipeline) data
+celltype_markers = all.markers[unique(colData(sce_ls[[1]])$singleR_labels_pruned)]
+celltype_markers = sapply(celltype_markers, unlist)
+celltype_markers_tb_ls = list()
+for(i in seq_along(celltype_markers)){
+  if(is.null(unlist(celltype_markers[i]))) next
+  celltype_markers_tb_ls[[i]] = tibble(cell_type = names(celltype_markers)[i],
+                               gene_name = unique(unlist(celltype_markers[i])))
+}
+celltype_markers_tb = bind_rows(celltype_markers_tb_ls) 
+
+celltype_markers_length_tb = rowData(sce_ls[["transcripts"]]) %>%
+  as_tibble() %>%
+  select(gene_name, start, end, transcript_length) %>%
+  mutate(length = end - start,
+         gene = rownames(rowData(sce_ls[["transcripts"]]))) %>%
+  select(gene, gene_name, length, transcript_length) %>%
+  right_join(., celltype_markers_tb, by = "gene_name")
+
+# Plot gene length of marker genes by cell type
+celltype_markers_length_tb %>%
+  ggplot(aes(x = cell_type, y = length)) + 
+  geom_boxplot() + 
+  scale_y_log10() +
+  coord_flip() +
+  theme_bw()
+
+celltype_markers_length_tb %>%
+  ggplot(aes(x = cell_type, y = transcript_length)) + 
+  geom_boxplot() + 
+  scale_y_log10() +
+  coord_flip() +
+  theme_bw()
+```
 
 
 ### PCA
