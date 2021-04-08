@@ -194,6 +194,8 @@ library(MASS)
 p_chisq_test = function(m, distribution = "poisson"){
   ind = c() # rows that fail
   p_values = c() # p-values for every row
+  chi_squares = c() # chi-squared value for every row
+  dfs = c() # degrees of freedom for every row
   
   if(distribution == "poisson"){
     for(i in 1:nrow(m)){
@@ -211,11 +213,23 @@ p_chisq_test = function(m, distribution = "poisson"){
       f_obs = c(f_obs, 0) # Observed value
       f_hyp = c(f_hyp, other_value) # Expected value
       
+      # Pool counts if < 5
+      if(any(f_obs < 5)){
+        start_pool_bin = which(f_obs < 5)[1]
+        f_obs_pool = sum(f_obs[start_pool_bin:length(f_obs)])
+        f_hyp_pool = sum(f_hyp[start_pool_bin:length(f_hyp)])
+        
+        f_obs = c(f_obs[1:(start_pool_bin - 1)], f_obs_pool)
+        f_hyp = c(f_hyp[1:(start_pool_bin - 1)], f_hyp_pool)
+      }
+
       p = 1 
       df = (length(bins) + 1) - p
       chiSquare = sum((f_obs-f_hyp)^2/f_hyp)
       
       p_values = c(p_values, 1 - pchisq(chiSquare, df = df))
+      chi_squares = c(chi_squares, chiSquare)
+      dfs = c(dfs, df)
     }
   } else if (distribution == "nb"){
     for(i in 1:nrow(m)){
@@ -236,11 +250,23 @@ p_chisq_test = function(m, distribution = "poisson"){
         f_obs = c(f_obs, 0) # Observed value
         f_hyp = c(f_hyp, other_value) # Expected value
         
+        # Pool counts if < 5
+        if(any(f_obs < 5)){
+          start_pool_bin = which(f_obs < 5)[1]
+          f_obs_pool = sum(f_obs[start_pool_bin:length(f_obs)])
+          f_hyp_pool = sum(f_hyp[start_pool_bin:length(f_hyp)])
+          
+          f_obs = c(f_obs[1:(start_pool_bin - 1)], f_obs_pool)
+          f_hyp = c(f_hyp[1:(start_pool_bin - 1)], f_hyp_pool)
+        }
+        
         p = 2
         df = (length(bins) + 1) - p
         chiSquare = sum((f_obs-f_hyp)^2/f_hyp)
 
-        p_values = c(p_values, 1 - pchisq(chiSquare, df = df))}, 
+        p_values = c(p_values, 1 - pchisq(chiSquare, df = df))
+        chi_squares = c(chi_squares, chiSquare)
+        dfs = c(dfs, df)}, 
         error = function(e){})
       if("NULL" %in% class(t)){
         ind = c(ind, i)
@@ -248,7 +274,7 @@ p_chisq_test = function(m, distribution = "poisson"){
     }
   }
   
-  return(list(p_values, ind))
+  return(list(p_values, ind, chi_squares, dfs))
 }
 
 # Bin by sample
