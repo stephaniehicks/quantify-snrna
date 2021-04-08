@@ -190,9 +190,13 @@ getGeneLengthAndGCContent(id, org, mode=c("org.db"))
 ```
 
 
-#### Binned by length
+### Gene Length Bias 
 
-```{r}
+#### Overall length bias
+
+This may have an effect on cell type classification (if marker genes have different lengths). For DE, we fix the gene so a constant length bias for all cell groups should not affect the analysis. 
+
+```{r} 
 genes_rowsums_tb = tibble(gene = rownames(sce_ls[["transcripts"]]))
 common_cells = Reduce(intersect, sapply(sce_ls, colnames)) 
 for(i in seq_along(sce_ls)){
@@ -213,10 +217,10 @@ genes_rowsums_tb = genes_rowsums_tb %>%
 # Bin by length
 genes_length_tb = rowData(sce_ls[["transcripts"]]) %>%
   as_tibble() %>%
-  select(start, end) %>%
+  select(start, end, transcript_length) %>%
   mutate(length = end - start,
          gene = rownames(rowData(sce_ls[["transcripts"]]))) %>%
-  select(gene, length)
+  select(gene, length, transcript_length)
 
 genes_rowsums_tb = genes_rowsums_tb %>%
   left_join(genes_length_tb, by = "gene")
@@ -264,6 +268,8 @@ genes_rowsums_tb %>%
   theme_bw()
 ```
 
+Correct gene length bias in preandmrna pipeline to transcripts pipeline.
+
 ```{r}
 library(mgcv)
 # GAM model to correct for gene length bias
@@ -294,11 +300,15 @@ ggplot(aes(x = t, y = M)) +
   labs(x = "Log10(gene length)",
        y = "Log2-fold ratio") +
   theme_bw()
+```
 
+
+```{r}
 # Compare gene length bias in original vs corrected vs expected expression
 model_tb %>%
   pivot_longer(cols = c("m1", "m1_corrected", "m2")) %>%
   ggplot(aes(x = t, y = value, color = name)) +
+  facet_wrap(~ name, nrow = 1) +
   geom_point(size = 0.1, alpha = 0.01) +
   geom_smooth() +
   scale_y_log10() +
@@ -306,6 +316,68 @@ model_tb %>%
        y = "Expression") +
   theme_bw()
 ```
+
+#### Length bias by cell type
+
+```{r}
+# Get rowsums for every pipeline and cell type group
+common_cells = Reduce(intersect, sapply(sce_ls, colnames)) 
+
+ding_cell_types = unique(colData(sce_ls[[1]])$ding_labels)
+ding_cell_types = ding_cell_types[!is.na(ding_cell_types)]
+
+for(i in seq_along(sce_ls)){
+  pipeline_name = names(sce_ls)[i]
+  tmp_tb_ls = list()
+  
+  for(cell_type in ding_cell_types){
+    sce = sce_ls[[i]]
+    
+    cells = colData(sce) %>% 
+      as.data.frame() %>% 
+      filter(ding_labels == cell_type) %>% 
+      rownames()
+    cells = intersect(cells, common_cells)
+    
+    m = counts(sce[, cells])
+    genes_rowsums = rowSums(m)
+    tmp_tb_ls[[cell_type]] = tibble(gene = names(genes_rowsums),
+                                    !!pipeline_name := genes_rowsums,
+                                    cell_type = cell_type)
+  }
+  tmp_tb = bind_rows(tmp_tb_ls)
+  
+  if(i == 1){
+    genes_rowsums_tb = tmp_tb
+  } else {
+    genes_rowsums_tb = genes_rowsums_tb %>%
+      left_join(., tmp_tb, by = c("gene", "cell_type"))
+  }
+}
+
+# Bin by length
+genes_length_tb = rowData(sce_ls[["transcripts"]]) %>%
+  as_tibble() %>%
+  select(start, end, transcript_length) %>%
+  mutate(length = end - start,
+         gene = rownames(rowData(sce_ls[["transcripts"]])))
+  select(gene, length, transcript_length)
+
+genes_rowsums_tb = genes_rowsums_tb %>%
+  left_join(genes_length_tb, by = "gene")
+```
+
+```{r}
+# Plot gene length bias by cell type
+genes_rowsums_tb %>%
+  ggplot(aes(x = transcript_length, y = preandmrna, color = cell_type)) +
+  # geom_point() + 
+  geom_smooth() + 
+  scale_x_log10() +
+  scale_y_log10() +
+  theme_bw()
+```
+
 
 
 ### PCA
