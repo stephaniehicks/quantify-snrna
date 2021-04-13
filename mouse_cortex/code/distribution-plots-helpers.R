@@ -1,7 +1,7 @@
 # distribution-plots-helpers.R
 # -----------------------------------------------------------------------------
 # Author:             Albert Kuo
-# Date last modified: Sep 14, 2020
+# Date last modified: Apr 13, 2021
 #
 # Helper functions for distribution-plots.R
 
@@ -322,14 +322,17 @@ p_chisq_test_2 = function(m, distribution = "poisson"){
 
     # Option 3 (edgeR)
     f_phi = 1/edgeR::estimateDisp(m)$tagwise.dispersion
+    # Option 3.5 (use edgeR mean)
+    mu_ij = edgeR::glmFit(m, dispersion = 1/f_phi)$fitted.values
+    f_hyp = mu_ij
     
     # Option 4 (glmGamPoi)
     # f_phi = 1/glmGamPoi::glm_gp(m, design = ~ 1, size_factors = "deconvolution", overdispersion = TRUE)$overdispersions
     
     remove_na_rows = which(!is.na(f_phi))
     f_var = mu_ij[remove_na_rows, ] + mu_ij[remove_na_rows, ]^2/f_phi[remove_na_rows]
-    
     chi_square = rowSums((f_obs[remove_na_rows, ]-f_hyp[remove_na_rows, ])^2/f_var)
+    
     return(list(chi_square, f_phi)) # diagnosing purposes
   } 
   
