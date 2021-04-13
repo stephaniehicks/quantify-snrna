@@ -96,7 +96,7 @@ saveRDS(counts_ls, here("./scrna/counts_more_ls.rds"))
 ```
 
 ```{r}
-counts_ls = readRDS(here("./scrna/counts_ls.rds"))
+counts_ls = readRDS(here("./scrna/counts_more_ls.rds"))
 ```
 
 
@@ -130,19 +130,26 @@ for(i in seq_along(counts_ls)){
 ```
 
 ```{r}
+plot_dt_pois_ls = readRDS(here("./scrna/output/plot_dt_pois_pooled_ls.rds"))
+plot_dt_nb_ls = readRDS(here("./scrna/output/plot_dt_nb_pooled_ls.rds"))
+```
+
+```{r fig.height = 10/6, fig.width = 8}
 # Poisson plots
 plot_dt_pois = bind_rows(plot_dt_pois_ls)
 plot_dt_pois %>%
+  filter(i %in% 1:4) %>%
   # filter(expression > 50) %>%
   ggplot(aes(x = p_value)) + 
-  facet_wrap(~ i, scales = "free") +
+  facet_wrap(~ i, scales = "free", ncol = 4) +
   geom_histogram() + 
   theme_bw()
 
 plot_dt_pois %>%
+  filter(i %in% 1:4) %>%
   # filter(expression > 50) %>%
   ggplot(aes(x = p_value, y = expression)) + 
-  facet_wrap(~ i, scales = "free") +
+  facet_wrap(~ i, scales = "free", ncol = 4) +
   geom_point(size = 0.1, alpha = 0.1) +
   geom_smooth() +
   scale_y_log10() +
@@ -150,20 +157,22 @@ plot_dt_pois %>%
 ```
 
 
-```{r}
+```{r fig.height = 10/6, fig.width = 8}
 # Negative binomial plots
 plot_dt_nb = bind_rows(plot_dt_nb_ls)
 plot_dt_nb %>%
-  filter(expression > 50) %>%
+  filter(i %in% 1:4) %>%
+  # filter(expression > 50) %>%
   ggplot(aes(x = p_value)) + 
-  facet_wrap(~ i, scales = "free") +
+  facet_wrap(~ i, scales = "free", ncol = 4) +
   geom_histogram() + 
   theme_bw()
 
 plot_dt_nb %>%
+  filter(i %in% 1:4) %>%
   # filter(expression > 50) %>%
   ggplot(aes(x = p_value, y = expression)) + 
-  facet_wrap(~ i, scales = "free") +
+  facet_wrap(~ i, scales = "free", ncol = 4) +
   geom_point(size = 0.1, alpha = 0.1) +
   geom_smooth() +
   scale_y_log10() +
