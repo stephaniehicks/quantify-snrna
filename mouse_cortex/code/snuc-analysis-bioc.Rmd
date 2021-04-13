@@ -841,7 +841,7 @@ dds = DESeqDataSetFromMatrix(countData = ceiling(counts(sce_sub)[1:10, ]), # tak
 
 # Compute log2fold change and p-values
 tic()
-dds = DESeq(dds)
+dds = DESeq(dds) # this function estimates size factor, dispersion, then negative binomial GLM fitting and Wald statistics
 toc()
 
 res = results(dds)
@@ -875,53 +875,64 @@ res = res %>%
 
 ```{r}
 pipeline = "preandmrna"
-res = readRDS(here(paste0("./mouse_cortex/output/de_", pipeline, "_norm.rds")))
+res = readRDS(here(paste0("./mouse_cortex/output/de_", pipeline, ".rds")))
 
 res = res %>%
-  select(-length) %>%
   left_join(., genes_rowsums_tb, by = "gene") # from binned by overall expression
 
-# Raw p-values
-res %>%
-  filter(!is.na(preandmrna)) %>%
-  ggplot(aes(x = length, y = pvalue)) + 
-  geom_point(aes(color = log1p(preandmrna)), alpha = 0.05) +
-  geom_smooth() +
-  scale_colour_gradientn(colours = terrain.colors(10)) +
-  scale_y_continuous(limits = c(0, 1)) +
-  scale_x_log10() +
-  theme_bw()
-
-# DESeq adjusted p-values (BH)
-res %>%
-  filter(!is.na(preandmrna)) %>%
-  ggplot(aes(x = length, y = padj)) + 
-  geom_point(aes(color = log1p(preandmrna)), alpha = 0.05) +
-  geom_smooth() +
-  scale_colour_gradientn(colours = terrain.colors(10)) +
-  scale_y_continuous(limits = c(0, 1)) +
-  scale_x_log10() +
-  theme_bw()
-
-# Manually adjusted p-values (BH)
-res %>%
-  filter(!is.na(preandmrna)) %>%
-  mutate(padj_manual = p.adjust(pvalue, method = "BH")) %>%
-  ggplot(aes(x = length, y = padj_manual)) + 
-  geom_point(aes(color = log1p(preandmrna)), alpha = 0.05) +
-  geom_smooth() +
-  scale_colour_gradientn(colours = terrain.colors(10)) +
-  scale_y_continuous(limits = c(0, 1)) +
-  scale_x_log10() +
-  theme_bw()
-
-# Log2Fold Change
+# Length vs log2fold change
 res %>%
   filter(!is.na(preandmrna)) %>%
   ggplot(aes(x = length, y = log2FoldChange)) + 
-  geom_point(alpha = 0.01) +
+  geom_point(alpha = 0.05) +
   geom_smooth() +
   scale_x_log10() +
+  theme_bw()
+
+# Length vs pvalue
+res %>%
+  filter(!is.na(preandmrna)) %>%
+  ggplot(aes(x = length, y = pvalue)) + 
+  geom_point(alpha = 0.05) +
+  geom_smooth() +
+  scale_x_log10() +
+  scale_y_continuous(limits = c(0, 1)) +
+  theme_bw()
+
+# Length vs padj
+res %>%
+  filter(!is.na(preandmrna)) %>%
+  ggplot(aes(x = length, y = padj)) + 
+  geom_point(alpha = 0.05) +
+  geom_smooth() +
+  scale_x_log10() +
+  scale_y_continuous(limits = c(0, 1)) +
+  theme_bw()
+
+# Expression vs log2fold change
+res %>%
+  ggplot(aes(x = preandmrna, y = log2FoldChange)) + 
+  geom_point(alpha = 0.05) +
+  geom_smooth() +
+  scale_x_log10(limits = c(0.1, 1e7)) +
+  theme_bw()
+
+# Mean exp vs pvalue
+res %>%
+  ggplot(aes(x = preandmrna, y = pvalue)) + 
+  geom_point(alpha = 0.05) +
+  geom_smooth() +
+  scale_x_log10(limits = c(0.1, 1e7)) +
+  scale_y_continuous(limits = c(0, 1)) +
+  theme_bw()
+
+# Mean exp vs padj
+res %>%
+  ggplot(aes(x = preandmrna, y = padj)) + 
+  geom_point(alpha = 0.05) +
+  geom_smooth() +
+  scale_x_log10(limits = c(0.1, 1e7)) +
+  scale_y_continuous(limits = c(0, 1)) +
   theme_bw()
 ```
 
