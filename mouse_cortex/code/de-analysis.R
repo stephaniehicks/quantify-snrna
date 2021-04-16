@@ -26,7 +26,12 @@ sce_ls[["preandmrna"]] = readRDS(here("mouse_cortex", "salmon_quants", "preandmr
 # sce_ls[["intronseparate"]] = readRDS(here("mouse_cortex", "salmon_quants", "intronseparate_pipeline", paste0("sce_", run_number, ".rds")))
 
 pipeline = "preandmrna"
-sce_sub = sce_ls[[pipeline]][, colData(sce_ls[[pipeline]])$ding_labels %in% c("Excitatory neuron", "Astrocyte")]
+select_cells = colData(sce_ls[[pipeline]]) %>%
+  as.data.frame() %>%
+  filter(ding_labels %in% c("Excitatory neuron", "Astrocyte")) %>%
+  filter(cortex == "cortex2") %>%
+  row.names()
+sce_sub = sce_ls[[pipeline]][, select_cells]
 
 # Get gene lengths
 genes_length_tb = rowData(sce_sub) %>%
@@ -95,7 +100,7 @@ res = res %>%
   left_join(., genes_length_tb, by = "gene")
 
 if(normalize){
-  saveRDS(res, here(paste0("./mouse_cortex/output/de_ea_", pipeline, "_norm.rds")))
+  saveRDS(res, here(paste0("./mouse_cortex/output/de_ea_cortex2_", pipeline, "_norm.rds")))
 } else {
-  saveRDS(res, here(paste0("./mouse_cortex/output/de_ea_", pipeline, ".rds")))
+  saveRDS(res, here(paste0("./mouse_cortex/output/de_ea_cortex2_", pipeline, ".rds")))
 }

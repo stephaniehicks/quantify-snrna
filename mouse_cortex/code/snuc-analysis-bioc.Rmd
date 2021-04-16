@@ -844,7 +844,9 @@ lib_size_tb %>%
 
 Here we compare if differential gene analysis differs between pipelines. 
 
-In particular, I will look at the inhibitory neurons versus excitatory neurons and identify genes that are differentially expressed in these two groups.
+In particular, I will look at the astrocytes versus excitatory neurons and identify genes that are differentially expressed in these two groups.
+
+Run `de-analysis.R` on cluster.
 
 ```{r}
 library(DESeq2)
@@ -853,7 +855,7 @@ library(apeglm)
 sce_sub = sce_ls[["preandmrna"]][, colData(sce_ls[["preandmrna"]])$ding_labels %in% c("Excitatory neuron", "Astrocyte")]
 
 # Store counts and intermediate quantities (dds is a SummarizedExperiment)
-dds = DESeqDataSetFromMatrix(countData = ceiling(counts(sce_sub)[, ]), # take integers 
+dds = DESeqDataSetFromMatrix(countData = ceiling(counts(sce_sub)[1:10, ]), # take integers 
                              colData = colData(sce_sub),
                              design = ~ cortex + ding_labels)
 
@@ -896,7 +898,7 @@ pipeline = "preandmrna"
 res = readRDS(here(paste0("./mouse_cortex/output/de_ea_", pipeline, ".rds")))
 
 res = res %>%
-  left_join(., genes_rowsums_tb, by = "gene") # from binned by overall expression
+  left_join(., genes_rowsums_tb %>% distinct(gene, transcripts, preandmrna, introncollapse, intronseparate), by = "gene") # from binned by overall expression
 
 # Length vs log2fold change
 res %>%
@@ -929,6 +931,7 @@ res %>%
 
 # Expression vs log2fold change
 res %>%
+  filter(!is.na(preandmrna)) %>%
   ggplot(aes(x = preandmrna, y = log2FoldChange)) + 
   geom_point(alpha = 0.05) +
   geom_smooth() +
@@ -937,6 +940,7 @@ res %>%
 
 # Mean exp vs pvalue
 res %>%
+  filter(!is.na(preandmrna)) %>%
   ggplot(aes(x = preandmrna, y = pvalue)) + 
   geom_point(alpha = 0.05) +
   geom_smooth() +
@@ -946,6 +950,7 @@ res %>%
 
 # Mean exp vs padj
 res %>%
+  filter(!is.na(preandmrna)) %>%
   ggplot(aes(x = preandmrna, y = padj)) + 
   geom_point(alpha = 0.05) +
   geom_smooth() +
