@@ -291,12 +291,12 @@ plot_dt_pois %>%
   theme_bw()
 ```
 
-```{r fig.height = 2.5, fig.width = 10}
+```{r fig.height = 10, fig.width = 10}
 # Negative binomial plots (single overdispersion parameter)
 plot_dt_nb_1 = bind_rows(plot_dt_nb_1_ls)
 
 plot_dt_nb_1 %>%
-  filter(i %in% 1:4) %>%
+  filter(i %in% 11:31) %>%
   # filter(expression > 50) %>%
     ggplot(aes(x = chi_quantile,
              y = chi_obs,
