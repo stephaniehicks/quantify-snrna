@@ -1,7 +1,7 @@
 # de-analysis.R
 # -----------------------------------------------------------------------------
 # Author:             Albert Kuo
-# Date last modified: Dec 2, 2020
+# Date last modified: Apr 16, 2021
 #
 # Differential expression analysis
 
@@ -17,15 +17,16 @@ suppressPackageStartupMessages({
 
 
 # Read in SingleCellExperiment objects
+normalize = FALSE
 run_number = "all" # give run_number or "all" for all of them together
 sce_ls = list()
-sce_ls[["transcripts"]] = readRDS(here("mouse_cortex", "salmon_quants", "transcripts_pipeline", paste0("sce_", run_number, ".rds")))
+# sce_ls[["transcripts"]] = readRDS(here("mouse_cortex", "salmon_quants", "transcripts_pipeline", paste0("sce_", run_number, ".rds")))
 sce_ls[["preandmrna"]] = readRDS(here("mouse_cortex", "salmon_quants", "preandmrna_pipeline", paste0("sce_", run_number, ".rds")))
-sce_ls[["introncollapse"]] = readRDS(here("mouse_cortex", "salmon_quants", "introncollapse_pipeline", paste0("sce_", run_number, ".rds")))
-sce_ls[["intronseparate"]] = readRDS(here("mouse_cortex", "salmon_quants", "intronseparate_pipeline", paste0("sce_", run_number, ".rds")))
+# sce_ls[["introncollapse"]] = readRDS(here("mouse_cortex", "salmon_quants", "introncollapse_pipeline", paste0("sce_", run_number, ".rds")))
+# sce_ls[["intronseparate"]] = readRDS(here("mouse_cortex", "salmon_quants", "intronseparate_pipeline", paste0("sce_", run_number, ".rds")))
 
 pipeline = "preandmrna"
-sce_sub = sce_ls[[pipeline]][, colData(sce_ls[[pipeline]])$ding_labels %in% c("Excitatory neuron", "Inhibitory neuron")]
+sce_sub = sce_ls[[pipeline]][, colData(sce_ls[[pipeline]])$ding_labels %in% c("Excitatory neuron", "Astrocyte")]
 
 # Get gene lengths
 genes_length_tb = rowData(sce_sub) %>%
@@ -41,10 +42,14 @@ rownames(genes_length_tb) = genes_length_tb$gene
 seq_data = newSeqExpressionSet(counts = as.matrix(counts(sce_sub)),
                                featureData = as.data.frame(genes_length_tb),
                                phenoData = as.data.frame(colData(sce_sub)))
-tic("normalize with EDASeq")
-seq_data_within = withinLaneNormalization(seq_data, "length", which = "full", offset = TRUE)
-seq_data_norm = betweenLaneNormalization(seq_data_within, which = "full")
-toc()
+if(normalize){
+  tic("normalize with EDASeq")
+  seq_data_within = withinLaneNormalization(seq_data, "length", which = "full", offset = TRUE)
+  seq_data_norm = betweenLaneNormalization(seq_data_within, which = "full")
+  toc()
+} else {
+  seq_data_norm = seq_data
+}
 
 # Store counts and intermediate quantities (dds is a SummarizedExperiment)
 # dds = DESeqDataSetFromMatrix(countData = ceiling(counts(sce_sub)[, ]), # take integers 
@@ -54,9 +59,12 @@ toc()
 dds = DESeqDataSetFromMatrix(countData = ceiling(counts(seq_data_norm)[, ]), # take integers 
                              colData = pData(seq_data_norm),
                              design = ~ cortex + ding_labels)
-normFactors <- exp(-1 * offst(seq_data_norm))
-normFactors <- normFactors / exp(rowMeans(log(normFactors)))
-normalizationFactors(dds) <- normFactors
+
+if(normalize){
+  normFactors <- exp(-1 * offst(seq_data_norm))
+  normFactors <- normFactors / exp(rowMeans(log(normFactors)))
+  normalizationFactors(dds) <- normFactors
+}
 
 # Compute log2fold change and p-values
 tic("DEseq")
@@ -68,7 +76,7 @@ res
 
 # Shrinkage of LFC
 resultsNames(dds)
-resLFC = lfcShrink(dds, coef="ding_labels_Inhibitory.neuron_vs_Excitatory.neuron", type="apeglm")
+resLFC = lfcShrink(dds, coef="ding_labels_Excitatory.neuron_vs_Astrocyte", type="apeglm")
 
 # MA plot for shrunken log2 fold change
 plotMA(resLFC)
@@ -86,4 +94,8 @@ res = res %>%
   mutate(gene = rownames(res)) %>%
   left_join(., genes_length_tb, by = "gene")
 
-saveRDS(res, here(paste0("./mouse_cortex/output/de_", pipeline, "_norm.rds")))
+if(normalize){
+  saveRDS(res, here(paste0("./mouse_cortex/output/de_ea_", pipeline, "_norm.rds")))
+} else {
+  saveRDS(res, here(paste0("./mouse_cortex/output/de_ea_", pipeline, ".rds")))
+}
