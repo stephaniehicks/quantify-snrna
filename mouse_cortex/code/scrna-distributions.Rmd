@@ -148,8 +148,43 @@ saveRDS(plot_dt_nb_ls, here("./scrna/output/plot_dt_nb_binned_ls.rds"))
 ```
 
 
+```{r}
+# Chi-squared tests where every bin must have > 5 counts
+plot_dt_pois_ls = readRDS(here("./scrna/output/plot_dt_pois_pooled_ls.rds"))
+plot_dt_nb_ls = readRDS(here("./scrna/output/plot_dt_nb_pooled_ls.rds"))
+
+# Chi-squared tests where every row has the same df
+plot_dt_pois_ls = readRDS(here("./scrna/output/plot_dt_pois_binned_ls.rds"))
+plot_dt_nb_ls = readRDS(here("./scrna/output/plot_dt_nb_binned_ls.rds"))
+```
+
+```{r}
+# Add chi-quantile
+for(i in 1:length(plot_dt_pois_ls)){
+  plot_dt_pois_ls[[i]] = plot_dt_pois_ls[[i]] %>%
+    arrange(chi_square) %>%
+    mutate(chi_quantile = qchisq(p = (1:length(chi_square))/length(chi_square), df = ncol(.) - 2),
+           percentile_color = case_when(chi_square > quantile(chi_square, 0.995, na.rm = TRUE) ~ "> 99.5",
+                                        chi_square > quantile(chi_square, 0.95, na.rm = TRUE) ~ "> 95",
+                                        chi_square > quantile(chi_square, 0.90, na.rm = TRUE) ~ "> 90",
+                                        T ~ "rest"),
+           i = i)
+  
+  plot_dt_nb_ls[[i]] = plot_dt_nb_ls[[i]] %>%
+    arrange(chi_square) %>%
+    mutate(chi_quantile = qchisq(p = (1:length(chi_square))/length(chi_square), df = ncol(.) - 2),
+           percentile_color = case_when(chi_square > quantile(chi_square, 0.995, na.rm = TRUE) ~ "> 99.5",
+                                        chi_square > quantile(chi_square, 0.95, na.rm = TRUE) ~ "> 95",
+                                        chi_square > quantile(chi_square, 0.90, na.rm = TRUE) ~ "> 90",
+                                        T ~ "rest"),
+           i = i)
+}
+```
+
+
 ```{r fig.height = 10/6, fig.width = 8}
 # Poisson plots
+# Histogram of p-values
 plot_dt_pois = bind_rows(plot_dt_pois_ls)
 plot_dt_pois %>%
   filter(i %in% 1:4) %>%
@@ -159,6 +194,7 @@ plot_dt_pois %>%
   geom_histogram() + 
   theme_bw()
 
+# P-value versus expression
 plot_dt_pois %>%
   filter(i %in% 1:4) %>%
   # filter(expression > 50) %>%
@@ -168,12 +204,26 @@ plot_dt_pois %>%
   geom_smooth() +
   scale_y_log10() +
   theme_bw()
+
+# QQ plot for when every row has same df
+plot_dt_pois %>%
+  filter(i %in% 1:4) %>%
+  ggplot(aes(x = chi_quantile,
+             y = chi_square,
+             color = percentile_color)) + 
+  facet_wrap(~ i, scales = "free", ncol = 4) +
+  geom_point(size = 0.5) + 
+  geom_abline(slope = 1, intercept = 0) +
+  # coord_cartesian(ylim = c(250, 1000)) +
+  theme_bw()
 ```
 
 
 ```{r fig.height = 10/6, fig.width = 8}
 # Negative binomial plots
 plot_dt_nb = bind_rows(plot_dt_nb_ls)
+
+# Histogram of p-values
 plot_dt_nb %>%
   filter(i %in% 1:4) %>%
   # filter(expression > 50) %>%
@@ -182,6 +232,7 @@ plot_dt_nb %>%
   geom_histogram() + 
   theme_bw()
 
+# P-value versus expression
 plot_dt_nb %>%
   filter(i %in% 1:4) %>%
   # filter(expression > 50) %>%
@@ -190,6 +241,18 @@ plot_dt_nb %>%
   geom_point(size = 0.1, alpha = 0.1) +
   geom_smooth() +
   scale_y_log10() +
+  theme_bw()
+
+# QQ plot for when every row has same df
+plot_dt_nb %>%
+  filter(i %in% 1:4) %>%
+  ggplot(aes(x = chi_quantile,
+             y = chi_square,
+             color = percentile_color)) + 
+  facet_wrap(~ i, scales = "free", ncol = 4) +
+  geom_point(size = 0.5) + 
+  geom_abline(slope = 1, intercept = 0) +
+  # coord_cartesian(ylim = c(250, 1000)) +
   theme_bw()
 ```
 
