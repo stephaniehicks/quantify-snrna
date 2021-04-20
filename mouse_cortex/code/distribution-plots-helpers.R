@@ -191,7 +191,7 @@ nb_bic_2<-function(m,X=NULL,prefit=NULL){
 library(MASS)
 
 # Bin by unique value
-p_chisq_test = function(m, distribution = "poisson"){
+p_chisq_test = function(m, distribution = "poisson", df_bin = NA){
   ind = c() # rows that fail
   p_values = c() # p-values for every row
   chi_squares = c() # chi-squared value for every row
@@ -204,6 +204,7 @@ p_chisq_test = function(m, distribution = "poisson"){
       lambda_fit = poisson_fit$estimate["lambda"]
       n_samples = length(x)
       f_obs = table(x)
+      p = 1 
       
       bins = as.numeric(names(f_obs))
       probs = dpois(bins, lambda = lambda_fit)
@@ -213,9 +214,12 @@ p_chisq_test = function(m, distribution = "poisson"){
       f_obs = c(f_obs, 0) # Observed value
       f_hyp = c(f_hyp, other_value) # Expected value
       
-      # Pool counts if < 5
-      if(any(f_obs < 5)){
+      if(!is.na(df)){ # Pool counts based on fixed input bin
+        start_pool_bin = min(df_bin + p - 1, length(f_obs))
+      } else if(any(f_obs < 5)){ # Pool counts if < 5
         start_pool_bin = which(f_obs < 5)[1]
+      }
+      if(exists("start_pool_bin")){
         f_obs_pool = sum(f_obs[start_pool_bin:length(f_obs)])
         f_hyp_pool = sum(f_hyp[start_pool_bin:length(f_hyp)])
         
@@ -223,8 +227,7 @@ p_chisq_test = function(m, distribution = "poisson"){
         f_hyp = c(f_hyp[1:(start_pool_bin - 1)], f_hyp_pool)
       }
 
-      p = 1 
-      df = (length(bins) + 1) - p
+      df = length(f_obs) - p
       chiSquare = sum((f_obs-f_hyp)^2/f_hyp)
       
       p_values = c(p_values, 1 - pchisq(chiSquare, df = df))
@@ -241,6 +244,7 @@ p_chisq_test = function(m, distribution = "poisson"){
         p_fit = r_fit / (nb_fit$estimate['mu'] + r_fit)
         n_samples = length(x)
         f_obs = table(x)
+        p = 2
         
         bins = as.numeric(names(f_obs))
         probs = dnbinom(bins, size = r_fit, prob = p_fit)
@@ -251,8 +255,12 @@ p_chisq_test = function(m, distribution = "poisson"){
         f_hyp = c(f_hyp, other_value) # Expected value
         
         # Pool counts if < 5
-        if(any(f_obs < 5)){
+        if(!is.na(df)){ # Pool counts based on fixed input bin
+          start_pool_bin = min(df_bin + p - 1, length(f_obs))
+        } else if(any(f_obs < 5)){ # Pool counts if < 5
           start_pool_bin = which(f_obs < 5)[1]
+        }
+        if(exists("start_pool_bin")){
           f_obs_pool = sum(f_obs[start_pool_bin:length(f_obs)])
           f_hyp_pool = sum(f_hyp[start_pool_bin:length(f_hyp)])
           
@@ -260,8 +268,8 @@ p_chisq_test = function(m, distribution = "poisson"){
           f_hyp = c(f_hyp[1:(start_pool_bin - 1)], f_hyp_pool)
         }
         
-        p = 2
-        df = (length(bins) + 1) - p
+        # df = length(bins) + 1 - p
+        df = length(f_obs) - p
         chiSquare = sum((f_obs-f_hyp)^2/f_hyp)
 
         p_values = c(p_values, 1 - pchisq(chiSquare, df = df))

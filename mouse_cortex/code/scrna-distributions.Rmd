@@ -105,6 +105,16 @@ counts_ls = readRDS(here("./scrna/counts_more_ls.rds"))
 ##### By Count Values
 
 ```{r}
+# Chi-squared tests where every bin must have > 5 counts
+plot_dt_pois_ls = readRDS(here("./scrna/output/plot_dt_pois_pooled_ls.rds"))
+plot_dt_nb_ls = readRDS(here("./scrna/output/plot_dt_nb_pooled_ls.rds"))
+
+# Use minimum bin number for each chi-squared test (length(bins) + 1 - p)
+df_pois = sapply(plot_dt_pois_ls, function(x) min(x$df))
+df_nb = sapply(plot_dt_nb_ls, function(x) min(x$df))
+```
+
+```{r}
 plot_dt_pois_ls = list()
 plot_dt_nb_ls = list()
 for(i in seq_along(counts_ls)){
@@ -112,7 +122,8 @@ for(i in seq_along(counts_ls)){
   counts = counts_ls[[i]]
   
   # Poisson
-  p_values_pois = p_chisq_test(counts, distribution = "poisson")
+  p_values_pois = p_chisq_test(counts, distribution = "poisson",
+                               df_bin = df_pois[i])
   plot_dt_pois_ls[[i]] = tibble(p_value = p_values_pois[[1]],
                                 chi_square = p_values_pois[[3]],
                                 df = p_values_pois[[4]],
@@ -120,7 +131,8 @@ for(i in seq_along(counts_ls)){
                                 i = i)
   
   # Negative binomial
-  p_values_nb = p_chisq_test(counts, distribution = "nb")
+  p_values_nb = p_chisq_test(counts, distribution = "nb",
+                             df_bin = df_nb[i])
   plot_dt_nb_ls[[i]] = tibble(p_value = p_values_nb[[1]],
                               chi_square = p_values_pois[[3]][setdiff(1:nrow(counts), p_values_nb[[2]])],
                               df = p_values_pois[[4]][setdiff(1:nrow(counts), p_values_nb[[2]])],
@@ -130,9 +142,11 @@ for(i in seq_along(counts_ls)){
 ```
 
 ```{r}
-plot_dt_pois_ls = readRDS(here("./scrna/output/plot_dt_pois_pooled_ls.rds"))
-plot_dt_nb_ls = readRDS(here("./scrna/output/plot_dt_nb_pooled_ls.rds"))
+# Save cluster results interactively
+saveRDS(plot_dt_pois_ls, here("./scrna/output/plot_dt_pois_binned_ls.rds"))
+saveRDS(plot_dt_nb_ls, here("./scrna/output/plot_dt_nb_binned_ls.rds"))
 ```
+
 
 ```{r fig.height = 10/6, fig.width = 8}
 # Poisson plots
