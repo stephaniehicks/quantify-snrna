@@ -204,7 +204,6 @@ p_chisq_test = function(m, distribution = "poisson", df_bin = NA){
       lambda_fit = poisson_fit$estimate["lambda"]
       n_samples = length(x)
       f_obs = table(x)
-      p = 1 
       
       bins = as.numeric(names(f_obs))
       probs = dpois(bins, lambda = lambda_fit)
@@ -215,7 +214,7 @@ p_chisq_test = function(m, distribution = "poisson", df_bin = NA){
       f_hyp = c(f_hyp, other_value) # Expected value
       
       if(!is.na(df)){ # Pool counts based on fixed input bin
-        start_pool_bin = min(df_bin + p - 1, length(f_obs))
+        start_pool_bin = min(df_bin, length(f_obs))
       } else if(any(f_obs < 5)){ # Pool counts if < 5
         start_pool_bin = which(f_obs < 5)[1]
       }
@@ -227,7 +226,7 @@ p_chisq_test = function(m, distribution = "poisson", df_bin = NA){
         f_hyp = c(f_hyp[1:(start_pool_bin - 1)], f_hyp_pool)
       }
 
-      df = length(f_obs) - p
+      df = length(f_obs) - 1
       chiSquare = sum((f_obs-f_hyp)^2/f_hyp)
       
       p_values = c(p_values, 1 - pchisq(chiSquare, df = df))
@@ -244,7 +243,6 @@ p_chisq_test = function(m, distribution = "poisson", df_bin = NA){
         p_fit = r_fit / (nb_fit$estimate['mu'] + r_fit)
         n_samples = length(x)
         f_obs = table(x)
-        p = 2
         
         bins = as.numeric(names(f_obs))
         probs = dnbinom(bins, size = r_fit, prob = p_fit)
@@ -256,7 +254,7 @@ p_chisq_test = function(m, distribution = "poisson", df_bin = NA){
         
         # Pool counts if < 5
         if(!is.na(df)){ # Pool counts based on fixed input bin
-          start_pool_bin = min(df_bin + p - 1, length(f_obs))
+          start_pool_bin = min(df_bin, length(f_obs))
         } else if(any(f_obs < 5)){ # Pool counts if < 5
           start_pool_bin = which(f_obs < 5)[1]
         }
@@ -269,7 +267,7 @@ p_chisq_test = function(m, distribution = "poisson", df_bin = NA){
         }
         
         # df = length(bins) + 1 - p
-        df = length(f_obs) - p
+        df = length(f_obs) - 1
         chiSquare = sum((f_obs-f_hyp)^2/f_hyp)
 
         p_values = c(p_values, 1 - pchisq(chiSquare, df = df))
