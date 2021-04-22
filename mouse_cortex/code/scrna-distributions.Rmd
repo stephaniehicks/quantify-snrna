@@ -164,7 +164,7 @@ plot_dt_nb_ls = readRDS(here("./scrna/output/plot_dt_nb_binned_ls.rds"))
 for(i in 1:length(plot_dt_pois_ls)){
   plot_dt_pois_ls[[i]] = plot_dt_pois_ls[[i]] %>%
     arrange(chi_square) %>%
-    mutate(chi_quantile = qchisq(p = (1:length(chi_square))/length(chi_square), df = ncol(.) - 2),
+    mutate(chi_quantile = qchisq(p = (1:length(chi_square))/length(chi_square), df = df_with5[i] - 1),
            percentile_color = case_when(chi_square > quantile(chi_square, 0.995, na.rm = TRUE) ~ "> 99.5",
                                         chi_square > quantile(chi_square, 0.95, na.rm = TRUE) ~ "> 95",
                                         chi_square > quantile(chi_square, 0.90, na.rm = TRUE) ~ "> 90",
@@ -173,7 +173,7 @@ for(i in 1:length(plot_dt_pois_ls)){
   
   plot_dt_nb_ls[[i]] = plot_dt_nb_ls[[i]] %>%
     arrange(chi_square) %>%
-    mutate(chi_quantile = qchisq(p = (1:length(chi_square))/length(chi_square), df = ncol(.) - 2),
+    mutate(chi_quantile = qchisq(p = (1:length(chi_square))/length(chi_square), df = df_with5[i] - 1),
            percentile_color = case_when(chi_square > quantile(chi_square, 0.995, na.rm = TRUE) ~ "> 99.5",
                                         chi_square > quantile(chi_square, 0.95, na.rm = TRUE) ~ "> 95",
                                         chi_square > quantile(chi_square, 0.90, na.rm = TRUE) ~ "> 90",
