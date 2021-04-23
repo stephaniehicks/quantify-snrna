@@ -1,8 +1,8 @@
 #$ -cwd
 #$ -o log/
 #$ -e log/
-#$ -l mem_free=10G,h_vmem=10G
-#$ -t 1:31
+#$ -l mem_free=8G,h_vmem=8G
+#$ -t 1:38
 
 
 # run script

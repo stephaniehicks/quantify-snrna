@@ -355,12 +355,13 @@ p_chisq_test_2_grouped = function(m, distribution = "poisson"){
   n_col = ncol(m)
   total_sum = sum(m)
   R_j = rowSums(m)
-  lambda_j = R_j/total_sum # proportion of counts in gene j
+  lambda_j = R_j/total_sum        # proportion of counts in gene j
   c_i = colSums(m)/total_sum      # proportion of counts in sample i
   mu_ij = outer(lambda_j, c_i)*total_sum
   
   # Discard genes with average mu_ij too low (< 0.01)
   avg_mu = R_j/n_col
+  m = m[(avg_mu > 0.01), ]
   mu_ij = mu_ij[(avg_mu > 0.01), ]
   
   # Find group size
@@ -388,7 +389,7 @@ p_chisq_test_2_grouped = function(m, distribution = "poisson"){
     
     # Option 2.5 (use edgeR mean)
     mu_ij = edgeR::glmFit(m, dispersion = 1/phi)$fitted.values
-    f_hyp = mu_ij
+    f_hyp = mu_ij %*% r_matrix
     
     f_var = mu_ij + mu_ij^2/phi
     chi_square = rowSums((f_obs-f_hyp)^2/f_var)
@@ -398,7 +399,7 @@ p_chisq_test_2_grouped = function(m, distribution = "poisson"){
     
     # Option 3.5 (use edgeR mean)
     mu_ij = edgeR::glmFit(m, dispersion = 1/f_phi)$fitted.values
-    f_hyp = mu_ij
+    f_hyp = mu_ij %*% r_matrix
 
     remove_na_rows = which(!is.na(f_phi))
     f_var = mu_ij[remove_na_rows, ] + mu_ij[remove_na_rows, ]^2/f_phi[remove_na_rows]

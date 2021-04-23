@@ -287,11 +287,11 @@ for(i in seq_along(counts_ls)){
   counts = counts_ls[[i]]
   
   # Poisson
-  chi_obs_pois = p_chisq_test_2(counts, distribution = "poisson")
-  plot_dt_pois_ls[[i]] = tibble(chi_obs = chi_obs_pois,
-                                expression = rowSums(counts),
-                                var = apply(counts, 1, var),
-                                prop_0 = apply(counts, 1, function(x) sum(x == 0))) %>%
+  chi_obs_pois = p_chisq_test_2_grouped(counts, distribution = "poisson")
+  plot_dt_pois_ls[[i]] = tibble(chi_obs = chi_obs_pois) %>%
+                                # expression = rowSums(counts),
+                                # var = apply(counts, 1, var),
+                                # prop_0 = apply(counts, 1, function(x) sum(x == 0))) %>%
     mutate(id = 1:n()) %>%
     arrange(chi_obs) %>%
     drop_na() %>%
@@ -303,11 +303,11 @@ for(i in seq_along(counts_ls)){
            i = i)
   
   # Negative binomial (single overdispersion parameter)
-  chi_obs_nb = p_chisq_test_2(counts, distribution = "nb 1")
-  plot_dt_nb_1_ls[[i]] = tibble(chi_obs = chi_obs_nb,
-                                expression = rowSums(counts),
-                                var = apply(counts, 1, var),
-                                prop_0 = apply(counts, 1, function(x) sum(x == 0))) %>%
+  chi_obs_nb = p_chisq_test_2_grouped(counts, distribution = "nb 1")
+  plot_dt_nb_1_ls[[i]] = tibble(chi_obs = chi_obs_nb) %>%
+                                # expression = rowSums(counts),
+                                # var = apply(counts, 1, var),
+                                # prop_0 = apply(counts, 1, function(x) sum(x == 0))) %>%
     mutate(id = 1:n()) %>%
     arrange(chi_obs) %>%
     drop_na() %>%
@@ -319,12 +319,12 @@ for(i in seq_along(counts_ls)){
            i = i)
   
   # Negative binomial (gene-specific overdispersion parameter)
-  chi_obs_nb = p_chisq_test_2(counts, distribution = "nb 2")
+  chi_obs_nb = p_chisq_test_2_grouped(counts, distribution = "nb 2")
   plot_dt_nb_2_ls[[i]] = tibble(chi_obs = chi_obs_nb[[1]],
-                                f_phi = chi_obs_nb[[2]],
-                                expression = rowSums(counts),
-                                var = apply(counts, 1, var),
-                                prop_0 = apply(counts, 1, function(x) sum(x == 0))) %>%
+                                f_phi = chi_obs_nb[[2]]) %>%
+                                # expression = rowSums(counts),
+                                # var = apply(counts, 1, var),
+                                # prop_0 = apply(counts, 1, function(x) sum(x == 0))) %>%
     mutate(id = 1:n()) %>%
     arrange(chi_obs) %>%
     drop_na() %>%
