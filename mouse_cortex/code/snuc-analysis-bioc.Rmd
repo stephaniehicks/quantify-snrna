@@ -1076,10 +1076,10 @@ summary(colSums(counts_sub_cluster_scaled))
 #                   sizes = apply(counts_sub_cluster_scaled, 1, nb_size))
 # saveRDS(emp_values, here("./mouse_cortex/output/emp_values.rds"))
 
-# edgeR
-emp_values = list(means = apply(counts_sub_cluster_scaled, 1, mean),
-                  sizes = 1/edgeR::estimateDisp(counts_sub_cluster_scaled)$tagwise.dispersion)
-saveRDS(emp_values, here("./mouse_cortex/output/emp_values_edger.rds"))
+# edgeR estimates (note that you do not need to downsample to do chi-squared tests)
+emp_values = list(means = apply(counts_sub_cluster, 1, mean),
+                  sizes = 1/edgeR::estimateDisp(counts_sub_cluster)$tagwise.dispersion)
+saveRDS(emp_values, here("./mouse_cortex/output/emp_values_edger_nodownsample.rds"))
 ```
 
 I compute the average expression for every row (x-axis) $\hat{\mu}_i$ and the empirical $P(X_i=0)$, which is the probability that for a given transcript $i$, the count is 0. 

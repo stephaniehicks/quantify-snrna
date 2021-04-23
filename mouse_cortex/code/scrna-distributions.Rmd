@@ -63,7 +63,7 @@ for(i in seq_along(h5ad_ls)){
 
 ```{r}
 # Simulated datasets with same dimensions as snRNA data
-emp_values = readRDS(here("./mouse_cortex/output/emp_values_edger.rds"))
+emp_values = readRDS(here("./mouse_cortex/output/emp_values_edger_nodownsample.rds"))
 means = emp_values$means
 sizes = emp_values$sizes
 
