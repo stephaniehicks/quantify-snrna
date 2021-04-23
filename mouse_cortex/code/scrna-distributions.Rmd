@@ -50,13 +50,14 @@ set.seed(1)
 counts_ls = list()
 for(i in seq_along(h5ad_ls)){
   counts = assay(h5ad_ls[[i]], "X")
-  
-  tic("downsample")
-  counts_scaled = Down_Sample_Matrix(ceiling(counts))
-  toc()
-  
-  counts_scaled = counts_scaled[rowSums(counts_scaled) != 0, ]
-  counts_ls[[i]] = counts_scaled
+  counts_ls[[i]] = counts
+
+  # tic("downsample")
+  # counts_scaled = Down_Sample_Matrix(ceiling(counts))
+  # toc()
+# 
+#   counts_scaled = counts_scaled[rowSums(counts_scaled) != 0, ]
+#   counts_ls[[i]] = counts_scaled
 }
 ```
 
@@ -67,36 +68,51 @@ means = emp_values$means
 sizes = emp_values$sizes
 
 # Poisson simulations
-lambdas = c(0.1, 0.3, 0.5, 0.7, 1.0)
+lambdas = c(0.01, 0.1, 1.0)
 for(i in seq_along(lambdas)){
   counts_ls[[i+4]] = matrix(rpois(n = 347*21483, lambda = lambdas[i]), ncol = 347, nrow = 21483)
 }
-counts_ls[[10]] = t(sapply(seq_len(length(means)), function(i) 
-  rpois(n = 347, lambda = means[i]))) # poisson with different parameters for each gene
+for(i in seq_along(lambdas)){
+  counts_ls[[i+4+length(lambdas)]] = counts_ls[[i+4]]
+  counts_ls[[i+4+length(lambdas)]][, (347/2):347] = counts_ls[[i+4]][, (347/2):347]*100 # Second half of cells have size factor 100
+}
 
+counts_ls[[11]] = t(sapply(seq_len(length(means)), function(i) 
+  rpois(n = 347, lambda = means[i]))) # poisson with different parameters for each gene
+counts_ls[[12]] = counts_ls[[11]][, (347/2):347]*100 # Second half of cells have size factor 100
 
 # Negative binomial simulations
 phis = c(0.3, 1, 10, 100) # the empirical 1st quartile is 0.33, median is 0.88, 3rd quartile is 2.24, mean is 6.1, excluding outliers
 for(i in seq_along(lambdas)){
   for(j in seq_along(phis)){
-    counts_ls[[(i-1)*length(phis)+j+10]] = matrix(rnbinom(n = 347*21483, size = phis[j], mu = lambdas[i]), ncol = 347, nrow = 21483)
+    ind = (i-1)*length(phis)+j+12
+    counts_ls[[ind]] = matrix(rnbinom(n = 347*21483, size = phis[j], mu = lambdas[i]), ncol = 347, nrow = 21483)
   }
 }
 
-counts_ls[[31]] = t(sapply(seq_len(length(means)), function(k) 
-  rnbinom(n = 347, size = sizes[k], mu = means[k]))) # negative binomial with different parameters for each gene
-
-for(j in 5:length(counts_ls)){
-  tic("downsample")
-  counts_ls[[j]] = Down_Sample_Matrix(ceiling(counts_ls[[j]]))
-  toc()
+for(i in seq_along(lambdas)){
+  for(j in seq_along(phis)){
+    ind = (i-1)*length(phis)+j+12
+    counts_ls[[ind+length(lambdas)*length(phis)]] = counts_ls[[ind]]
+    counts_ls[[ind+length(lambdas)*length(phis)]][, (347/2):347] = counts_ls[[ind]][, (347/2):347]*100 # Second half of cells have size factor 100
+  }
 }
 
-saveRDS(counts_ls, here("./scrna/counts_more_ls.rds"))
+counts_ls[[37]] = t(sapply(seq_len(length(means)), function(k) 
+  rnbinom(n = 347, size = sizes[k], mu = means[k]))) # negative binomial with different parameters for each gene
+counts_ls[[38]] = counts_ls[[37]][, (347/2):347]*100 # Second half of cells have size factor 100
+
+# for(j in 5:length(counts_ls)){
+#   tic("downsample")
+#   counts_ls[[j]] = Down_Sample_Matrix(ceiling(counts_ls[[j]]))
+#   toc()
+# }
+
+saveRDS(counts_ls, here("./scrna/counts_v2_ls.rds"))
 ```
 
 ```{r}
-counts_ls = readRDS(here("./scrna/counts_more_ls.rds"))
+counts_ls = readRDS(here("./scrna/counts_v2_ls.rds"))
 ```
 
 
