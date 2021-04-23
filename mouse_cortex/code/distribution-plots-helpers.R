@@ -287,7 +287,7 @@ p_chisq_test = function(m, distribution = "poisson", df_bin = NA){
 p_chisq_test_2 = function(m, distribution = "poisson"){
   total_sum = sum(m)
   lambda_j = rowSums(m)/total_sum # proportion of counts in gene j
-  c_i = colSums(m)/total_sum # proportion of counts in sample i (should be approximately same across i for downsampled matrix)
+  c_i = colSums(m)/total_sum      # proportion of counts in sample i
   mu_ij = outer(lambda_j, c_i)*total_sum
   
   f_obs = m
@@ -350,5 +350,62 @@ p_chisq_test_2 = function(m, distribution = "poisson"){
   return(chi_square)
 }
 
+# Bin by sample and group cells
+p_chisq_test_2_grouped = function(m, distribution = "poisson"){
+  n_col = ncol(m)
+  total_sum = sum(m)
+  R_j = rowSums(m)
+  lambda_j = R_j/total_sum # proportion of counts in gene j
+  c_i = colSums(m)/total_sum      # proportion of counts in sample i
+  mu_ij = outer(lambda_j, c_i)*total_sum
+  
+  # Discard genes with average mu_ij too low (< 0.01)
+  avg_mu = R_j/n_col
+  mu_ij = mu_ij[(avg_mu > 0.01), ]
+  
+  # Find group size
+  p = 0.25 # restrict component variance to be within < 2*(1+p)
+  min_mu = min(avg_mu[avg_mu > 0.01]) # smallest average mu_ij in remaining genes
+  r = ceiling(1/(2*min_mu*p))
+  
+  # Assign cells to groups
+  n_groups = round(n_col/r)
+  group_size_max = ceiling(n_col/n_groups)
+  group_assign = rep(1:n_groups, group_size_max)
+  group_assign = group_assign[1:n_col]
+  group_sizes = as.vector(table(group_assign))
+  
+  f_obs = t(rowsum(t(m), group_assign, reorder = TRUE)) # get grouped_sums = grouped means*r
+  f_obs = matrix(rep(f_obs, group_size_max), ncol = group_size_max*n_groups)[, 1:n_col] # turn into matrix
+  r_matrix = diag(rep(group_sizes, group_size_max)[1:n_col])
+  f_hyp = mu_ij %*% r_matrix # multiply mu_ij by r
+  
+  if(distribution == "poisson"){
+    chi_square = rowSums((f_obs-f_hyp)^2/f_hyp)
+  } else if(distribution == "nb 1"){ # single overdispersion parameter
+    # Option 2 (edgeR)
+    phi = 1/edgeR::estimateCommonDisp(m)
+    
+    # Option 2.5 (use edgeR mean)
+    mu_ij = edgeR::glmFit(m, dispersion = 1/phi)$fitted.values
+    f_hyp = mu_ij
+    
+    f_var = mu_ij + mu_ij^2/phi
+    chi_square = rowSums((f_obs-f_hyp)^2/f_var)
+  } else if(distribution == "nb 2"){
+    # Option 3 (edgeR)
+    f_phi = 1/edgeR::estimateDisp(m)$tagwise.dispersion
+    
+    # Option 3.5 (use edgeR mean)
+    mu_ij = edgeR::glmFit(m, dispersion = 1/f_phi)$fitted.values
+    f_hyp = mu_ij
 
-
+    remove_na_rows = which(!is.na(f_phi))
+    f_var = mu_ij[remove_na_rows, ] + mu_ij[remove_na_rows, ]^2/f_phi[remove_na_rows]
+    chi_square = rowSums((f_obs[remove_na_rows, ]-f_hyp[remove_na_rows, ])^2/f_var)
+    
+    return(list(chi_square, f_phi)) # diagnosing purposes
+  } 
+  
+  return(chi_square)
+}
