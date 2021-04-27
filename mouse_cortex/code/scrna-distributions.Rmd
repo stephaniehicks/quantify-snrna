@@ -74,12 +74,14 @@ for(i in seq_along(lambdas)){
 }
 for(i in seq_along(lambdas)){
   counts_ls[[i+4+length(lambdas)]] = counts_ls[[i+4]]
-  counts_ls[[i+4+length(lambdas)]][, (347/2):347] = counts_ls[[i+4]][, (347/2):347]*100 # Second half of cells have size factor 100
+  counts_ls[[i+4+length(lambdas)]][, 200:347] =  matrix(rpois(n = 148*21483, lambda = lambdas[i]*100), ncol = 148, nrow = 21483) # Second half of cells have size factor 100
 }
 
 counts_ls[[11]] = t(sapply(seq_len(length(means)), function(i) 
   rpois(n = 347, lambda = means[i]))) # poisson with different parameters for each gene
-counts_ls[[12]] = counts_ls[[11]][, (347/2):347]*100 # Second half of cells have size factor 100
+counts_ls[[12]] = counts_ls[[11]]
+counts_ls[[12]][, 200:347] = t(sapply(seq_len(length(means)), function(i) 
+  rpois(n = 148, lambda = means[i]))) # Second half of cells have size factor 100
 
 # Negative binomial simulations
 phis = c(0.3, 1, 10, 100) # the empirical 1st quartile is 0.33, median is 0.88, 3rd quartile is 2.24, mean is 6.1, excluding outliers
@@ -94,13 +96,16 @@ for(i in seq_along(lambdas)){
   for(j in seq_along(phis)){
     ind = (i-1)*length(phis)+j+12
     counts_ls[[ind+length(lambdas)*length(phis)]] = counts_ls[[ind]]
-    counts_ls[[ind+length(lambdas)*length(phis)]][, (347/2):347] = counts_ls[[ind]][, (347/2):347]*100 # Second half of cells have size factor 100
+    counts_ls[[ind+length(lambdas)*length(phis)]][, 200:347] = 
+      matrix(rnbinom(n = 148*21483, size = phis[j], mu = lambdas[i]*100), ncol = 148, nrow = 21483) # Second half of cells have size factor 100
   }
 }
 
 counts_ls[[37]] = t(sapply(seq_len(length(means)), function(k) 
   rnbinom(n = 347, size = sizes[k], mu = means[k]))) # negative binomial with different parameters for each gene
-counts_ls[[38]] = counts_ls[[37]][, (347/2):347]*100 # Second half of cells have size factor 100
+counts_ls[[38]] = counts_ls[[37]]
+counts_ls[[38]][, 200:347] = t(sapply(seq_len(length(means)), function(k) 
+  rnbinom(n = 148, size = sizes[k], mu = means[k]*100))) # Second half of cells have size factor 100
 
 # for(j in 5:length(counts_ls)){
 #   tic("downsample")
@@ -351,7 +356,7 @@ for(i in 1:32){
 }
 ```
 
-```{r fig.width = 5, fig.height = 2}
+```{r fig.width = 5, fig.height = 3}
 # Poisson plots
 plot_dt_pois = bind_rows(plot_dt_pois_ls)
 plot_dt_pois %>%
@@ -360,7 +365,7 @@ plot_dt_pois %>%
     ggplot(aes(x = chi_quantile,
              y = chi_obs,
              color = percentile_color)) + 
-  facet_wrap(~ i, scales = "free", ncol = 4) +
+  facet_wrap(~ i, scales = "free", ncol = 3) +
   geom_point(size = 0.5) + 
   geom_abline(slope = 1, intercept = 0) +
   # coord_cartesian(ylim = c(250, 1000)) +
