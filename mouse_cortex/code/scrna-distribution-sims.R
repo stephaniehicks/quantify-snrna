@@ -21,13 +21,31 @@ counts = counts_ls[[i]]
 # Poisson
 chi_obs_pois = p_chisq_test_2(counts, distribution = "poisson")
 plot_dt_pois = tibble(chi_obs = chi_obs_pois) %>%
+  # expression = rowSums(counts),
+  # var = apply(counts, 1, var),
+  # prop_0 = apply(counts, 1, function(x) sum(x == 0))) %>%
+  mutate(id = 1:n()) %>%
+  arrange(chi_obs) %>%
+  drop_na() %>%
+  mutate(chi_quantile = qchisq(p = (1:length(chi_obs))/length(chi_obs), df = ncol(counts) - 1),
+         percentile_color = case_when(chi_obs > quantile(chi_obs, 0.995, na.rm = TRUE) ~ "> 99.5",
+                                      chi_obs > quantile(chi_obs, 0.95, na.rm = TRUE) ~ "> 95",
+                                      chi_obs > quantile(chi_obs, 0.90, na.rm = TRUE) ~ "> 90",
+                                      T ~ "rest"),
+         i = i)
+
+saveRDS(plot_dt_pois, here(paste0("./scrna/output/plot_dt_pois_ls_", i, ".rds")))
+
+# Poisson (grouped)
+chi_obs_pois = p_chisq_test_2_grouped(counts, distribution = "poisson")
+plot_dt_pois = tibble(chi_obs = chi_obs_pois[[1]]) %>%
                          # expression = rowSums(counts),
                          # var = apply(counts, 1, var),
                          # prop_0 = apply(counts, 1, function(x) sum(x == 0))) %>%
   mutate(id = 1:n()) %>%
   arrange(chi_obs) %>%
   drop_na() %>%
-  mutate(chi_quantile = qchisq(p = (1:length(chi_obs))/length(chi_obs), df = ncol(counts) - 1),
+  mutate(chi_quantile = qchisq(p = (1:length(chi_obs))/length(chi_obs), df = chi_obs_pois[[2]] - 1),
          percentile_color = case_when(chi_obs > quantile(chi_obs, 0.995, na.rm = TRUE) ~ "> 99.5",
                                       chi_obs > quantile(chi_obs, 0.95, na.rm = TRUE) ~ "> 95",
                                       chi_obs > quantile(chi_obs, 0.90, na.rm = TRUE) ~ "> 90",

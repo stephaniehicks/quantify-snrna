@@ -377,9 +377,10 @@ p_chisq_test_2_grouped = function(m, distribution = "poisson"){
   group_sizes = as.vector(table(group_assign))
   
   f_obs = t(rowsum(t(m), group_assign, reorder = TRUE)) # get grouped_sums = grouped means*r
-  f_obs = matrix(rep(f_obs, group_size_max), ncol = group_size_max*n_groups)[, 1:n_col] # turn into matrix
+  # f_obs = matrix(rep(f_obs, group_size_max), ncol = group_size_max*n_groups)[, 1:n_col] # turn into matrix
   r_matrix = diag(rep(group_sizes, group_size_max)[1:n_col])
-  f_hyp = mu_ij %*% r_matrix # multiply mu_ij by r
+  f_hyp = t(rowsum(t(mu_ij), group_assign, reorder = TRUE)) # get sum of lambdas for each group
+  f_hyp = f_hyp[, 1:ncol(f_obs)]
   
   if(distribution == "poisson"){
     chi_square = rowSums((f_obs-f_hyp)^2/f_hyp)
@@ -405,8 +406,8 @@ p_chisq_test_2_grouped = function(m, distribution = "poisson"){
     f_var = mu_ij[remove_na_rows, ] + mu_ij[remove_na_rows, ]^2/f_phi[remove_na_rows]
     chi_square = rowSums((f_obs[remove_na_rows, ]-f_hyp[remove_na_rows, ])^2/f_var)
     
-    return(list(chi_square, f_phi)) # diagnosing purposes
+    return(list(chi_square, f_phi, df = ncol(f_obs))) # diagnosing purposes
   } 
   
-  return(chi_square)
+  return(list(chi_square, df = ncol(f_obs)))
 }
