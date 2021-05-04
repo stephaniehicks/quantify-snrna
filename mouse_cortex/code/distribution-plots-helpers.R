@@ -286,9 +286,10 @@ p_chisq_test = function(m, distribution = "poisson", df_bin = NA){
 # Bin by sample
 p_chisq_test_2 = function(m, distribution = "poisson"){
   total_sum = sum(m)
+  c_i = colSums(m)                # proportion of counts in sample i
   lambda_j = rowSums(m)/total_sum # proportion of counts in gene j
-  c_i = colSums(m)/total_sum      # proportion of counts in sample i
-  mu_ij = outer(lambda_j, c_i)*total_sum
+  # lambda_alt = rowSums(t(t(m)/c_i))/ncol(m)
+  mu_ij = outer(lambda_j, c_i)
   
   f_obs = m
   f_hyp = mu_ij
@@ -355,9 +356,10 @@ p_chisq_test_2_grouped = function(m, distribution = "poisson"){
   n_col = ncol(m)
   total_sum = sum(m)
   R_j = rowSums(m)
-  lambda_j = R_j/total_sum        # proportion of counts in gene j
-  c_i = colSums(m)/total_sum      # proportion of counts in sample i
-  mu_ij = outer(lambda_j, c_i)*total_sum
+  c_i = colSums(m)                # proportion of counts in sample i
+  lambda_j = rowSums(m)/total_sum # proportion of counts in gene j
+  # lambda_alt = rowSums(t(t(m)/c_i))/ncol(m)
+  mu_ij = outer(lambda_j, c_i)
   
   # Discard genes with average mu_ij too low (< 0.01)
   avg_mu = R_j/n_col
@@ -379,7 +381,7 @@ p_chisq_test_2_grouped = function(m, distribution = "poisson"){
   f_obs = t(rowsum(t(m), group_assign, reorder = TRUE)) # get grouped_sums = grouped means*r
   # f_obs = matrix(rep(f_obs, group_size_max), ncol = group_size_max*n_groups)[, 1:n_col] # turn into matrix
   r_matrix = diag(rep(group_sizes, group_size_max)[1:n_col])
-  f_hyp = t(rowsum(t(mu_ij), group_assign, reorder = TRUE)) # get sum of lambdas for each group
+  f_hyp = t(rowsum(t(mu_ij), group_assign, reorder = TRUE)) # get sum of means for each group
   f_hyp = f_hyp[, 1:ncol(f_obs)]
   
   if(distribution == "poisson"){
