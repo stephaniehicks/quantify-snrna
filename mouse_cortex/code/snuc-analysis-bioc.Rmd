@@ -388,13 +388,76 @@ genes_rowmeans_tb %>%
   filter(transcripts > 0) %>%
   ggplot(aes(x = transcript_length, y = transcripts, color = cell_type)) +
   facet_wrap(cortex ~ cell_group, labeller = label_both) +
-  geom_point(alpha = 0.01) +
+  # geom_point(alpha = 0.01) +
   geom_smooth() + 
   scale_x_log10() +
   scale_y_log10() +
   # scale_y_continuous(limits = c(0, 10)) +
   theme_bw()
 ```
+#### Sequence of As
+
+```{r}
+transcripts_nA8 = readRDS(here("mouse_cortex", "salmon_files", "transcripts_nA8.rds"))
+transcripts_nA8 = transcripts_nA8 %>%
+  group_by(gene_id) %>%
+  summarize(transcripts_max_nA8 = max(n))
+transcripts_nA8 %>%
+  ggplot(aes(x = transcripts_max_nA8)) +
+  geom_histogram() +
+  # scale_x_log10() +
+  theme_bw()
+
+preandmrna_nA8 = readRDS(here("mouse_cortex", "salmon_files", "preandmrna_nA8.rds"))
+preandmrna_nA8 = preandmrna_nA8 %>%
+  group_by(gene_id) %>%
+  summarize(preandmrna_max_nA8 = max(n))
+preandmrna_nA8 %>%
+  ggplot(aes(x = preandmrna_max_nA8)) +
+  geom_histogram() +
+  # scale_x_log10() +
+  theme_bw()
+```
+
+
+```{r}
+genes_rowmeans_tb = genes_rowmeans_tb %>%
+  left_join(., transcripts_nA8, by = c("gene" = "gene_id")) %>%
+  left_join(., preandmrna_nA8, by = c("gene" = "gene_id"))
+
+genes_rowmeans_tb %>%
+  mutate(cell_group = case_when(cell_type %in% c("Excitatory neuron", "Inhibitory neuron") ~ 1,
+                                cell_type %in% c("Endothelial", "Microglia") ~ 2,
+                                TRUE ~ 3)) %>%
+  # filter(transcripts > 0) %>%
+  ggplot(aes(x = transcripts_max_nA8, y = transcripts, color = cell_type)) +
+  facet_wrap(cortex ~ cell_group, labeller = label_both) +
+  # geom_point(alpha = 0.01) +
+  geom_smooth() + 
+  scale_x_log10() +
+  scale_y_log10() +
+  # scale_y_continuous(limits = c(0, 10)) +
+  theme_bw()
+```
+```{r}
+# Relationship between nA8 under transcripts versus preandmrna pipeline
+genes_rowmeans_tb %>%
+  ggplot(aes(x = transcripts_max_nA8, y = preandmrna_max_nA8)) + 
+  geom_point(alpha = 0.5) +
+  geom_abline(intercept = 0, slope = 1)+
+  scale_x_log10() +
+  scale_y_log10() +
+  theme_bw()
+
+# Relationship between gene length and nA8
+genes_rowmeans_tb %>%
+  ggplot(aes(x = preandmrna_max_nA8, y = length)) + 
+  geom_point(alpha = 0.5) +
+  scale_x_log10() +
+  scale_y_log10() +
+  theme_bw()
+```
+
 
 #### By marker genes
 
