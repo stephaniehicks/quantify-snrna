@@ -31,13 +31,13 @@ t2g_preandmrna = read.table(here("mouse_cortex", "salmon_files", "gencode.vM25.p
 # transcripts
 matches = vmatchPattern("AAAAAAAA", tx)
 transcripts_nA8 = tibble(transcript_id = names(tx),
-              n = elementNROWS(matches)) %>%
+                         n = elementNROWS(matches)) %>%
   left_join(., t2g, by = "transcript_id")
 saveRDS(transcripts_nA8, here("mouse_cortex", "salmon_files", "transcripts_nA8.rds"))
 
 # preandmrna
 matches = vmatchPattern("AAAAAAAA", preandmrna)
 preandmrna_nA8 = tibble(transcript_id = names(preandmrna),
-                         n = elementNROWS(matches)) %>%
-  left_join(., t2gpreandmrna, by = "transcript_id")
+                        n = elementNROWS(matches)) %>%
+  left_join(., t2g_preandmrna, by = "transcript_id")
 saveRDS(preandmrna_nA8, here("mouse_cortex", "salmon_files", "preandmrna_nA8.rds"))
