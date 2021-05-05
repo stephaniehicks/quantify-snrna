@@ -440,6 +440,30 @@ genes_rowmeans_tb %>%
   theme_bw()
 ```
 ```{r}
+cors_bias = genes_rowmeans_tb %>%
+  group_by(cell_type, cortex) %>%
+  mutate(across(where(is.numeric), log10)) %>%
+  mutate(across(where(is.numeric), ~na_if(., -Inf))) %>%
+  mutate(across(where(is.numeric), ~na_if(., Inf))) %>%
+  summarize(cor_transcripts_transcript_length = cor(transcripts, transcript_length, use = "pairwise.complete.obs"),
+            cor_preandmrna_transcript_length = cor(preandmrna, transcript_length, use = "pairwise.complete.obs"),
+            cor_transcripts_length = cor(transcripts, length, use = "pairwise.complete.obs"),
+            cor_preandmrna_length = cor(preandmrna, length, use = "pairwise.complete.obs"),
+            cor_transcripts_transcripts_max_nA8 = cor(transcripts, transcripts_max_nA8, use = "pairwise.complete.obs"),
+            cor_preandmrna_transcripts_max_nA8 = cor(preandmrna, transcripts_max_nA8, use = "pairwise.complete.obs"),
+            cor_transcripts_preandmrna_max_nA8 = cor(transcripts, preandmrna_max_nA8, use = "pairwise.complete.obs"),
+            cor_preandmrna_preandmrna_max_nA8 = cor(preandmrna, preandmrna_max_nA8, use = "pairwise.complete.obs")) %>%
+  pivot_longer(cols = starts_with("cor_"), names_to = "variables", values_to = "correlation")
+
+cors_bias %>%
+  ggplot(aes(x = cell_type, y = correlation)) +
+  geom_point(aes(color = cortex)) +
+  facet_wrap(~ variables, ncol = 2) +
+  coord_flip() +
+  theme_bw()
+```
+
+```{r}
 # Relationship between nA8 under transcripts versus preandmrna pipeline
 genes_rowmeans_tb %>%
   ggplot(aes(x = transcripts_max_nA8, y = preandmrna_max_nA8)) + 
