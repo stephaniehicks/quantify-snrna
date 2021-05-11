@@ -385,8 +385,10 @@ genes_rowmeans_tb %>%
   mutate(cell_group = case_when(cell_type %in% c("Excitatory neuron", "Inhibitory neuron") ~ 1,
                                 cell_type %in% c("Endothelial", "Microglia") ~ 2,
                                 TRUE ~ 3)) %>%
-  filter(transcripts > 0) %>%
-  ggplot(aes(x = transcript_length, y = transcripts, color = cell_type)) +
+  filter(preandmrna > 0) %>%
+  # filter(preandmrna_max_nA8 == 0) %>%
+  # filter(cell_type %in% c("Excitatory neuron", "Microglia", "Astrocyte") & cortex == "cortex1") %>%
+  ggplot(aes(x = length, y = preandmrna, color = cell_type)) +
   facet_wrap(cortex ~ cell_group, labeller = label_both) +
   # geom_point(alpha = 0.01) +
   geom_smooth() + 
@@ -395,6 +397,7 @@ genes_rowmeans_tb %>%
   # scale_y_continuous(limits = c(0, 10)) +
   theme_bw()
 ```
+
 #### Sequence of As
 
 ```{r}
@@ -424,15 +427,19 @@ preandmrna_nA8 %>%
 genes_rowmeans_tb = genes_rowmeans_tb %>%
   left_join(., transcripts_nA8, by = c("gene" = "gene_id")) %>%
   left_join(., preandmrna_nA8, by = c("gene" = "gene_id"))
+```
 
+
+```{r}
 genes_rowmeans_tb %>%
   mutate(cell_group = case_when(cell_type %in% c("Excitatory neuron", "Inhibitory neuron") ~ 1,
                                 cell_type %in% c("Endothelial", "Microglia") ~ 2,
                                 TRUE ~ 3)) %>%
-  # filter(transcripts > 0) %>%
-  ggplot(aes(x = transcripts_max_nA8, y = transcripts, color = cell_type)) +
+  filter(preandmrna > 0) %>%
+  filter(cell_type %in% c("Excitatory neuron", "Microglia", "Astrocyte") & cortex == "cortex1") %>%
+  ggplot(aes(x = preandmrna_max_nA8, y = preandmrna, color = cell_type)) +
   facet_wrap(cortex ~ cell_group, labeller = label_both) +
-  # geom_point(alpha = 0.01) +
+  geom_point(alpha = 0.01) +
   geom_smooth() + 
   scale_x_log10() +
   scale_y_log10() +
@@ -440,23 +447,19 @@ genes_rowmeans_tb %>%
   theme_bw()
 ```
 ```{r}
-cors_bias = genes_rowmeans_tb %>%
+r2_bias = genes_rowmeans_tb %>%
   group_by(cell_type, cortex) %>%
   mutate(across(where(is.numeric), log10)) %>%
   mutate(across(where(is.numeric), ~na_if(., -Inf))) %>%
   mutate(across(where(is.numeric), ~na_if(., Inf))) %>%
-  summarize(cor_transcripts_transcript_length = cor(transcripts, transcript_length, use = "pairwise.complete.obs"),
-            cor_preandmrna_transcript_length = cor(preandmrna, transcript_length, use = "pairwise.complete.obs"),
-            cor_transcripts_length = cor(transcripts, length, use = "pairwise.complete.obs"),
-            cor_preandmrna_length = cor(preandmrna, length, use = "pairwise.complete.obs"),
-            cor_transcripts_transcripts_max_nA8 = cor(transcripts, transcripts_max_nA8, use = "pairwise.complete.obs"),
-            cor_preandmrna_transcripts_max_nA8 = cor(preandmrna, transcripts_max_nA8, use = "pairwise.complete.obs"),
-            cor_transcripts_preandmrna_max_nA8 = cor(transcripts, preandmrna_max_nA8, use = "pairwise.complete.obs"),
-            cor_preandmrna_preandmrna_max_nA8 = cor(preandmrna, preandmrna_max_nA8, use = "pairwise.complete.obs")) %>%
-  pivot_longer(cols = starts_with("cor_"), names_to = "variables", values_to = "correlation")
+  summarize(r2_transcripts_transcript_length = cor(transcripts, transcript_length, use = "pairwise.complete.obs")^2,
+            r2_preandmrna_length = cor(preandmrna, length, use = "pairwise.complete.obs")^2,
+            r2_transcripts_transcripts_max_nA8 = cor(transcripts, transcripts_max_nA8, use = "pairwise.complete.obs")^2,
+            r2_preandmrna_preandmrna_max_nA8 = cor(preandmrna, preandmrna_max_nA8, use = "pairwise.complete.obs")^2) %>%
+  pivot_longer(cols = starts_with("r2_"), names_to = "variables", values_to = "r2")
 
-cors_bias %>%
-  ggplot(aes(x = cell_type, y = correlation)) +
+r2_bias %>%
+  ggplot(aes(x = cell_type, y = r2)) +
   geom_point(aes(color = cortex)) +
   facet_wrap(~ variables, ncol = 2) +
   coord_flip() +
