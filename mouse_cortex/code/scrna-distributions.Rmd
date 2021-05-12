@@ -117,7 +117,7 @@ saveRDS(counts_ls, here("./scrna/counts_v2_ls.rds"))
 ```
 
 ```{r}
-counts_ls = readRDS(here("./scrna/counts_v2_ls.rds"))
+counts_ls = readRDS(here("./scrna/counts_more_ls.rds"))
 ```
 
 
@@ -288,58 +288,58 @@ plot_dt_pois_ls = list()
 plot_dt_nb_1_ls = list()
 plot_dt_nb_2_ls = list()
 # for(i in seq_along(counts_ls)){
-for(i in 5:12){
+for(i in 11:31){
   print(i)
   counts = counts_ls[[i]]
   
   # Poisson
-  chi_obs_pois = p_chisq_test_2_grouped(counts, distribution = "poisson")
-  plot_dt_pois_ls[[i]] = tibble(chi_obs = chi_obs_pois[[1]]) %>%
+  # chi_obs_pois = p_chisq_test_2_grouped(counts, distribution = "poisson")
+  # plot_dt_pois_ls[[i]] = tibble(chi_obs = chi_obs_pois[[1]]) %>%
+  #                               # expression = rowSums(counts),
+  #                               # var = apply(counts, 1, var),
+  #                               # prop_0 = apply(counts, 1, function(x) sum(x == 0))) %>%
+  #   mutate(id = 1:n()) %>%
+  #   arrange(chi_obs) %>%
+  #   drop_na() %>%
+  #   mutate(chi_quantile = qchisq(p = (1:length(chi_obs))/length(chi_obs), df = chi_obs_pois[[2]] - 1),
+  #          percentile_color = case_when(chi_obs > quantile(chi_obs, 0.995, na.rm = TRUE) ~ "> 99.5",
+  #                                       chi_obs > quantile(chi_obs, 0.95, na.rm = TRUE) ~ "> 95",
+  #                                       chi_obs > quantile(chi_obs, 0.90, na.rm = TRUE) ~ "> 90",
+  #                                       T ~ "rest"),
+  #          i = i)
+  
+  # Negative binomial (single overdispersion parameter)
+  chi_obs_nb = p_chisq_test_2_grouped(counts, distribution = "nb 1")
+  plot_dt_nb_1_ls[[i]] = tibble(chi_obs = chi_obs_nb[[1]]) %>%
                                 # expression = rowSums(counts),
                                 # var = apply(counts, 1, var),
                                 # prop_0 = apply(counts, 1, function(x) sum(x == 0))) %>%
     mutate(id = 1:n()) %>%
     arrange(chi_obs) %>%
     drop_na() %>%
-    mutate(chi_quantile = qchisq(p = (1:length(chi_obs))/length(chi_obs), df = chi_obs_pois[[2]] - 1),
+    mutate(chi_quantile = qchisq(p = (1:length(chi_obs))/length(chi_obs), df = chi_obs_nb[[2]] - 2),
            percentile_color = case_when(chi_obs > quantile(chi_obs, 0.995, na.rm = TRUE) ~ "> 99.5",
                                         chi_obs > quantile(chi_obs, 0.95, na.rm = TRUE) ~ "> 95",
                                         chi_obs > quantile(chi_obs, 0.90, na.rm = TRUE) ~ "> 90",
                                         T ~ "rest"),
            i = i)
-  
-  # Negative binomial (single overdispersion parameter)
-  # chi_obs_nb = p_chisq_test_2_grouped(counts, distribution = "nb 1")
-  # plot_dt_nb_1_ls[[i]] = tibble(chi_obs = chi_obs_nb) %>%
-  #                               # expression = rowSums(counts),
-  #                               # var = apply(counts, 1, var),
-  #                               # prop_0 = apply(counts, 1, function(x) sum(x == 0))) %>%
-  #   mutate(id = 1:n()) %>%
-  #   arrange(chi_obs) %>%
-  #   drop_na() %>%
-  #   mutate(chi_quantile = qchisq(p = (1:length(chi_obs))/length(chi_obs), df = ncol(counts) - 2),
-  #          percentile_color = case_when(chi_obs > quantile(chi_obs, 0.995, na.rm = TRUE) ~ "> 99.5",
-  #                                       chi_obs > quantile(chi_obs, 0.95, na.rm = TRUE) ~ "> 95",
-  #                                       chi_obs > quantile(chi_obs, 0.90, na.rm = TRUE) ~ "> 90",
-  #                                       T ~ "rest"),
-  #          i = i)
-  # 
+
   # # Negative binomial (gene-specific overdispersion parameter)
-  # chi_obs_nb = p_chisq_test_2_grouped(counts, distribution = "nb 2")
-  # plot_dt_nb_2_ls[[i]] = tibble(chi_obs = chi_obs_nb[[1]],
-  #                               f_phi = chi_obs_nb[[2]]) %>%
-  #                               # expression = rowSums(counts),
-  #                               # var = apply(counts, 1, var),
-  #                               # prop_0 = apply(counts, 1, function(x) sum(x == 0))) %>%
-  #   mutate(id = 1:n()) %>%
-  #   arrange(chi_obs) %>%
-  #   drop_na() %>%
-  #   mutate(chi_quantile = qchisq(p = (1:length(chi_obs))/length(chi_obs), df = ncol(counts) - 2),
-  #          percentile_color = case_when(chi_obs > quantile(chi_obs, 0.995, na.rm = TRUE) ~ "> 99.5",
-  #                                       chi_obs > quantile(chi_obs, 0.95, na.rm = TRUE) ~ "> 95",
-  #                                       chi_obs > quantile(chi_obs, 0.90, na.rm = TRUE) ~ "> 90",
-  #                                       T ~ "rest"),
-  #          i = i)
+  chi_obs_nb = p_chisq_test_2_grouped(counts, distribution = "nb 2")
+  plot_dt_nb_2_ls[[i]] = tibble(chi_obs = chi_obs_nb[[1]],
+                                f_phi = chi_obs_nb[[2]]) %>%
+                                # expression = rowSums(counts),
+                                # var = apply(counts, 1, var),
+                                # prop_0 = apply(counts, 1, function(x) sum(x == 0))) %>%
+    mutate(id = 1:n()) %>%
+    arrange(chi_obs) %>%
+    drop_na() %>%
+    mutate(chi_quantile = qchisq(p = (1:length(chi_obs))/length(chi_obs), df = chi_obs_nb[[3]] - 2),
+           percentile_color = case_when(chi_obs > quantile(chi_obs, 0.995, na.rm = TRUE) ~ "> 99.5",
+                                        chi_obs > quantile(chi_obs, 0.95, na.rm = TRUE) ~ "> 95",
+                                        chi_obs > quantile(chi_obs, 0.90, na.rm = TRUE) ~ "> 90",
+                                        T ~ "rest"),
+           i = i)
 }
 ```
 
@@ -356,16 +356,16 @@ for(i in 1:32){
 }
 ```
 
-```{r fig.width = 10, fig.height = 6}
+```{r fig.width = 10, fig.height = 10}
 # Poisson plots
 plot_dt_pois = bind_rows(plot_dt_pois_ls)
 plot_dt_pois %>%
-  filter(i %in% 5:12) %>%
+  filter(i %in% 11:31) %>%
   # filter(expression > 50) %>%
     ggplot(aes(x = chi_quantile,
              y = chi_obs,
              color = percentile_color)) + 
-  facet_wrap(~ i, scales = "free", ncol = 3) +
+  facet_wrap(~ i, scales = "free", ncol = 4) +
   geom_point(size = 0.5) + 
   geom_abline(slope = 1, intercept = 0) +
   # coord_cartesian(ylim = c(250, 1000)) +
