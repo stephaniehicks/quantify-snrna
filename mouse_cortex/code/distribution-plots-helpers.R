@@ -392,7 +392,8 @@ p_chisq_test_2_grouped = function(m, distribution = "poisson"){
     
     # Option 2.5 (use edgeR mean)
     mu_ij = edgeR::glmFit(m, dispersion = 1/phi)$fitted.values
-    f_hyp = mu_ij %*% r_matrix
+    f_hyp = t(rowsum(t(mu_ij), group_assign, reorder = TRUE)) # get sum of means for each group
+    f_hyp = f_hyp[, 1:ncol(f_obs)]
     
     f_var = mu_ij + mu_ij^2/phi
     chi_square = rowSums((f_obs-f_hyp)^2/f_var)
@@ -402,7 +403,8 @@ p_chisq_test_2_grouped = function(m, distribution = "poisson"){
     
     # Option 3.5 (use edgeR mean)
     mu_ij = edgeR::glmFit(m, dispersion = 1/f_phi)$fitted.values
-    f_hyp = mu_ij %*% r_matrix
+    f_hyp = t(rowsum(t(mu_ij), group_assign, reorder = TRUE)) # get sum of means for each group
+    f_hyp = f_hyp[, 1:ncol(f_obs)]
 
     remove_na_rows = which(!is.na(f_phi))
     f_var = mu_ij[remove_na_rows, ] + mu_ij[remove_na_rows, ]^2/f_phi[remove_na_rows]
