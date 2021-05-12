@@ -1372,6 +1372,35 @@ plot_dt %>%
 ```
 
 ```{r}
+# Negative binomial (single overdispersion parameter - grouped)
+chi_obs_nb = p_chisq_test_2_grouped(counts_sub_cluster_scaled, distribution = "nb 1")
+plot_dt = tibble(chi_obs = chi_obs_nb[[1]]) %>%
+  # expression = rowSums(counts),
+  # var = apply(counts, 1, var),
+  # prop_0 = apply(counts, 1, function(x) sum(x == 0))) %>%
+  mutate(id = 1:n()) %>%
+  arrange(chi_obs) %>%
+  drop_na() %>%
+  mutate(chi_quantile = qchisq(p = (1:length(chi_obs))/length(chi_obs), df = chi_obs_nb[[2]] - 1),
+         percentile_color = case_when(chi_obs > quantile(chi_obs, 0.995, na.rm = TRUE) ~ "> 99.5",
+                                      chi_obs > quantile(chi_obs, 0.95, na.rm = TRUE) ~ "> 95",
+                                      chi_obs > quantile(chi_obs, 0.90, na.rm = TRUE) ~ "> 90",
+                                      T ~ "rest"),
+         i = i)
+
+plot_dt %>%
+  # filter(expression > 50) %>%
+    ggplot(aes(x = chi_quantile,
+             y = chi_obs,
+             color = percentile_color)) + 
+  geom_point(size = 0.5) + 
+  geom_abline(slope = 1, intercept = 0) +
+  # coord_cartesian(ylim = c(250, 1000)) +
+  theme_bw()
+```
+
+
+```{r}
 # Negative binomial (gene-specific overdispersion parameter)
 chi_obs_nb = p_chisq_test_2(counts_sub_cluster_scaled, distribution = "nb 2")
 plot_dt = tibble(chi_obs = chi_obs_nb) %>%
@@ -1387,6 +1416,34 @@ plot_dt = tibble(chi_obs = chi_obs_nb) %>%
 plot_dt %>%
   # filter(expression > 50) %>%
   ggplot(aes(x = chi_quantile,
+             y = chi_obs,
+             color = percentile_color)) + 
+  geom_point(size = 0.5) + 
+  geom_abline(slope = 1, intercept = 0) +
+  # coord_cartesian(ylim = c(250, 1000)) +
+  theme_bw()
+```
+
+```{r}
+# Negative binomial (gene-specific overdispersion parameter - grouped)
+chi_obs_nb = p_chisq_test_2_grouped(counts_sub_cluster_scaled, distribution = "nb 2")
+plot_dt = tibble(chi_obs = chi_obs_nb[[1]]) %>%
+  # expression = rowSums(counts),
+  # var = apply(counts, 1, var),
+  # prop_0 = apply(counts, 1, function(x) sum(x == 0))) %>%
+  mutate(id = 1:n()) %>%
+  arrange(chi_obs) %>%
+  drop_na() %>%
+  mutate(chi_quantile = qchisq(p = (1:length(chi_obs))/length(chi_obs), df = chi_obs_nb[[3]] - 2),
+         percentile_color = case_when(chi_obs > quantile(chi_obs, 0.995, na.rm = TRUE) ~ "> 99.5",
+                                      chi_obs > quantile(chi_obs, 0.95, na.rm = TRUE) ~ "> 95",
+                                      chi_obs > quantile(chi_obs, 0.90, na.rm = TRUE) ~ "> 90",
+                                      T ~ "rest"),
+         i = i)
+
+plot_dt %>%
+  # filter(expression > 50) %>%
+    ggplot(aes(x = chi_quantile,
              y = chi_obs,
              color = percentile_color)) + 
   geom_point(size = 0.5) + 
