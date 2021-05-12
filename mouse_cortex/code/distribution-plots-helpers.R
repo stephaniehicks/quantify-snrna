@@ -361,14 +361,16 @@ p_chisq_test_2_grouped = function(m, distribution = "poisson"){
   # lambda_alt = rowSums(t(t(m)/c_i))/ncol(m)
   mu_ij = outer(lambda_j, c_i)
   
-  # Discard genes with average mu_ij too low (< 0.01)
+  # Discard genes with average mu_ij too low (< ~0.01)
+  n_groups_min = ifelse(distribution == "poisson", 2, 3) # min number of groups allowed
+  cutoff = 2*n_groups_min/n_col      
   avg_mu = R_j/n_col
-  m = m[(avg_mu > 0.01), ]
-  mu_ij = mu_ij[(avg_mu > 0.01), ]
+  m = m[(avg_mu > cutoff), ]
+  mu_ij = mu_ij[(avg_mu > cutoff), ]
   
   # Find group size
   p = 0.25 # restrict component variance to be within < 2*(1+p)
-  min_mu = min(avg_mu[avg_mu > 0.01]) # smallest average mu_ij in remaining genes
+  min_mu = min(avg_mu[avg_mu > cutoff]) # smallest average mu_ij in remaining genes
   r = ceiling(1/(2*min_mu*p))
   
   # Assign cells to groups
@@ -395,7 +397,7 @@ p_chisq_test_2_grouped = function(m, distribution = "poisson"){
     f_hyp = t(rowsum(t(mu_ij), group_assign, reorder = TRUE)) # get sum of means for each group
     f_hyp = f_hyp[, 1:ncol(f_obs)]
     
-    f_var = mu_ij + mu_ij^2/phi
+    f_var = f_hyp + f_hyp^2/phi
     chi_square = rowSums((f_obs-f_hyp)^2/f_var)
   } else if(distribution == "nb 2"){
     # Option 3 (edgeR)
@@ -407,7 +409,7 @@ p_chisq_test_2_grouped = function(m, distribution = "poisson"){
     f_hyp = f_hyp[, 1:ncol(f_obs)]
 
     remove_na_rows = which(!is.na(f_phi))
-    f_var = mu_ij[remove_na_rows, ] + mu_ij[remove_na_rows, ]^2/f_phi[remove_na_rows]
+    f_var = f_hyp[remove_na_rows, ] + f_hyp[remove_na_rows, ]^2/f_phi[remove_na_rows]
     chi_square = rowSums((f_obs[remove_na_rows, ]-f_hyp[remove_na_rows, ])^2/f_var)
     
     return(list(chi_square, f_phi, df = ncol(f_obs))) # diagnosing purposes
