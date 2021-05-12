@@ -2,7 +2,7 @@
 #$ -o log/
 #$ -e log/
 #$ -l mem_free=8G,h_vmem=8G
-#$ -t 1:38
+#$ -t 1:31
 
 
 # run script
