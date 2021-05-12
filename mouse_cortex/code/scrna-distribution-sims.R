@@ -15,7 +15,7 @@ i = task_id
 print(i)
 
 # Run chi-squared tests
-counts_ls = readRDS(here("./scrna/counts_v2_ls.rds"))
+counts_ls = readRDS(here("./scrna/counts_more_ls.rds"))
 counts = counts_ls[[i]]
 
 # Poisson
@@ -70,7 +70,25 @@ plot_dt_nb_1 = tibble(chi_obs = chi_obs_nb) %>%
                                       T ~ "rest"),
          i = i)
 
-saveRDS(plot_dt_nb_1, here(paste0("./scrna/output/plot_dt_nb_1_grouped_ls_", i, ".rds")))
+saveRDS(plot_dt_nb_1, here(paste0("./scrna/output/plot_dt_nb_1_ls_", i, ".rds")))
+
+# Negative binomial (single overdispersion parameter - grouped)
+chi_obs_nb = p_chisq_test_2_grouped(counts, distribution = "nb 1")
+plot_dt_nb = tibble(chi_obs = chi_obs_nb[[1]]) %>%
+  # expression = rowSums(counts),
+  # var = apply(counts, 1, var),
+  # prop_0 = apply(counts, 1, function(x) sum(x == 0))) %>%
+  mutate(id = 1:n()) %>%
+  arrange(chi_obs) %>%
+  drop_na() %>%
+  mutate(chi_quantile = qchisq(p = (1:length(chi_obs))/length(chi_obs), df = chi_obs_nb[[2]] - 2),
+         percentile_color = case_when(chi_obs > quantile(chi_obs, 0.995, na.rm = TRUE) ~ "> 99.5",
+                                      chi_obs > quantile(chi_obs, 0.95, na.rm = TRUE) ~ "> 95",
+                                      chi_obs > quantile(chi_obs, 0.90, na.rm = TRUE) ~ "> 90",
+                                      T ~ "rest"),
+         i = i)
+
+saveRDS(plot_dt_pois, here(paste0("./scrna/output/plot_dt_nb_1_grouped_ls_", i, ".rds")))
 
 # Negative binomial (gene-specific overdispersion parameter)
 chi_obs_nb = p_chisq_test_2(counts, distribution = "nb 2")
@@ -89,4 +107,22 @@ plot_dt_nb_2 = tibble(chi_obs = chi_obs_nb[[1]],
                                       T ~ "rest"),
          i = i)
 
-saveRDS(plot_dt_nb_2, here(paste0("./scrna/output/plot_dt_nb_2_grouped_ls_", i, ".rds")))
+saveRDS(plot_dt_nb_2, here(paste0("./scrna/output/plot_dt_nb_2_ls_", i, ".rds")))
+
+# Negative binomial (gene-specific overdispersion parameter - grouped)
+chi_obs_nb = p_chisq_test_2_grouped(counts, distribution = "nb 2")
+plot_dt_nb = tibble(chi_obs = chi_obs_nb[[1]]) %>%
+  # expression = rowSums(counts),
+  # var = apply(counts, 1, var),
+  # prop_0 = apply(counts, 1, function(x) sum(x == 0))) %>%
+  mutate(id = 1:n()) %>%
+  arrange(chi_obs) %>%
+  drop_na() %>%
+  mutate(chi_quantile = qchisq(p = (1:length(chi_obs))/length(chi_obs), df = chi_obs_nb[[3]] - 2),
+         percentile_color = case_when(chi_obs > quantile(chi_obs, 0.995, na.rm = TRUE) ~ "> 99.5",
+                                      chi_obs > quantile(chi_obs, 0.95, na.rm = TRUE) ~ "> 95",
+                                      chi_obs > quantile(chi_obs, 0.90, na.rm = TRUE) ~ "> 90",
+                                      T ~ "rest"),
+         i = i)
+
+saveRDS(plot_dt_pois, here(paste0("./scrna/output/plot_dt_nb_1_grouped_ls_", i, ".rds")))
