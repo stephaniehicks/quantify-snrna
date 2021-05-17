@@ -349,10 +349,10 @@ for(i in 11:31){
 plot_dt_pois_ls = list()
 plot_dt_nb_1_ls = list()
 plot_dt_nb_2_ls = list()
-for(i in 1:32){
-  plot_dt_pois_ls[[i]] = readRDS(here(paste0("./scrna/output/plot_dt_pois_ls_", i, ".rds")))
-  plot_dt_nb_1_ls[[i]] = readRDS(here(paste0("./scrna/output/plot_dt_nb_1_ls_", i, ".rds")))
-  plot_dt_nb_2_ls[[i]] = readRDS(here(paste0("./scrna/output/plot_dt_nb_2_ls_", i, ".rds")))
+for(i in 1:31){
+  plot_dt_pois_ls[[i]] = readRDS(here(paste0("./scrna/output/plot_dt_pois_grouped_ls_", i, ".rds")))
+  plot_dt_nb_1_ls[[i]] = readRDS(here(paste0("./scrna/output/plot_dt_nb_1_grouped_ls_", i, ".rds")))
+  plot_dt_nb_2_ls[[i]] = readRDS(here(paste0("./scrna/output/plot_dt_nb_2_grouped_ls_", i, ".rds")))
 }
 ```
 
