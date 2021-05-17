@@ -229,6 +229,36 @@ print(p)
 ggsave(here("./publication/figures/figure_4.png"), plot = p, width = 8, height = 10)
 ```
 
+# Figure 5 (QQ plots)
+
+These were manually generated from `snuc-analysis-bioc.Rmd`, but eventually we want to run them under `distribution-plots.R`.
+
+```{r}
+a = readRDS(here("./mouse_cortex/plots/qq_plot_poisson_excitatory_neuron_cortex_1.rds"))
+b = readRDS(here("./mouse_cortex/plots/qq_plot_nb_2_excitatory_neuron_cortex_1.rds"))
+c = readRDS(here("./mouse_cortex/plots/qq_plot_poisson_inhibitory_neuron_cortex_1.rds"))
+d = readRDS(here("./mouse_cortex/plots/qq_plot_nb_2_inhibitory_neuron_cortex_1.rds"))
+e = readRDS(here("./mouse_cortex/plots/qq_plot_poisson_astrocyte_cortex_1.rds"))
+f = readRDS(here("./mouse_cortex/plots/qq_plot_nb_2_astrocyte_cortex_1.rds"))
+
+a = a +
+  labs(title = "Excitatory neuron")
+b = b +
+  labs(title = "Excitatory neuron")
+c = c +
+  labs(title = "Inhibitory neuron")
+d = d +
+  labs(title = "Inhibitory neuron")
+e = e +
+  labs(title = "Astrocyte")
+f = f +
+  labs(title = "Astrocyte")
+
+p = plot_grid(a, b, c, d, e, f, nrow = 3, labels = "auto")
+print(p)
+ggsave(here("./publication/figures/figure_5.png"), plot = p, width = 8, height = 10)
+```
+
 
 # Supplementary Figure 1 (lib size by gene type)
 
