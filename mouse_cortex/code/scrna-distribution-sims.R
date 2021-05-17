@@ -125,4 +125,4 @@ plot_dt_nb = tibble(chi_obs = chi_obs_nb[[1]]) %>%
                                       T ~ "rest"),
          i = i)
 
-saveRDS(plot_dt_pois, here(paste0("./scrna/output/plot_dt_nb_1_grouped_ls_", i, ".rds")))
+saveRDS(plot_dt_pois, here(paste0("./scrna/output/plot_dt_nb_2_grouped_ls_", i, ".rds")))
