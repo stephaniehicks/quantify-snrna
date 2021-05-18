@@ -260,6 +260,22 @@ ggsave(here("./publication/figures/figure_5.png"), plot = p, width = 8, height =
 ```
 
 
+# Figure 6 (Gene length bias plot)
+
+These were manually generated from `snuc-analysis-bioc.Rmd`. (a) comes from the gene length bias - by cell type section. (b) comes from DE analysis.
+
+```{r}
+a = readRDS(here("./mouse_cortex/plots/gene_length_bias_cortex_1.rds"))
+b = readRDS(here("./mouse_cortex/plots/de_length_bias_ea.rds"))
+
+a = a +
+  theme(legend.position = "top")
+
+p = plot_grid(a, b, nrow = 1, labels = "auto")
+print(p)
+ggsave(here("./publication/figures/figure_6.png"), plot = p, width = 12, height = 5)
+```
+
 # Supplementary Figure 1 (lib size by gene type)
 
 ```{r}

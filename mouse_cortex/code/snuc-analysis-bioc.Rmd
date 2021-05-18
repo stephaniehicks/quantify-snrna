@@ -381,7 +381,7 @@ genes_rowmeans_tb = genes_rowmeans_tb %>%
 
 ```{r}
 # Plot gene length bias by cell type
-genes_rowmeans_tb %>%
+p = genes_rowmeans_tb %>%
   mutate(cell_group = case_when(cell_type %in% c("Excitatory neuron", "Inhibitory neuron") ~ 1,
                                 cell_type %in% c("Endothelial", "Microglia") ~ 2,
                                 TRUE ~ 3)) %>%
@@ -396,7 +396,11 @@ genes_rowmeans_tb %>%
   scale_x_log10() +
   scale_y_log10() +
   # scale_y_continuous(limits = c(0, 10)) +
-  theme_bw()
+  labs(x = "Gene length", y = "Mean expression", color = "Cell Type") +
+  theme_bw() 
+
+print(p)
+# saveRDS(p, here("./mouse_cortex/plots/gene_length_bias_cortex_1.rds"))
 ```
 
 #### Sequence of As
@@ -994,13 +998,16 @@ res = res %>%
   left_join(., genes_rowsums_tb %>% distinct(gene, transcripts, preandmrna, introncollapse, intronseparate), by = "gene") # from binned by overall expression
 
 # Length vs log2fold change
-res %>%
+p = res %>%
   filter(!is.na(preandmrna)) %>%
   ggplot(aes(x = length, y = log2FoldChange)) + 
   geom_point(alpha = 0.05) +
   geom_smooth() +
   scale_x_log10() +
+  labs(x = "Gene length") +
   theme_bw()
+print(p)
+# saveRDS(p, here("./mouse_cortex/plots/de_length_bias_ea.rds"))
 
 # Length vs pvalue
 res %>%

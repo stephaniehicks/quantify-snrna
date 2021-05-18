@@ -349,9 +349,9 @@ for(i in 11:31){
 plot_dt_pois_ls = list()
 plot_dt_nb_1_ls = list()
 plot_dt_nb_2_ls = list()
-for(i in 1:31){
-  plot_dt_pois_ls[[i]] = readRDS(here(paste0("./scrna/output/plot_dt_pois_grouped_ls_", i, ".rds")))
-  plot_dt_nb_1_ls[[i]] = readRDS(here(paste0("./scrna/output/plot_dt_nb_1_grouped_ls_", i, ".rds")))
+for(i in 23:31){
+  # plot_dt_pois_ls[[i]] = readRDS(here(paste0("./scrna/output/plot_dt_pois_grouped_ls_", i, ".rds")))
+  # plot_dt_nb_1_ls[[i]] = readRDS(here(paste0("./scrna/output/plot_dt_nb_1_grouped_ls_", i, ".rds")))
   plot_dt_nb_2_ls[[i]] = readRDS(here(paste0("./scrna/output/plot_dt_nb_2_grouped_ls_", i, ".rds")))
 }
 ```
@@ -433,7 +433,7 @@ plot_dt_nb_1 %>%
 # Negative binomial plots (gene-specific overdispersion parameter)
 plot_dt_nb_2 = bind_rows(plot_dt_nb_2_ls)
 plot_dt_nb_2 %>%
-  filter(i %in% 11:31) %>%
+  filter(i %in% 23:31) %>%
   # filter(expression > 50) %>%
     ggplot(aes(x = chi_quantile,
              y = chi_obs,
