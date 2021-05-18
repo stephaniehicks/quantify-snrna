@@ -387,9 +387,10 @@ genes_rowmeans_tb %>%
                                 TRUE ~ 3)) %>%
   filter(preandmrna > 0) %>%
   # filter(preandmrna_max_nA8 == 0) %>%
-  # filter(cell_type %in% c("Excitatory neuron", "Microglia", "Astrocyte") & cortex == "cortex1") %>%
+  # filter(cell_type %in% c("Excitatory neuron", "Microglia", "Astrocyte")) %>%
+  filter(cortex == "cortex1") %>%
   ggplot(aes(x = length, y = preandmrna, color = cell_type)) +
-  facet_wrap(cortex ~ cell_group, labeller = label_both) +
+  # facet_wrap(cortex ~ .) +
   # geom_point(alpha = 0.01) +
   geom_smooth() + 
   scale_x_log10() +
