@@ -20,16 +20,16 @@ suppressPackageStartupMessages({
 normalize = FALSE
 run_number = "all" # give run_number or "all" for all of them together
 sce_ls = list()
-# sce_ls[["transcripts"]] = readRDS(here("mouse_cortex", "salmon_quants", "transcripts_pipeline", paste0("sce_", run_number, ".rds")))
+sce_ls[["transcripts"]] = readRDS(here("mouse_cortex", "salmon_quants", "transcripts_pipeline", paste0("sce_", run_number, ".rds")))
 sce_ls[["preandmrna"]] = readRDS(here("mouse_cortex", "salmon_quants", "preandmrna_pipeline", paste0("sce_", run_number, ".rds")))
-# sce_ls[["introncollapse"]] = readRDS(here("mouse_cortex", "salmon_quants", "introncollapse_pipeline", paste0("sce_", run_number, ".rds")))
-# sce_ls[["intronseparate"]] = readRDS(here("mouse_cortex", "salmon_quants", "intronseparate_pipeline", paste0("sce_", run_number, ".rds")))
+sce_ls[["introncollapse"]] = readRDS(here("mouse_cortex", "salmon_quants", "introncollapse_pipeline", paste0("sce_", run_number, ".rds")))
+sce_ls[["intronseparate"]] = readRDS(here("mouse_cortex", "salmon_quants", "intronseparate_pipeline", paste0("sce_", run_number, ".rds")))
 
-pipeline = "preandmrna"
+pipeline = "introncollapse"
 select_cells = colData(sce_ls[[pipeline]]) %>%
   as.data.frame() %>%
   filter(ding_labels %in% c("Excitatory neuron", "Astrocyte")) %>%
-  filter(cortex == "cortex2") %>%
+  filter(cortex == "cortex1") %>%
   row.names()
 sce_sub = sce_ls[[pipeline]][, select_cells]
 
@@ -63,7 +63,7 @@ if(normalize){
 
 dds = DESeqDataSetFromMatrix(countData = ceiling(counts(seq_data_norm)[, ]), # take integers 
                              colData = pData(seq_data_norm),
-                             design = ~ cortex + ding_labels)
+                             design = ~ ding_labels)
 
 if(normalize){
   normFactors <- exp(-1 * offst(seq_data_norm))
@@ -100,7 +100,7 @@ res = res %>%
   left_join(., genes_length_tb, by = "gene")
 
 if(normalize){
-  saveRDS(res, here(paste0("./mouse_cortex/output/de_ea_cortex2_", pipeline, "_norm.rds")))
+  saveRDS(res, here(paste0("./mouse_cortex/output/de_ea_", pipeline, "_norm.rds")))
 } else {
-  saveRDS(res, here(paste0("./mouse_cortex/output/de_ea_cortex2_", pipeline, ".rds")))
+  saveRDS(res, here(paste0("./mouse_cortex/output/de_ea_", pipeline, ".rds")))
 }

@@ -265,15 +265,35 @@ ggsave(here("./publication/figures/figure_5.png"), plot = p, width = 8, height =
 These were manually generated from `snuc-analysis-bioc.Rmd`. (a) comes from the gene length bias - by cell type section. (b) comes from DE analysis.
 
 ```{r}
-a = readRDS(here("./mouse_cortex/plots/gene_length_bias_cortex_1.rds"))
-b = readRDS(here("./mouse_cortex/plots/de_length_bias_ea.rds"))
+a = readRDS(here("./mouse_cortex/plots/gene_length_bias_transcripts_cortex_1.rds"))
+b = readRDS(here("./mouse_cortex/plots/de_length_bias_transcripts_ea.rds"))
+c = readRDS(here("./mouse_cortex/plots/de_length_bias_hist_transcripts_ea.rds"))
+d = readRDS(here("./mouse_cortex/plots/gene_length_bias_preandmrna_cortex_1.rds"))
+e = readRDS(here("./mouse_cortex/plots/de_length_bias_preandmrna_ea.rds"))
+f = readRDS(here("./mouse_cortex/plots/de_length_bias_hist_preandmrna_ea.rds"))
+g = readRDS(here("./mouse_cortex/plots/gene_length_bias_introncollapse_cortex_1.rds"))
+h = readRDS(here("./mouse_cortex/plots/de_length_bias_introncollapse_ea.rds"))
+i = readRDS(here("./mouse_cortex/plots/de_length_bias_hist_introncollapse_ea.rds"))
+j = readRDS(here("./mouse_cortex/plots/gene_length_bias_intronseparate_cortex_1.rds"))
+k = readRDS(here("./mouse_cortex/plots/de_length_bias_intronseparate_ea.rds"))
+l = readRDS(here("./mouse_cortex/plots/de_length_bias_hist_intronseparate_ea.rds"))
 
 a = a +
   theme(legend.position = "top")
+d = d +
+  theme(legend.position = "top")
+g = g +
+  theme(legend.position = "top")
+j = j +
+  theme(legend.position = "top")
 
-p = plot_grid(a, b, nrow = 1, labels = "auto")
+p = plot_grid(a, b, c, 
+              d, e, f,
+              g, h, i,
+              j, k, l, 
+              nrow = 4, labels = "auto")
 print(p)
-ggsave(here("./publication/figures/figure_6.png"), plot = p, width = 12, height = 5)
+ggsave(here("./publication/figures/figure_6.png"), plot = p, width = 18, height = 20)
 ```
 
 # Supplementary Figure 1 (lib size by gene type)

@@ -385,11 +385,11 @@ p = genes_rowmeans_tb %>%
   mutate(cell_group = case_when(cell_type %in% c("Excitatory neuron", "Inhibitory neuron") ~ 1,
                                 cell_type %in% c("Endothelial", "Microglia") ~ 2,
                                 TRUE ~ 3)) %>%
-  filter(preandmrna > 0) %>%
+  # filter(preandmrna > 0) %>%
   # filter(preandmrna_max_nA8 == 0) %>%
   # filter(cell_type %in% c("Excitatory neuron", "Microglia", "Astrocyte")) %>%
   filter(cortex == "cortex1") %>%
-  ggplot(aes(x = length, y = preandmrna, color = cell_type)) +
+  ggplot(aes(x = length, y = transcripts, color = cell_type)) +
   # facet_wrap(cortex ~ .) +
   # geom_point(alpha = 0.01) +
   geom_smooth() + 
@@ -400,7 +400,7 @@ p = genes_rowmeans_tb %>%
   theme_bw() 
 
 print(p)
-# saveRDS(p, here("./mouse_cortex/plots/gene_length_bias_cortex_1.rds"))
+# saveRDS(p, here("./mouse_cortex/plots/gene_length_bias_transcripts_cortex_1.rds"))
 ```
 
 #### Sequence of As
@@ -999,7 +999,6 @@ res = res %>%
 
 # Length vs log2fold change
 p = res %>%
-  filter(!is.na(preandmrna)) %>%
   ggplot(aes(x = length, y = log2FoldChange)) + 
   geom_point(alpha = 0.05) +
   geom_smooth() +
@@ -1007,56 +1006,70 @@ p = res %>%
   labs(x = "Gene length") +
   theme_bw()
 print(p)
-# saveRDS(p, here("./mouse_cortex/plots/de_length_bias_ea.rds"))
+saveRDS(p, here(paste0("./mouse_cortex/plots/de_length_bias_", pipeline, "_ea.rds")))
 
-# Length vs pvalue
-res %>%
-  filter(!is.na(preandmrna)) %>%
-  ggplot(aes(x = length, y = pvalue)) + 
-  geom_point(alpha = 0.05) +
-  geom_smooth() +
+# Density histograms for all genes (orange) vs differential genes (blue)
+p = res %>%
+  ggplot(aes(x = length, y = ..density..)) +
+  geom_histogram(fill = "#E69F00", alpha = 0.5) +
+  geom_histogram(data = res %>% filter(padj < 0.05), aes(x = length, y = ..density..), fill = "#56B4E9", alpha = 0.5) +
   scale_x_log10() +
-  scale_y_continuous(limits = c(0, 1)) +
+  labs(x = "Gene length", y = "Density") +
   theme_bw()
+print(p)
+saveRDS(p, here(paste0("./mouse_cortex/plots/de_length_bias_hist_", pipeline, "_ea.rds")))
+```
 
-# Length vs padj
-res %>%
-  filter(!is.na(preandmrna)) %>%
-  ggplot(aes(x = length, y = padj)) + 
-  geom_point(alpha = 0.05) +
-  geom_smooth() +
-  scale_x_log10() +
-  scale_y_continuous(limits = c(0, 1)) +
-  theme_bw()
 
-# Expression vs log2fold change
-res %>%
-  filter(!is.na(preandmrna)) %>%
-  ggplot(aes(x = preandmrna, y = log2FoldChange)) + 
-  geom_point(alpha = 0.05) +
-  geom_smooth() +
-  scale_x_log10(limits = c(0.1, 1e7)) +
-  theme_bw()
-
-# Mean exp vs pvalue
-res %>%
-  filter(!is.na(preandmrna)) %>%
-  ggplot(aes(x = preandmrna, y = pvalue)) + 
-  geom_point(alpha = 0.05) +
-  geom_smooth() +
-  scale_x_log10(limits = c(0.1, 1e7)) +
-  scale_y_continuous(limits = c(0, 1)) +
-  theme_bw()
-
-# Mean exp vs padj
-res %>%
-  filter(!is.na(preandmrna)) %>%
-  ggplot(aes(x = preandmrna, y = padj)) + 
-  geom_point(alpha = 0.05) +
-  geom_smooth() +
-  scale_x_log10(limits = c(0.1, 1e7)) +
-  scale_y_continuous(limits = c(0, 1)) +
-  theme_bw()
+```{r}
+# # Length vs pvalue
+# res %>%
+#   filter(!is.na(preandmrna)) %>%
+#   ggplot(aes(x = length, y = pvalue)) + 
+#   geom_point(alpha = 0.05) +
+#   geom_smooth() +
+#   scale_x_log10() +
+#   scale_y_continuous(limits = c(0, 1)) +
+#   theme_bw()
+# 
+# # Length vs padj
+# res %>%
+#   filter(!is.na(preandmrna)) %>%
+#   ggplot(aes(x = length, y = padj)) + 
+#   geom_point(alpha = 0.05) +
+#   geom_smooth() +
+#   scale_x_log10() +
+#   scale_y_continuous(limits = c(0, 1)) +
+#   theme_bw()
+# 
+# # Expression vs log2fold change
+# res %>%
+#   filter(!is.na(preandmrna)) %>%
+#   ggplot(aes(x = preandmrna, y = log2FoldChange)) + 
+#   geom_point(alpha = 0.05) +
+#   geom_smooth() +
+#   scale_x_log10(limits = c(0.1, 1e7)) +
+#   theme_bw()
+# 
+# # Mean exp vs pvalue
+# res %>%
+#   filter(!is.na(preandmrna)) %>%
+#   ggplot(aes(x = preandmrna, y = pvalue)) + 
+#   geom_point(alpha = 0.05) +
+#   geom_smooth() +
+#   scale_x_log10(limits = c(0.1, 1e7)) +
+#   scale_y_continuous(limits = c(0, 1)) +
+#   theme_bw()
+# 
+# # Mean exp vs padj
+# res %>%
+#   filter(!is.na(preandmrna)) %>%
+#   ggplot(aes(x = preandmrna, y = padj)) + 
+#   geom_point(alpha = 0.05) +
+#   geom_smooth() +
+#   scale_x_log10(limits = c(0.1, 1e7)) +
+#   scale_y_continuous(limits = c(0, 1)) +
+#   theme_bw()
 ```
 
 
