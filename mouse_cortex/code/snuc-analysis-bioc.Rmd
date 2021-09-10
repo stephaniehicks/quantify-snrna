@@ -1072,6 +1072,55 @@ saveRDS(p, here(paste0("./mouse_cortex/plots/de_length_bias_hist_", pipeline, "_
 #   theme_bw()
 ```
 
+#### cQN
+
+```{r}
+library(cqn)
+library(scales)
+
+
+# Example in documentation
+data(montgomery.subset) # counts
+data(sizeFactors.subset) # size factors
+data(uCovar)             # gene length and GC-content
+
+cqn.subset <- cqn(montgomery.subset, lengths = uCovar$length,
+                  x = uCovar$gccontent, sizeFactors = sizeFactors.subset,
+                  verbose = TRUE)
+
+RPKM.cqn <- cqn.subset$y + cqn.subset$offset # normalized expression values
+```
+
+
+```{r}
+# groups
+grp1 <- c("NA06985", "NA06994", "NA07037", "NA10847", "NA11920")
+grp2 <- c("NA11918", "NA11931", "NA12003", "NA12006", "NA12287")
+
+# compare
+RPM <- sweep(log2(montgomery.subset + 1), 2, log2(sizeFactors.subset/10^6))
+RPKM.std <- sweep(RPM, 1, log2(uCovar$length / 10^3))
+whGenes <- which(rowMeans(RPKM.std) >= 2 & uCovar$length >= 100)
+M.std <- rowMeans(RPKM.std[whGenes, grp1]) - rowMeans(RPKM.std[whGenes, grp2])
+A.std <- rowMeans(RPKM.std[whGenes,])
+M.cqn <- rowMeans(RPKM.cqn[whGenes, grp1]) - rowMeans(RPKM.cqn[whGenes, grp2])
+A.cqn <- rowMeans(RPKM.cqn[whGenes,])
+
+par(mfrow = c(1,2))
+gccontent <- uCovar$gccontent[whGenes]
+whHigh <- which(gccontent > quantile(gccontent, 0.9))
+whLow <- which(gccontent < quantile(gccontent, 0.1))
+plot(A.std[whHigh], M.std[whHigh], cex = 0.2, pch = 16, xlab = "A",
+ylab = "M", main = "Standard RPKM",
+
+ylim = c(-4,4), xlim = c(0,12), col = "red")
+points(A.std[whLow], M.std[whLow], cex = 0.2, pch = 16, col = "blue")
+plot(A.cqn[whHigh], M.cqn[whHigh], cex = 0.2, pch = 16, xlab = "A",
+ylab = "M", main = "CQN normalized RPKM",
+ylim = c(-4,4), xlim = c(0,12), col = "red")
+points(A.cqn[whLow], M.cqn[whLow], cex = 0.2, pch = 16, col = "blue")
+```
+
 
 ### Distributions
 
