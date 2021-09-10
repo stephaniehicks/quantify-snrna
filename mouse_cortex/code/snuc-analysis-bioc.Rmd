@@ -1086,7 +1086,7 @@ source(here("./mouse_cortex/code/distribution-plots-helpers.R"))
 sce = sce_ls[["preandmrna"]]
 
 # Subset to cell type
-cell_type = "Astrocyte"
+cell_type = "Inhibitory neuron"
 sce_sub = sce[, colData(sce)$ding_labels == cell_type & !is.na(colData(sce)$ding_labels)]
 dim(sce_sub)
 
@@ -1174,6 +1174,7 @@ terciles
 summary(colSums(counts_sub_cluster))
 # counts_sub_cluster = counts_sub_cluster[, (colSums(counts_sub_cluster) > terciles[2])]
 
+# Downsample matrix
 tic()
 counts_sub_cluster_scaled = Down_Sample_Matrix(ceiling(counts_sub_cluster))
 toc()
@@ -1369,7 +1370,7 @@ p = plot_dt %>%
              color = percentile_color)) + 
   geom_point(size = 0.5) + 
   geom_abline(slope = 1, intercept = 0) +
-  # coord_cartesian(ylim = c(0, 20)) +
+  coord_cartesian(ylim = c(0, 20)) +
   labs(x = "Chi-squared quantiles",
        y = "Goodness of fit statistic") +
   guides(color = FALSE) +

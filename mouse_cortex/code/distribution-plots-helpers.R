@@ -362,20 +362,21 @@ p_chisq_test_2_grouped = function(m, distribution = "poisson"){
   mu_ij = outer(lambda_j, c_i)
   
   # Discard genes with average mu_ij too low (< ~0.01)
+  p = 0.25 # restrict component variance to be within < 2*(1+p)
   n_groups_min = ifelse(distribution == "poisson", 2, 3) # min number of groups allowed
-  cutoff = 2*n_groups_min/n_col      
+  cutoff = (1/(2*p))*(n_groups_min/n_col)      
   avg_mu = R_j/n_col
+  # avg_mu = apply(m, 1, median)
   m = m[(avg_mu > cutoff), ]
   mu_ij = mu_ij[(avg_mu > cutoff), ]
   
   # Find group size
-  p = 0.25 # restrict component variance to be within < 2*(1+p)
   min_mu = min(avg_mu[avg_mu > cutoff]) # smallest average mu_ij in remaining genes
   r = ceiling(1/(2*min_mu*p))
   
   # Assign cells to groups
-  n_groups = round(n_col/r)
-  group_size_max = ceiling(n_col/n_groups)
+  n_groups = max(1, round(n_col/r))
+  group_size_max = max(n_col, ceiling(n_col/n_groups))
   group_assign = rep(1:n_groups, group_size_max)
   group_assign = group_assign[1:n_col]
   group_sizes = as.vector(table(group_assign))
