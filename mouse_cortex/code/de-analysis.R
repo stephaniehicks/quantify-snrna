@@ -1,7 +1,7 @@
 # de-analysis.R
 # -----------------------------------------------------------------------------
 # Author:             Albert Kuo
-# Date last modified: Apr 16, 2021
+# Date last modified: Sep 13, 2021
 #
 # Differential expression analysis
 
@@ -25,7 +25,7 @@ sce_ls[["preandmrna"]] = readRDS(here("mouse_cortex", "salmon_quants", "preandmr
 sce_ls[["introncollapse"]] = readRDS(here("mouse_cortex", "salmon_quants", "introncollapse_pipeline", paste0("sce_", run_number, ".rds")))
 sce_ls[["intronseparate"]] = readRDS(here("mouse_cortex", "salmon_quants", "intronseparate_pipeline", paste0("sce_", run_number, ".rds")))
 
-pipeline = "introncollapse"
+pipeline = "preandmrna"
 select_cells = colData(sce_ls[[pipeline]]) %>%
   as.data.frame() %>%
   filter(ding_labels %in% c("Excitatory neuron", "Astrocyte")) %>%
@@ -79,7 +79,7 @@ toc()
 res = results(dds)
 res
 
-# Shrinkage of LFC
+# Shrinkage of LFC when count values are too low
 resultsNames(dds)
 resLFC = lfcShrink(dds, coef="ding_labels_Excitatory.neuron_vs_Astrocyte", type="apeglm")
 
@@ -94,13 +94,13 @@ genes_length_tb = rowData(sce_ls[[pipeline]]) %>%
          gene = rownames(rowData(sce_ls[[pipeline]]))) %>%
   select(gene, length)
 
-res = res %>%
+resLFC = resLFC %>%
   as_tibble() %>%
   mutate(gene = rownames(res)) %>%
   left_join(., genes_length_tb, by = "gene")
 
 if(normalize){
-  saveRDS(res, here(paste0("./mouse_cortex/output/de_ea_", pipeline, "_norm.rds")))
+  saveRDS(resLFC, here(paste0("./mouse_cortex/output/de_ea_", pipeline, "_lfc_norm.rds")))
 } else {
-  saveRDS(res, here(paste0("./mouse_cortex/output/de_ea_", pipeline, ".rds")))
+  saveRDS(resLFC, here(paste0("./mouse_cortex/output/de_ea_", pipeline, "_lfc.rds")))
 }
