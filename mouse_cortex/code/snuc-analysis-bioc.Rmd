@@ -992,7 +992,7 @@ res = res %>%
 
 ```{r}
 pipeline = "preandmrna"
-res = readRDS(here(paste0("./mouse_cortex/output/de_ea_", pipeline, ".rds")))
+res = readRDS(here(paste0("./mouse_cortex/output/de_ea_", pipeline, "_lfc.rds")))
 
 res = res %>%
   left_join(., genes_rowsums_tb %>% distinct(gene, transcripts, preandmrna, introncollapse, intronseparate), by = "gene") # from binned by overall expression
@@ -1006,7 +1006,7 @@ p = res %>%
   labs(x = "Gene length") +
   theme_bw()
 print(p)
-saveRDS(p, here(paste0("./mouse_cortex/plots/de_length_bias_", pipeline, "_ea.rds")))
+# saveRDS(p, here(paste0("./mouse_cortex/plots/de_length_bias_", pipeline, "_ea.rds")))
 
 # Density histograms for all genes (orange) vs differential genes (blue)
 p = res %>%
@@ -1017,7 +1017,7 @@ p = res %>%
   labs(x = "Gene length", y = "Density") +
   theme_bw()
 print(p)
-saveRDS(p, here(paste0("./mouse_cortex/plots/de_length_bias_hist_", pipeline, "_ea.rds")))
+# saveRDS(p, here(paste0("./mouse_cortex/plots/de_length_bias_hist_", pipeline, "_ea.rds")))
 ```
 
 
@@ -1075,10 +1075,14 @@ saveRDS(p, here(paste0("./mouse_cortex/plots/de_length_bias_hist_", pipeline, "_
 #### cQN
 
 ```{r}
+suppressPackageStartupMessages({
 library(cqn)
 library(scales)
+})
+```
 
 
+```{r}
 # Example in documentation
 data(montgomery.subset) # counts
 data(sizeFactors.subset) # size factors
@@ -1089,10 +1093,7 @@ cqn.subset <- cqn(montgomery.subset, lengths = uCovar$length,
                   verbose = TRUE)
 
 RPKM.cqn <- cqn.subset$y + cqn.subset$offset # normalized expression values
-```
 
-
-```{r}
 # groups
 grp1 <- c("NA06985", "NA06994", "NA07037", "NA10847", "NA11920")
 grp2 <- c("NA11918", "NA11931", "NA12003", "NA12006", "NA12287")
@@ -1119,6 +1120,28 @@ plot(A.cqn[whHigh], M.cqn[whHigh], cex = 0.2, pch = 16, xlab = "A",
 ylab = "M", main = "CQN normalized RPKM",
 ylim = c(-4,4), xlim = c(0,12), col = "red")
 points(A.cqn[whLow], M.cqn[whLow], cex = 0.2, pch = 16, col = "blue")
+```
+
+
+```{r}
+sce_sub = sce_ls[["preandmrna"]][, colData(sce_ls[["preandmrna"]])$ding_labels %in% c("Excitatory neuron", "Astrocyte")]
+
+genes_length_tb = rowData(sce_ls[["preandmrna"]]) %>%
+  as_tibble() %>%
+  select(start, end) %>%
+  mutate(length = end - start,
+         gene = rownames(rowData(sce_ls[["preandmrna"]]))) %>%
+  select(gene, length)
+
+counts_sub = as.matrix(round(counts(sce_sub)))
+nonzero_sums = which(rowSums(counts_sub) != 0)
+counts_sub = counts_sub[nonzero_sums, ]
+
+cqn_res = cqn(counts = counts_sub, lengths = (genes_length_tb$length[nonzero_sums]),
+              x = sample(genes_length_tb$length[nonzero_sums])/max(genes_length_tb$length[nonzero_sums]), # placeholder (supposed to be GC content)
+              subindex = which(rowMeans(counts_sub) > 20), # Default is rowMeans > 50
+              sizeFactors = colData(sce_sub)$sizeFactor,
+              verbose = TRUE)
 ```
 
 
