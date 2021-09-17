@@ -3,7 +3,7 @@
 # Author:             Albert Kuo
 # Date last modified: Sep 17, 2021
 #
-# Differential expression analysis
+# Run cQN to normalize and then run DE analysis.
 
 suppressPackageStartupMessages({
   library(here)
