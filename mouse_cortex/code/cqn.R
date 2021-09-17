@@ -40,15 +40,15 @@ genes_length_tb = rowData(sce_sub) %>%
   as_tibble() %>%
   select(start, end) %>%
   mutate(length = end - start,
-         gene = rownames(rowData(sce_ls[[pipeline]]))) %>%
+         gene = rownames(rowData(sce_sub))) %>%
   select(gene, length)
 genes_length_tb = as.data.frame(genes_length_tb)
 rownames(genes_length_tb) = genes_length_tb$gene
 
 # Run cQN
 counts_sub = as.matrix(round(counts(sce_sub)))
-nonzero_sums = which(rowSums(counts_sub) != 0)
-counts_sub = counts_sub[nonzero_sums, ]
+# nonzero_sums = which(rowSums(counts_sub) != 0)
+# counts_sub = counts_sub[nonzero_sums, ]
 
 tic()
 cqn_res = cqn(counts = counts_sub, 
@@ -56,13 +56,17 @@ cqn_res = cqn(counts = counts_sub,
               # x = sample(genes_length_tb$length[nonzero_sums])/max(genes_length_tb$length[nonzero_sums]), # placeholder (supposed to be GC content)
               lengths = 1000,
               lengthMethod = "fixed",
-              x = (genes_length_tb$length[nonzero_sums]),
+              x = genes_length_tb$length,
               subindex = which(rowMeans(counts_sub) > 15), # Default is rowMeans > 50
               sizeFactors = colData(sce_sub)$sizeFactor,
               verbose = FALSE)
 toc()
 
 counts_normalized <- cqn_res$y + cqn_res$offset # normalized expression values
+print(dim(counts_normalized))
+print(dim(sce_sub))
+rownames(counts_normalized) = rownames(sce_sub)
+colnames(counts_normalized) = colnames(sce_sub)
 
 # Normalize with EDASeq
 seq_data = newSeqExpressionSet(counts = counts_normalized,
