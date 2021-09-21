@@ -375,7 +375,7 @@ p_chisq_test_2_grouped = function(m, distribution = "poisson"){
   r = ceiling(1/(2*min_mu*p))
   
   # Assign cells to groups
-  n_groups = max(1, round(n_col/r))
+  n_groups = max(n_groups_min, round(n_col/r))
   group_size_max = max(n_col, ceiling(n_col/n_groups))
   group_assign = rep(1:n_groups, group_size_max)
   group_assign = group_assign[1:n_col]
@@ -394,24 +394,24 @@ p_chisq_test_2_grouped = function(m, distribution = "poisson"){
     phi = 1/edgeR::estimateCommonDisp(m)
     
     # Option 2.5 (use edgeR mean)
-    mu_ij = edgeR::glmFit(m, dispersion = 1/phi)$fitted.values
-    f_hyp = t(rowsum(t(mu_ij), group_assign, reorder = TRUE)) # get sum of means for each group
-    f_hyp = f_hyp[, 1:ncol(f_obs)]
+    # mu_ij = edgeR::glmFit(m, dispersion = 1/phi)$fitted.values
+    # f_hyp = t(rowsum(t(mu_ij), group_assign, reorder = TRUE)) # get sum of means for each group
+    # f_hyp = f_hyp[, 1:ncol(f_obs)]
     
     f_var = f_hyp + f_hyp^2/phi
     chi_square = rowSums((f_obs-f_hyp)^2/f_var)
   } else if(distribution == "nb 2"){
     # Option 2
-    nb_phi = function(x){
-      suppressWarnings(try({estimates = fitdistr(x, "negative binomial")$estimate}, silent = TRUE))
-      if(!exists("estimates")) return(NA)
-      size = estimates['size']
-      return(size)
-    }
-    f_phi = as.numeric(apply(m, 1, nb_phi))
+    # nb_phi = function(x){
+    #   suppressWarnings(try({estimates = fitdistr(x, "negative binomial")$estimate}, silent = TRUE))
+    #   if(!exists("estimates")) return(NA)
+    #   size = estimates['size']
+    #   return(size)
+    # }
+    # f_phi = as.numeric(apply(m, 1, nb_phi))
     
     # Option 3 (edgeR)
-    # f_phi = 1/edgeR::estimateDisp(m)$tagwise.dispersion
+    f_phi = 1/edgeR::estimateDisp(m)$tagwise.dispersion
     
     # Option 3.5 (use edgeR mean)
     # mu_ij = edgeR::glmFit(m, dispersion = 1/f_phi)$fitted.values
