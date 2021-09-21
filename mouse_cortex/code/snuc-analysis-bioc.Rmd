@@ -992,7 +992,7 @@ res = res %>%
 
 ```{r}
 pipeline = "preandmrna"
-res = readRDS(here(paste0("./mouse_cortex/output/de_ea_", pipeline, "_lfc.rds")))
+res = readRDS(here(paste0("./mouse_cortex/output/de_ea_", pipeline, "_lfc_cqn.rds")))
 
 res = res %>%
   left_join(., genes_rowsums_tb %>% distinct(gene, transcripts, preandmrna, introncollapse, intronseparate), by = "gene") # from binned by overall expression
@@ -1122,6 +1122,7 @@ ylim = c(-4,4), xlim = c(0,12), col = "red")
 points(A.cqn[whLow], M.cqn[whLow], cex = 0.2, pch = 16, col = "blue")
 ```
 
+Run on cluster using `cqn.sh`. 
 
 ```{r}
 sce_sub = sce_ls[["preandmrna"]][, colData(sce_ls[["preandmrna"]])$ding_labels %in% c("Excitatory neuron", "Astrocyte")]
@@ -1134,15 +1135,64 @@ genes_length_tb = rowData(sce_ls[["preandmrna"]]) %>%
   select(gene, length)
 
 counts_sub = as.matrix(round(counts(sce_sub)))
-nonzero_sums = which(rowSums(counts_sub) != 0)
-counts_sub = counts_sub[nonzero_sums, ]
+# nonzero_sums = which(rowSums(counts_sub) != 0)
+# counts_sub = counts_sub[nonzero_sums, ]
 
-cqn_res = cqn(counts = counts_sub, lengths = (genes_length_tb$length[nonzero_sums]),
-              x = sample(genes_length_tb$length[nonzero_sums])/max(genes_length_tb$length[nonzero_sums]), # placeholder (supposed to be GC content)
-              subindex = which(rowMeans(counts_sub) > 20), # Default is rowMeans > 50
+tic()
+cqn_res = cqn(counts = counts_sub, 
+              # lengths = (genes_length_tb$length[nonzero_sums]),
+              # x = sample(genes_length_tb$length[nonzero_sums])/max(genes_length_tb$length[nonzero_sums]), # placeholder (supposed to be GC content)
+              lengths = 1000,
+              lengthMethod = "fixed",
+              x = (genes_length_tb$length[nonzero_sums]),
+              subindex = which(rowMeans(counts_sub) > 15), # Default is rowMeans > 50
               sizeFactors = colData(sce_sub)$sizeFactor,
-              verbose = TRUE)
+              verbose = FALSE)
+toc()
 ```
+
+```{r}
+sce_sub = sce_ls[["preandmrna"]][, colData(sce_ls[["preandmrna"]])$ding_labels %in% c("Excitatory neuron", "Astrocyte")]
+counts_sub = as.matrix(round(counts(sce_sub))) # original counts
+seq_cqn = readRDS(here("./mouse_cortex/output/counts_eapreandmrna_cqn.rds")) # normalized counts
+
+# Groups
+grp1 = rownames(pData(seq_cqn))[pData(seq_cqn)$ding_labels == "Excitatory neuron"]
+grp2 = rownames(pData(seq_cqn))[pData(seq_cqn)$ding_labels == "Astrocyte"]
+
+# Compare
+counts_sub_sweep = sweep(log2(counts_sub + 1), 2, log2(colData(sce_sub)$sizeFactor)) # divide by size factors
+M_std = rowMeans(counts_sub_sweep[, grp1]) - rowMeans(counts_sub_sweep[, grp2])
+A_std = rowMeans(counts_sub_sweep)
+
+counts_cqn_sweep = sweep(log2(counts(seq_cqn) + 1), 2, log2(pData(seq_cqn)$sizeFactor)) # divide by size factors
+M_cqn = rowMeans(counts_cqn_sweep[, grp1]) - rowMeans(counts_cqn_sweep[, grp2])
+A_cqn = rowMeans(counts_cqn_sweep)
+
+gene_lengths = rowData(sce_sub) %>%
+  as_tibble() %>%
+  select(start, end) %>%
+  mutate(length = end - start,
+         gene = rownames(rowData(sce_sub))) %>%
+  select(gene, length)
+
+plot_dt = gene_lengths %>%
+  mutate(M_std = M_std,
+         A_std = A_std,
+         M_cqn = M_cqn,
+         A_cqn = A_cqn) %>%
+  pivot_longer(M_std:A_cqn, names_to = c(".value", "data"), names_sep = "_")
+
+plot_dt %>%
+  filter(length > quantile(length, 0.9) | length < quantile(length, 0.1)) %>%
+  ggplot(aes(x = M, y = A, color = length > quantile(length, 0.9))) +
+  facet_wrap(~ data) +
+  geom_point(alpha = 0.01) + 
+  # scale_color_gradientn(colours = terrain.colors(10)) + 
+  theme_bw()
+```
+
+
 
 
 ### Distributions
@@ -1248,9 +1298,10 @@ summary(colSums(counts_sub_cluster))
 
 # Downsample matrix
 tic()
+set.seed(1)
 counts_sub_cluster_scaled = Down_Sample_Matrix(ceiling(counts_sub_cluster))
 toc()
-counts_sub_cluster_scaled = counts_sub_cluster_scaled[rowSums(counts_sub_cluster_scaled) != 0, ]
+# counts_sub_cluster_scaled = counts_sub_cluster_scaled[rowSums(counts_sub_cluster_scaled) != 0, ]
 summary(colSums(counts_sub_cluster_scaled))
 
 # Save values for simulation datasets
