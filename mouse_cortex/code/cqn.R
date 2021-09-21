@@ -1,7 +1,7 @@
 # cqn.R
 # -----------------------------------------------------------------------------
 # Author:             Albert Kuo
-# Date last modified: Sep 17, 2021
+# Date last modified: Sep 21, 2021
 #
 # Run cQN to normalize and then run DE analysis.
 
@@ -62,14 +62,14 @@ cqn_res = cqn(counts = counts_sub,
               verbose = FALSE)
 toc()
 
-counts_normalized <- cqn_res$y + cqn_res$offset # normalized expression values
+counts_normalized <- cqn_res$y + cqn_res$offset # log2 normalized expression values
 print(dim(counts_normalized))
 print(dim(sce_sub))
 rownames(counts_normalized) = rownames(sce_sub)
 colnames(counts_normalized) = colnames(sce_sub)
 
 # Normalize with EDASeq
-seq_data = newSeqExpressionSet(counts = counts_normalized,
+seq_data = newSeqExpressionSet(counts = 2^counts_normalized,
                                featureData = as.data.frame(genes_length_tb),
                                phenoData = as.data.frame(colData(sce_sub)))
 if(normalize){
@@ -125,7 +125,7 @@ resLFC = resLFC %>%
   left_join(., genes_length_tb, by = "gene")
 
 # Save results
-saveRDS(seq_data, here(paste0("./mouse_cortex/output/counts_ea", pipeline, "_cqn.rds")))
+saveRDS(seq_data, here(paste0("./mouse_cortex/output/counts_ea_", pipeline, "_cqn.rds")))
 if(normalize){
   saveRDS(resLFC, here(paste0("./mouse_cortex/output/de_ea_", pipeline, "_lfc_cqn_norm.rds")))
 } else {
