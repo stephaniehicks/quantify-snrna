@@ -176,17 +176,17 @@ genes_rowsums_tb %>%
   theme_bw()
 ```
 
-
 #### Binned by GC content
 
 ```{r}
 library(EDASeq)
 
-id = rownames(sce_ls[["transcripts"]])[1]
+id = rownames(sce_ls[["preandmrna"]])[1:5]
 id = sub("\\..*", "", id)
-org = "mmu"
+org = "mmusculus_gene_ensembl"
+tic()
 getGeneLengthAndGCContent(id, org, mode=c("biomart"))
-getGeneLengthAndGCContent(id, org, mode=c("org.db"))
+toc()
 ```
 
 
@@ -1076,8 +1076,8 @@ print(p)
 
 ```{r}
 suppressPackageStartupMessages({
-library(cqn)
-library(scales)
+  library(cqn)
+  library(scales)
 })
 ```
 
@@ -1154,7 +1154,7 @@ toc()
 ```{r}
 sce_sub = sce_ls[["preandmrna"]][, colData(sce_ls[["preandmrna"]])$ding_labels %in% c("Excitatory neuron", "Astrocyte")]
 counts_sub = as.matrix(round(counts(sce_sub))) # original counts
-seq_cqn = readRDS(here("./mouse_cortex/output/counts_eapreandmrna_cqn.rds")) # normalized counts
+seq_cqn = readRDS(here("./mouse_cortex/output/counts_ea_preandmrna_cqn.rds")) # normalized counts
 
 # Groups
 grp1 = rownames(pData(seq_cqn))[pData(seq_cqn)$ding_labels == "Excitatory neuron"]
@@ -1183,12 +1183,17 @@ plot_dt = gene_lengths %>%
          A_cqn = A_cqn) %>%
   pivot_longer(M_std:A_cqn, names_to = c(".value", "data"), names_sep = "_")
 
+whGenes = names(rowMeans(counts_sub_sweep) >= 10)
 plot_dt %>%
-  filter(length > quantile(length, 0.9) | length < quantile(length, 0.1)) %>%
-  ggplot(aes(x = M, y = A, color = length > quantile(length, 0.9))) +
-  facet_wrap(~ data) +
+  mutate(length_label = ifelse(length > quantile(length, 0.9), "> 90th percentile", NA),
+         length_label = ifelse(length < quantile(length, 0.1), "< 10th percentile", length_label)) %>%
+  filter(!is.na(length_label)) %>%
+  # filter(gene %in% whGenes) %>%
+  ggplot(aes(x = M, y = A, color = length_label)) +
+  facet_wrap(~ data, scales = "free_x") +
   geom_point(alpha = 0.01) + 
   # scale_color_gradientn(colours = terrain.colors(10)) + 
+  guides(color = guide_legend(override.aes = list(alpha = 1))) +
   theme_bw()
 ```
 
