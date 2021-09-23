@@ -1,7 +1,7 @@
 # get-gc-content.R
 # -----------------------------------------------------------------------------
 # Author:             Albert Kuo
-# Date last modified: Sep 22, 2021
+# Date last modified: Sep 23, 2021
 #
 # Run cQN to normalize and then run DE analysis.
 
@@ -22,9 +22,7 @@ sce_ls[["preandmrna"]] = readRDS(here("mouse_cortex", "salmon_quants", "preandmr
 sce_ls[["introncollapse"]] = readRDS(here("mouse_cortex", "salmon_quants", "introncollapse_pipeline", paste0("sce_", run_number, ".rds")))
 sce_ls[["intronseparate"]] = readRDS(here("mouse_cortex", "salmon_quants", "intronseparate_pipeline", paste0("sce_", run_number, ".rds")))
 
-pipeline = "preandmrna"
-
-id = rownames(sce_ls[[pipeline]])
+id = Reduce(union, list(rownames(sce_ls[["transcripts"]]), rownames(sce_ls[["preandmrna"]]), rownames(sce_ls[["introncollapse"]]), rownames(sce_ls[["intronseparate"]])))
 id = sub("\\..*", "", id)
 org = "mmusculus_gene_ensembl"
 tic()
@@ -32,4 +30,4 @@ gc = getGeneLengthAndGCContent(id, org, mode=c("biomart"))
 toc()
 
 # Save results
-saveRDS(gc, here(paste0("./mouse_cortex/output/gc_content_", pipeline, ".rds")))
+saveRDS(gc, here(paste0("./mouse_cortex/output/gc_content.rds")))
