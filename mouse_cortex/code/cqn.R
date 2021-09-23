@@ -1,7 +1,7 @@
 # cqn.R
 # -----------------------------------------------------------------------------
 # Author:             Albert Kuo
-# Date last modified: Sep 21, 2021
+# Date last modified: Sep 23, 2021
 #
 # Run cQN to normalize and then run DE analysis.
 
@@ -16,7 +16,6 @@ suppressPackageStartupMessages({
   library(cqn)
   library(scales)
 })
-
 
 # Read in SingleCellExperiment objects
 normalize = FALSE
@@ -45,6 +44,15 @@ genes_length_tb = rowData(sce_sub) %>%
 genes_length_tb = as.data.frame(genes_length_tb)
 rownames(genes_length_tb) = genes_length_tb$gene
 
+# Get GC content
+gc_content = readRDS(here("./mouse_cortex/output/gc_content_preandmrna.rds"))
+gc_content = gc_content %>% 
+  as_tibble(rownames = "gene") %>% 
+  dplyr::rename(length_biomart = length)
+genes_length_tb = genes_length_tb %>%
+  mutate(gene_noversion = gsub("\\..*", "", gene)) %>%
+  left_join(., gc_content, by = c("gene_noversion" = "gene"))
+
 # Run cQN
 counts_sub = as.matrix(round(counts(sce_sub)))
 # nonzero_sums = which(rowSums(counts_sub) != 0)
@@ -52,11 +60,8 @@ counts_sub = as.matrix(round(counts(sce_sub)))
 
 tic()
 cqn_res = cqn(counts = counts_sub, 
-              # lengths = (genes_length_tb$length[nonzero_sums]),
-              # x = sample(genes_length_tb$length[nonzero_sums])/max(genes_length_tb$length[nonzero_sums]), # placeholder (supposed to be GC content)
-              lengths = 1000,
-              lengthMethod = "fixed",
-              x = genes_length_tb$length,
+              lengths = genes_length_tb$length, # length
+              x = genes_length_tb$gc, # GC content
               subindex = which(rowMeans(counts_sub) > 15), # Default is rowMeans > 50
               sizeFactors = colData(sce_sub)$sizeFactor,
               verbose = FALSE)

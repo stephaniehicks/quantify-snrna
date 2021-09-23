@@ -402,6 +402,62 @@ p = genes_rowmeans_tb %>%
 print(p)
 # saveRDS(p, here("./mouse_cortex/plots/gene_length_bias_transcripts_cortex_1.rds"))
 ```
+#### GC content
+
+```{r}
+gc_content = readRDS(here("./mouse_cortex/output/gc_content_preandmrna.rds"))
+gc_content = gc_content %>% 
+  as_tibble(rownames = "gene") %>% 
+  dplyr::rename(length_biomart = length)
+genes_rowmeans_tb  = genes_rowmeans_tb %>%
+  mutate(gene_noversion = gsub("\\..*", "", gene)) %>%
+  left_join(., gc_content, by = c("gene_noversion" = "gene"))
+```
+
+
+```{r}
+# GC content
+p = genes_rowmeans_tb %>%
+  mutate(cell_group = case_when(cell_type %in% c("Excitatory neuron", "Inhibitory neuron") ~ 1,
+                                cell_type %in% c("Endothelial", "Microglia") ~ 2,
+                                TRUE ~ 3)) %>%
+  # filter(preandmrna > 0) %>%
+  # filter(preandmrna_max_nA8 == 0) %>%
+  # filter(cell_type %in% c("Excitatory neuron", "Microglia", "Astrocyte")) %>%
+  filter(cortex == "cortex1") %>%
+  ggplot(aes(x = gc, y = transcripts, color = cell_type)) +
+  # facet_wrap(cortex ~ .) +
+  # geom_point(alpha = 0.01) +
+  geom_smooth() + 
+  scale_x_log10() +
+  scale_y_log10() +
+  # scale_y_continuous(limits = c(0, 10)) +
+  labs(x = "GC content", y = "Mean expression", color = "Cell Type") +
+  theme_bw() 
+
+print(p)
+
+# Length downloaded from Biomart
+p = genes_rowmeans_tb %>%
+  mutate(cell_group = case_when(cell_type %in% c("Excitatory neuron", "Inhibitory neuron") ~ 1,
+                                cell_type %in% c("Endothelial", "Microglia") ~ 2,
+                                TRUE ~ 3)) %>%
+  # filter(preandmrna > 0) %>%
+  # filter(preandmrna_max_nA8 == 0) %>%
+  # filter(cell_type %in% c("Excitatory neuron", "Microglia", "Astrocyte")) %>%
+  filter(cortex == "cortex1") %>%
+  ggplot(aes(x = length_biomart, y = transcripts, color = cell_type)) +
+  # facet_wrap(cortex ~ .) +
+  # geom_point(alpha = 0.01) +
+  geom_smooth() + 
+  scale_x_log10() +
+  scale_y_log10() +
+  # scale_y_continuous(limits = c(0, 10)) +
+  labs(x = "Gene length (from Biomart)", y = "Mean expression", color = "Cell Type") +
+  theme_bw() 
+
+print(p)
+```
 
 #### Sequence of As
 
