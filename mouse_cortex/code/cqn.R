@@ -42,28 +42,34 @@ genes_length_tb = rowData(sce_sub) %>%
          gene = rownames(rowData(sce_sub))) %>%
   select(gene, length)
 genes_length_tb = as.data.frame(genes_length_tb)
-rownames(genes_length_tb) = genes_length_tb$gene
 
 # Get GC content
-gc_content = readRDS(here("./mouse_cortex/output/gc_content_preandmrna.rds"))
+gc_content = readRDS(here("./mouse_cortex/output/gc_content.rds"))
 gc_content = gc_content %>% 
   as_tibble(rownames = "gene") %>% 
   dplyr::rename(length_biomart = length)
 genes_length_tb = genes_length_tb %>%
   mutate(gene_noversion = gsub("\\..*", "", gene)) %>%
   left_join(., gc_content, by = c("gene_noversion" = "gene"))
+rownames(genes_length_tb) = genes_length_tb$gene
 
-# Run cQN
+# Remove genes with missing GC content
+keep_genes = which(!is.na(genes_length_tb$gc))
+sce_sub = sce_sub[keep_genes, ]
 counts_sub = as.matrix(round(counts(sce_sub)))
+
+genes_length_tb = genes_length_tb[keep_genes, ]
+size_factors = colData(sce_sub)$sizeFactor
 # nonzero_sums = which(rowSums(counts_sub) != 0)
 # counts_sub = counts_sub[nonzero_sums, ]
 
+# Run cQN
 tic()
 cqn_res = cqn(counts = counts_sub, 
               lengths = genes_length_tb$length, # length
               x = genes_length_tb$gc, # GC content
               subindex = which(rowMeans(counts_sub) > 15), # Default is rowMeans > 50
-              sizeFactors = colData(sce_sub)$sizeFactor,
+              sizeFactors = size_factors,
               verbose = FALSE)
 toc()
 
