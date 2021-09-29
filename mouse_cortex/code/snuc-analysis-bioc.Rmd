@@ -1537,8 +1537,15 @@ plot_dt %>%
 
 
 ```{r}
+# Filter to protein coding genes
+protein_coding_genes = rowData(sce) %>% as_tibble() %>% filter(transcript_type == "protein_coding") %>% pull(gene_id)
+counts_sub_drop = counts_sub_cluster_scaled[rownames(counts_sub_cluster_scaled) %in% protein_coding_genes, ]
+# Filter to genes with rowMeans > median
+row_means = rowMeans(counts_sub_drop)
+counts_sub_drop = counts_sub_drop[row_means > mean(row_means), ]
+
 # Poisson (grouped)
-chi_obs_pois = p_chisq_test_2_grouped(counts_sub_cluster_scaled, distribution = "poisson")
+chi_obs_pois = p_chisq_test_2_grouped(counts_sub_drop, distribution = "poisson")
 plot_dt = tibble(chi_obs = chi_obs_pois[[1]]) %>%
                  # expression = rowSums(counts_sub_cluster_scaled)) %>%
   arrange(chi_obs) %>%
@@ -1551,16 +1558,15 @@ plot_dt = tibble(chi_obs = chi_obs_pois[[1]]) %>%
          i = i)
 
 p = plot_dt %>%
-  # filter(expression > 50) %>%
     ggplot(aes(x = chi_quantile,
              y = chi_obs,
              color = percentile_color)) + 
   geom_point(size = 0.5) + 
   geom_abline(slope = 1, intercept = 0) +
-  coord_cartesian(ylim = c(0, 20)) +
+  # coord_cartesian(ylim = c(0, 20)) +
   labs(x = "Chi-squared quantiles",
        y = "Goodness of fit statistic") +
-  guides(color = FALSE) +
+  # guides(color = FALSE) +
   theme_bw()
 print(p)
 # saveRDS(p, here("./mouse_cortex/plots/qq_plot_poisson_astrocyte_cortex_1.rds"))
