@@ -1134,6 +1134,7 @@ print(p)
 suppressPackageStartupMessages({
   library(cqn)
   library(scales)
+  library(EDASeq)
 })
 ```
 
@@ -1183,6 +1184,7 @@ Run on cluster using `cqn.sh`.
 ```{r}
 sce_sub = sce_ls[["preandmrna"]][, colData(sce_ls[["preandmrna"]])$ding_labels %in% c("Excitatory neuron", "Astrocyte")]
 
+# Get gene lengths
 genes_length_tb = rowData(sce_ls[["preandmrna"]]) %>%
   as_tibble() %>%
   select(start, end) %>%
@@ -1190,73 +1192,112 @@ genes_length_tb = rowData(sce_ls[["preandmrna"]]) %>%
          gene = rownames(rowData(sce_ls[["preandmrna"]]))) %>%
   select(gene, length)
 
+# Get GC content
+gc_content = readRDS(here("./mouse_cortex/output/gc_content.rds"))
+gc_content = gc_content %>% 
+  as_tibble(rownames = "gene") %>% 
+  dplyr::rename(length_biomart = length)
+genes_length_tb = genes_length_tb %>%
+  mutate(gene_noversion = gsub("\\..*", "", gene)) %>%
+  left_join(., gc_content, by = c("gene_noversion" = "gene"))
+rownames(genes_length_tb) = genes_length_tb$gene
+
+# Remove genes with missing GC content
+keep_genes = which(!is.na(genes_length_tb$gc))
+sce_sub = sce_sub[keep_genes, ]
 counts_sub = as.matrix(round(counts(sce_sub)))
-# nonzero_sums = which(rowSums(counts_sub) != 0)
-# counts_sub = counts_sub[nonzero_sums, ]
+
+genes_length_tb = genes_length_tb[keep_genes, ]
+size_factors = colData(sce_sub)$sizeFactor
+
+# Aggregate over cell types
+counts_sub = as.matrix(counts(sce_sub))
+colnames(counts_sub) = colData(sce_sub)$ding_labels
+counts_sub = t(rowsum(t(counts_sub), colnames(counts_sub)))
+counts_sub = round(counts_sub)
 
 tic()
 cqn_res = cqn(counts = counts_sub, 
-              # lengths = (genes_length_tb$length[nonzero_sums]),
-              # x = sample(genes_length_tb$length[nonzero_sums])/max(genes_length_tb$length[nonzero_sums]), # placeholder (supposed to be GC content)
-              lengths = 1000,
-              lengthMethod = "fixed",
-              x = (genes_length_tb$length[nonzero_sums]),
-              subindex = which(rowMeans(counts_sub) > 15), # Default is rowMeans > 50
-              sizeFactors = colData(sce_sub)$sizeFactor,
-              verbose = FALSE)
+              lengths = genes_length_tb$length, # length
+              x = genes_length_tb$gc, # GC content
+              # subindex = which(rowMeans(counts_sub) > 15), # Default is rowMeans > 50
+              verbose = TRUE)
 toc()
 ```
 
 ```{r}
-sce_sub = sce_ls[["preandmrna"]][, colData(sce_ls[["preandmrna"]])$ding_labels %in% c("Excitatory neuron", "Astrocyte")]
-counts_sub = as.matrix(round(counts(sce_sub))) # original counts
-seq_cqn = readRDS(here("./mouse_cortex/output/counts_ea_preandmrna_cqn.rds")) # normalized counts
+dim(counts_sub) # original counts
+
+# seq_cqn = readRDS(here("./mouse_cortex/output/counts_ea_preandmrna_cqn.rds")) # normalized counts
+counts_normalized <- cqn_res$y + cqn_res$offset # log2 normalized expression values
+rownames(counts_normalized) = rownames(sce_sub)
+colnames(counts_normalized) = colnames(counts_sub)
+pdata = as.data.frame(tibble(ding_labels = colnames(counts_sub)))
+rownames(pdata) = colnames(counts_sub)
+rownames(genes_length_tb) = genes_length_tb$gene
+seq_cqn = newSeqExpressionSet(counts = 2^counts_normalized,
+                              featureData = as.data.frame(genes_length_tb),
+                              phenoData = pdata)
 
 # Groups
 grp1 = rownames(pData(seq_cqn))[pData(seq_cqn)$ding_labels == "Excitatory neuron"]
 grp2 = rownames(pData(seq_cqn))[pData(seq_cqn)$ding_labels == "Astrocyte"]
 
 # Compare
-counts_sub_sweep = sweep(log2(counts_sub + 1), 2, log2(colData(sce_sub)$sizeFactor)) # divide by size factors
-M_std = rowMeans(counts_sub_sweep[, grp1]) - rowMeans(counts_sub_sweep[, grp2])
+counts_sub_sweep = sweep(counts_sub, 2, colSums(counts_sub), `/`)           # divide by size factors
+counts_sub_sweep = log2(counts_sub_sweep + 1)
+M_std = rowMeans(counts_sub_sweep[, grp1, drop = FALSE]) - rowMeans(counts_sub_sweep[, grp2, drop = FALSE])
 A_std = rowMeans(counts_sub_sweep)
 
-counts_cqn_sweep = sweep(log2(counts(seq_cqn) + 1), 2, log2(pData(seq_cqn)$sizeFactor)) # divide by size factors
-M_cqn = rowMeans(counts_cqn_sweep[, grp1]) - rowMeans(counts_cqn_sweep[, grp2])
+counts_cqn_sweep = sweep(counts(seq_cqn), 2, colSums(counts(seq_cqn)), `/`) # divide by size factors
+counts_cqn_sweep = log2(counts_cqn_sweep + 1)
+M_cqn = rowMeans(counts_cqn_sweep[, grp1, drop = FALSE]) - rowMeans(counts_cqn_sweep[, grp2, drop = FALSE])
 A_cqn = rowMeans(counts_cqn_sweep)
 
-gene_lengths = rowData(sce_sub) %>%
-  as_tibble() %>%
-  select(start, end) %>%
-  mutate(length = end - start,
-         gene = rownames(rowData(sce_sub))) %>%
-  select(gene, length)
 intersect_genes = intersect(names(M_std), names(M_cqn)) # Some genes did not have GC content and were not cqn-normalized
-gene_lengths = gene_lengths %>%
+genes_length_tb = genes_length_tb %>%
   filter(gene %in% intersect_genes)
 
-plot_dt = gene_lengths %>%
+plot_dt = genes_length_tb %>%
   mutate(M_std = M_std[intersect_genes],
          A_std = A_std[intersect_genes],
          M_cqn = M_cqn[intersect_genes],
          A_cqn = A_cqn[intersect_genes]) %>%
   pivot_longer(M_std:A_cqn, names_to = c(".value", "data"), names_sep = "_")
 
-whGenes = names(rowMeans(counts_sub_sweep) >= 10)
+# M versus length
 plot_dt %>%
+  ggplot(aes(x = length, y = M)) + 
+  facet_wrap(~ data) +
+  geom_point(alpha = 0.01) + 
+  geom_smooth() +
+  scale_x_log10() +
+  theme_bw()
+
+# M versus GC content
+plot_dt %>%
+  ggplot(aes(x = gc, y = M)) + 
+  facet_wrap(~ data) +
+  geom_point(alpha = 0.01) + 
+  geom_smooth() +
+  theme_bw()
+
+whGenes = names(A_std)[A_std >= mean(A_std)]
+plot_dt %>%
+  filter(gene %in% whGenes) %>%
   mutate(length_label = ifelse(length > quantile(length, 0.9), "> 90th percentile", NA),
          length_label = ifelse(length < quantile(length, 0.1), "< 10th percentile", length_label)) %>%
   filter(!is.na(length_label)) %>%
-  # filter(gene %in% whGenes) %>%
-  ggplot(aes(x = M, y = A, color = length_label)) +
+  ggplot(aes(x = A, y = M, color = length_label)) +
   facet_wrap(~ data, scales = "free_x") +
-  geom_point(alpha = 0.01) + 
+  geom_point(alpha = 0.1) + 
   # scale_color_gradientn(colours = terrain.colors(10)) + 
+  scale_x_log10() +
+  # scale_y_log10() +
+  geom_smooth(se = FALSE) +
   guides(color = guide_legend(override.aes = list(alpha = 1))) +
   theme_bw()
 ```
-
-
 
 
 ### Distributions
