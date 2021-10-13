@@ -1265,36 +1265,50 @@ plot_dt = genes_length_tb %>%
          A_cqn = A_cqn[intersect_genes]) %>%
   pivot_longer(M_std:A_cqn, names_to = c(".value", "data"), names_sep = "_")
 
-# M versus length
+whGenes = names(A_std)[A_std >= mean(A_std)]
+
+# A versus gene length
 plot_dt %>%
-  ggplot(aes(x = length, y = M)) + 
+  filter(gene %in% whGenes) %>%
+  mutate(length_label = ifelse(length > quantile(length, 0.9), "> 90th percentile", NA),
+         length_label = ifelse(length < quantile(length, 0.1), "< 10th percentile", length_label)) %>%
+  # filter(!is.na(length_label)) %>%
+  ggplot(aes(x = length, y = A, color = length_label)) + 
   facet_wrap(~ data) +
   geom_point(alpha = 0.01) + 
   geom_smooth() +
   scale_x_log10() +
+  # scale_y_log10() +
+  ylim(c(-0.00005, 0.0015)) +
   theme_bw()
 
-# M versus GC content
+# M versus gene length
 plot_dt %>%
-  ggplot(aes(x = gc, y = M)) + 
+  filter(gene %in% whGenes) %>%
+  mutate(length_label = ifelse(length > quantile(length, 0.9), "> 90th percentile", NA),
+         length_label = ifelse(length < quantile(length, 0.1), "< 10th percentile", length_label)) %>%
+  # filter(!is.na(length_label)) %>%
+  ggplot(aes(x = length, y = M, color = length_label)) + 
   facet_wrap(~ data) +
-  geom_point(alpha = 0.01) + 
+  geom_point(alpha = 0.1) + 
   geom_smooth() +
+  scale_x_log10() +
+  # scale_y_log10() +
+  ylim(c(-0.005, 0.005)) +
   theme_bw()
 
-whGenes = names(A_std)[A_std >= mean(A_std)]
 plot_dt %>%
   filter(gene %in% whGenes) %>%
   mutate(length_label = ifelse(length > quantile(length, 0.9), "> 90th percentile", NA),
          length_label = ifelse(length < quantile(length, 0.1), "< 10th percentile", length_label)) %>%
   filter(!is.na(length_label)) %>%
   ggplot(aes(x = A, y = M, color = length_label)) +
-  facet_wrap(~ data, scales = "free_x") +
-  geom_point(alpha = 0.1) + 
+  facet_wrap(~ data, nrow = 2) +
+  geom_point(alpha = 0.01) + 
   # scale_color_gradientn(colours = terrain.colors(10)) + 
   scale_x_log10() +
   # scale_y_log10() +
-  geom_smooth(se = FALSE) +
+  # geom_smooth(se = FALSE) +
   guides(color = guide_legend(override.aes = list(alpha = 1))) +
   theme_bw()
 ```
@@ -1408,6 +1422,11 @@ counts_sub_cluster_scaled = Down_Sample_Matrix(ceiling(counts_sub_cluster))
 toc()
 # counts_sub_cluster_scaled = counts_sub_cluster_scaled[rowSums(counts_sub_cluster_scaled) != 0, ]
 summary(colSums(counts_sub_cluster_scaled))
+
+# Save mean and size factor ratios to generate a Poisson sim
+# saveRDS(list(means = rowMeans(counts_sub_cluster_scaled),
+#              size_factors_ratios = colSums(counts_sub_cluster)/colSums(counts_sub_cluster_scaled)),
+#         here("./mouse_cortex/output/emp_values_pois.rds"))
 
 # Save values for simulation datasets
 # nb_size = function(x){
