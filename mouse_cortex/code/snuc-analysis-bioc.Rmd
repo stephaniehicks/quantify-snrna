@@ -1128,6 +1128,7 @@ print(p)
 #   theme_bw()
 ```
 
+
 #### cQN
 
 ```{r}
@@ -1182,7 +1183,7 @@ points(A.cqn[whLow], M.cqn[whLow], cex = 0.2, pch = 16, col = "blue")
 Run on cluster using `cqn.sh`. 
 
 ```{r}
-sce_sub = sce_ls[["preandmrna"]][, colData(sce_ls[["preandmrna"]])$ding_labels %in% c("Excitatory neuron", "Astrocyte")]
+sce_sub = sce_ls[["preandmrna"]][, colData(sce_ls[["preandmrna"]])$ding_labels %in% c("Inhibitory neuron", "Endothelial") & colData(sce_ls[["preandmrna"]])$cortex == "cortex2"]
 
 # Get gene lengths
 genes_length_tb = rowData(sce_ls[["preandmrna"]]) %>%
@@ -1218,8 +1219,10 @@ counts_sub = round(counts_sub)
 
 tic()
 cqn_res = cqn(counts = counts_sub, 
-              lengths = genes_length_tb$length, # length
-              x = genes_length_tb$gc, # GC content
+              # lengths = genes_length_tb$length, # length
+              lengths = 1000,
+              lengthMethod = "fixed",
+              x = genes_length_tb$length, # GC content
               # subindex = which(rowMeans(counts_sub) > 15), # Default is rowMeans > 50
               verbose = TRUE)
 toc()
@@ -1240,8 +1243,8 @@ seq_cqn = newSeqExpressionSet(counts = 2^counts_normalized,
                               phenoData = pdata)
 
 # Groups
-grp1 = rownames(pData(seq_cqn))[pData(seq_cqn)$ding_labels == "Excitatory neuron"]
-grp2 = rownames(pData(seq_cqn))[pData(seq_cqn)$ding_labels == "Astrocyte"]
+grp1 = rownames(pData(seq_cqn))[pData(seq_cqn)$ding_labels == "Inhibitory neuron"]
+grp2 = rownames(pData(seq_cqn))[pData(seq_cqn)$ding_labels == "Endothelial"]
 
 # Compare
 counts_sub_sweep = sweep(counts_sub, 2, colSums(counts_sub), `/`)           # divide by size factors
@@ -1303,8 +1306,8 @@ plot_dt %>%
          length_label = ifelse(length < quantile(length, 0.1), "< 10th percentile", length_label)) %>%
   filter(!is.na(length_label)) %>%
   ggplot(aes(x = A, y = M, color = length_label)) +
-  facet_wrap(~ data, nrow = 2) +
-  geom_point(alpha = 0.01) + 
+  facet_wrap(~ data) +
+  geom_point(alpha = 0.1) + 
   # scale_color_gradientn(colours = terrain.colors(10)) + 
   scale_x_log10() +
   # scale_y_log10() +
@@ -1605,7 +1608,7 @@ row_means = rowMeans(counts_sub_drop)
 counts_sub_drop = counts_sub_drop[row_means > mean(row_means), ]
 
 # Poisson (grouped)
-chi_obs_pois = p_chisq_test_2_grouped(counts_sub_drop, distribution = "poisson")
+chi_obs_pois = p_chisq_test_2_grouped(counts_sub_cluster, distribution = "poisson")
 plot_dt = tibble(chi_obs = chi_obs_pois[[1]]) %>%
                  # expression = rowSums(counts_sub_cluster_scaled)) %>%
   arrange(chi_obs) %>%

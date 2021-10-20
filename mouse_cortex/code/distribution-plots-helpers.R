@@ -352,12 +352,18 @@ p_chisq_test_2 = function(m, distribution = "poisson"){
 }
 
 # Bin by sample and group cells
-p_chisq_test_2_grouped = function(m, distribution = "poisson"){
+p_chisq_test_2_grouped = function(m, c_i = NA, distribution = "poisson"){
   n_col = ncol(m)
   total_sum = sum(m)
   R_j = rowSums(m)
-  c_i = colSums(m)                # proportion of counts in sample i
-  lambda_j = rowSums(m)/total_sum # proportion of counts in gene j
+  if(is.na(c_i)){
+    c_i = colSums(m)
+  } else {
+    c_i = c_i
+    total_sum = sum(c_i)
+  }
+  # c_i = colSums(m)                # proportion of counts in sample i
+  lambda_j = R_j/total_sum # proportion of counts in gene j
   # lambda_alt = rowSums(t(t(m)/c_i))/ncol(m)
   mu_ij = outer(lambda_j, c_i)
   
@@ -376,6 +382,7 @@ p_chisq_test_2_grouped = function(m, distribution = "poisson"){
   
   # Assign cells to groups
   n_groups = max(n_groups_min, round(n_col/r))
+  # n_groups = 2
   group_size_max = max(n_col, ceiling(n_col/n_groups))
   group_assign = rep(1:n_groups, group_size_max)
   group_assign = group_assign[1:n_col]

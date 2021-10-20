@@ -116,9 +116,19 @@ counts_ls[[38]][, 200:347] = t(sapply(seq_len(length(means)), function(k)
 saveRDS(counts_ls, here("./scrna/counts_v2_ls.rds"))
 ```
 
+
 ```{r}
 counts_ls = readRDS(here("./scrna/counts_more_ls.rds")) # 31 simulations
 # counts_ls = readRDS(here("./scrna/counts_v2_ls.rds"))     # 38 simulations
+```
+
+```{r}
+# Poisson simulation with sampled mean and adjusting for size factors
+emp_values = readRDS(here("./mouse_cortex/output/emp_values_pois.rds"))
+lambdas_m = emp_values$means %*% t(emp_values$size_factors_ratios)
+lambdas = as.vector(lambdas_m)
+counts_vec = sapply(lambdas, function(x) rpois(n = 1, lambda = x))
+counts_ls[[32]] = matrix(counts_vec, ncol = 347, nrow = 31701)
 ```
 
 
@@ -289,10 +299,14 @@ plot_dt_pois_ls = list()
 plot_dt_nb_1_ls = list()
 plot_dt_nb_2_ls = list()
 # for(i in seq_along(counts_ls)){
-for(i in 11:14){
+for(i in 32:32){
   print(i)
   counts = counts_ls[[i]]
   
+  # Filter to genes with rowMeans > median
+  # row_means = rowMeans(counts)
+  # counts = counts[row_means > mean(row_means), ]
+
   # Poisson
   chi_obs_pois = p_chisq_test_2_grouped(counts, distribution = "poisson")
   plot_dt_pois_ls[[i]] = tibble(chi_obs = chi_obs_pois[[1]]) %>%
@@ -309,64 +323,41 @@ for(i in 11:14){
                                         T ~ "rest"),
            i = i)
 
-  # Negative binomial (single overdispersion parameter)
-  chi_obs_nb = p_chisq_test_2_grouped(counts, distribution = "nb 1")
-  plot_dt_nb_1_ls[[i]] = tibble(chi_obs = chi_obs_nb[[1]]) %>%
-                                # expression = rowSums(counts),
-                                # var = apply(counts, 1, var),
-                                # prop_0 = apply(counts, 1, function(x) sum(x == 0))) %>%
-    mutate(id = 1:n()) %>%
-    arrange(chi_obs) %>%
-    drop_na() %>%
-    mutate(chi_quantile = qchisq(p = (1:length(chi_obs))/length(chi_obs), df = chi_obs_nb[[2]] - 2),
-           percentile_color = case_when(chi_obs > quantile(chi_obs, 0.995, na.rm = TRUE) ~ "> 99.5",
-                                        chi_obs > quantile(chi_obs, 0.95, na.rm = TRUE) ~ "> 95",
-                                        chi_obs > quantile(chi_obs, 0.90, na.rm = TRUE) ~ "> 90",
-                                        T ~ "rest"),
-           i = i)
-
-  # Negative binomial (gene-specific overdispersion parameter)
-  chi_obs_nb = p_chisq_test_2_grouped(counts, distribution = "nb 2")
-  plot_dt_nb_2_ls[[i]] = tibble(chi_obs = chi_obs_nb[[1]],
-                                f_phi = chi_obs_nb[[2]]) %>%
-                                # expression = rowSums(counts),
-                                # var = apply(counts, 1, var),
-                                # prop_0 = apply(counts, 1, function(x) sum(x == 0))) %>%
-    mutate(id = 1:n()) %>%
-    arrange(chi_obs) %>%
-    drop_na() %>%
-    mutate(chi_quantile = qchisq(p = (1:length(chi_obs))/length(chi_obs), df = chi_obs_nb[[3]] - 2),
-           percentile_color = case_when(chi_obs > quantile(chi_obs, 0.995, na.rm = TRUE) ~ "> 99.5",
-                                        chi_obs > quantile(chi_obs, 0.95, na.rm = TRUE) ~ "> 95",
-                                        chi_obs > quantile(chi_obs, 0.90, na.rm = TRUE) ~ "> 90",
-                                        T ~ "rest"),
-           i = i)
+  # # Negative binomial (single overdispersion parameter)
+  # chi_obs_nb = p_chisq_test_2_grouped(counts, distribution = "nb 1")
+  # plot_dt_nb_1_ls[[i]] = tibble(chi_obs = chi_obs_nb[[1]]) %>%
+  #                               # expression = rowSums(counts),
+  #                               # var = apply(counts, 1, var),
+  #                               # prop_0 = apply(counts, 1, function(x) sum(x == 0))) %>%
+  #   mutate(id = 1:n()) %>%
+  #   arrange(chi_obs) %>%
+  #   drop_na() %>%
+  #   mutate(chi_quantile = qchisq(p = (1:length(chi_obs))/length(chi_obs), df = chi_obs_nb[[2]] - 2),
+  #          percentile_color = case_when(chi_obs > quantile(chi_obs, 0.995, na.rm = TRUE) ~ "> 99.5",
+  #                                       chi_obs > quantile(chi_obs, 0.95, na.rm = TRUE) ~ "> 95",
+  #                                       chi_obs > quantile(chi_obs, 0.90, na.rm = TRUE) ~ "> 90",
+  #                                       T ~ "rest"),
+  #          i = i)
+  # 
+  # # Negative binomial (gene-specific overdispersion parameter)
+  # chi_obs_nb = p_chisq_test_2_grouped(counts, distribution = "nb 2")
+  # plot_dt_nb_2_ls[[i]] = tibble(chi_obs = chi_obs_nb[[1]],
+  #                               f_phi = chi_obs_nb[[2]]) %>%
+  #                               # expression = rowSums(counts),
+  #                               # var = apply(counts, 1, var),
+  #                               # prop_0 = apply(counts, 1, function(x) sum(x == 0))) %>%
+  #   mutate(id = 1:n()) %>%
+  #   arrange(chi_obs) %>%
+  #   drop_na() %>%
+  #   mutate(chi_quantile = qchisq(p = (1:length(chi_obs))/length(chi_obs), df = chi_obs_nb[[3]] - 2),
+  #          percentile_color = case_when(chi_obs > quantile(chi_obs, 0.995, na.rm = TRUE) ~ "> 99.5",
+  #                                       chi_obs > quantile(chi_obs, 0.95, na.rm = TRUE) ~ "> 95",
+  #                                       chi_obs > quantile(chi_obs, 0.90, na.rm = TRUE) ~ "> 90",
+  #                                       T ~ "rest"),
+  #          i = i)
 }
 ```
 
-```{r}
-tmp = p_chisq_test_2_grouped(cbind(counts_ls[[5]][, 1:199], counts_ls[[7]][, 200:347]), distribution = "poisson")
-tibble(chi_obs = tmp[[1]]) %>%
-                                # expression = rowSums(counts),
-                                # var = apply(counts, 1, var),
-                                # prop_0 = apply(counts, 1, function(x) sum(x == 0))) %>%
-    mutate(id = 1:n()) %>%
-    arrange(chi_obs) %>%
-    drop_na() %>%
-    mutate(chi_quantile = qchisq(p = (1:length(chi_obs))/length(chi_obs), df = tmp[[2]] - 1),
-           percentile_color = case_when(chi_obs > quantile(chi_obs, 0.995, na.rm = TRUE) ~ "> 99.5",
-                                        chi_obs > quantile(chi_obs, 0.95, na.rm = TRUE) ~ "> 95",
-                                        chi_obs > quantile(chi_obs, 0.90, na.rm = TRUE) ~ "> 90",
-                                        T ~ "rest"),
-           i = i) %>%
-  ggplot(aes(x = chi_quantile,
-             y = chi_obs,
-             color = percentile_color)) + 
-  geom_point(size = 0.5) + 
-  geom_abline(slope = 1, intercept = 0) +
-  # coord_cartesian(ylim = c(250, 1000)) +
-  theme_bw()
-```
 
 ```{r}
 # Read results from cluster
@@ -380,11 +371,12 @@ for(i in 11:14){
 }
 ```
 
-```{r fig.width = 10, fig.height = 3}
+```{r fig.width = 3, fig.height = 2}
 # Poisson plots
 plot_dt_pois = bind_rows(plot_dt_pois_ls)
+
 plot_dt_pois %>%
-  filter(i %in% 11:14) %>%
+  filter(i %in% 32:32) %>%
   # filter(expression > 50) %>%
     ggplot(aes(x = chi_quantile,
              y = chi_obs,

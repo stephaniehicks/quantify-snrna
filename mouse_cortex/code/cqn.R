@@ -1,7 +1,7 @@
 # cqn.R
 # -----------------------------------------------------------------------------
 # Author:             Albert Kuo
-# Date last modified: Sep 23, 2021
+# Date last modified: Oct 20, 2021
 #
 # Run cQN to normalize and then run DE analysis.
 
@@ -29,8 +29,8 @@ sce_ls[["intronseparate"]] = readRDS(here("mouse_cortex", "salmon_quants", "intr
 pipeline = "preandmrna"
 select_cells = colData(sce_ls[[pipeline]]) %>%
   as.data.frame() %>%
-  filter(ding_labels %in% c("Excitatory neuron", "Astrocyte")) %>%
-  filter(cortex == "cortex1") %>%
+  filter(ding_labels %in% c("Inhibitory neuron", "Endothelial")) %>%
+  filter(cortex == "cortex2") %>%
   row.names()
 sce_sub = sce_ls[[pipeline]][, select_cells]
 
@@ -63,13 +63,19 @@ size_factors = colData(sce_sub)$sizeFactor
 # nonzero_sums = which(rowSums(counts_sub) != 0)
 # counts_sub = counts_sub[nonzero_sums, ]
 
+# Aggregate over cell type pseudo-groups (5 per cell type)
+counts_sub = as.matrix(counts(sce_sub))
+colnames(counts_sub) = colData(sce_sub)$ding_labels
+counts_sub = t(rowsum(t(counts_sub), paste(colnames(counts_sub), sample(1:5, ncol(counts_sub), replace = TRUE))))
+counts_sub = round(counts_sub)
+
 # Run cQN
 tic()
 cqn_res = cqn(counts = counts_sub, 
               lengths = genes_length_tb$length, # length
               x = genes_length_tb$gc, # GC content
-              subindex = which(rowMeans(counts_sub) > 15), # Default is rowMeans > 50
-              sizeFactors = size_factors,
+              # subindex = which(rowMeans(counts_sub) > 15), # Default is rowMeans > 50
+              # sizeFactors = size_factors,
               verbose = FALSE)
 toc()
 
@@ -77,12 +83,15 @@ counts_normalized <- cqn_res$y + cqn_res$offset # log2 normalized expression val
 print(dim(counts_normalized))
 print(dim(sce_sub))
 rownames(counts_normalized) = rownames(sce_sub)
-colnames(counts_normalized) = colnames(sce_sub)
+colnames(counts_normalized) = colnames(counts_sub)
 
 # Normalize with EDASeq
+pdata = as.data.frame(tibble(group = colnames(counts_sub),
+                             ding_labels = sapply(colnames(counts_sub), function(x) gsub(".{2}$", "", x))))
+rownames(pdata) = colnames(counts_sub)
 seq_data = newSeqExpressionSet(counts = 2^counts_normalized,
                                featureData = as.data.frame(genes_length_tb),
-                               phenoData = as.data.frame(colData(sce_sub)))
+                               phenoData = pdata)
 if(normalize){
   tic("normalize with EDASeq")
   seq_data_within = withinLaneNormalization(seq_data, "length", which = "full", offset = TRUE)
@@ -117,7 +126,7 @@ res
 
 # Shrinkage of LFC when count values are too low
 resultsNames(dds)
-resLFC = lfcShrink(dds, coef="ding_labels_Excitatory.neuron_vs_Astrocyte", type="apeglm")
+resLFC = lfcShrink(dds, coef="ding_labels_Inhibitory.neuron_vs_Endothelial", type="apeglm")
 
 # MA plot for shrunken log2 fold change
 plotMA(resLFC)
