@@ -28,7 +28,7 @@ sce_ls[["intronseparate"]] = readRDS(here("mouse_cortex", "salmon_quants", "intr
 pipeline = "preandmrna"
 select_cells = colData(sce_ls[[pipeline]]) %>%
   as.data.frame() %>%
-  filter(ding_labels %in% c("Excitatory neuron", "Astrocyte")) %>%
+  filter(ding_labels %in% c("Inhibitory neuron", "Endothelial")) %>%
   filter(cortex == "cortex1") %>%
   row.names()
 sce_sub = sce_ls[[pipeline]][, select_cells]
@@ -61,7 +61,7 @@ if(normalize){
 #                              colData = colData(sce_sub),
 #                              design = ~ cortex + ding_labels)
 
-dds = DESeqDataSetFromMatrix(countData = ceiling(counts(seq_data_norm)[, ]), # take integers 
+dds = DESeqDataSetFromMatrix(countData = round(counts(seq_data_norm)[, ]), # take integers 
                              colData = pData(seq_data_norm),
                              design = ~ ding_labels)
 
@@ -81,7 +81,7 @@ res
 
 # Shrinkage of LFC when count values are too low
 resultsNames(dds)
-resLFC = lfcShrink(dds, coef="ding_labels_Excitatory.neuron_vs_Astrocyte", type="apeglm")
+resLFC = lfcShrink(dds, coef="ding_labels_Inhibitory.neuron_vs_Endothelial", type="apeglm")
 
 # MA plot for shrunken log2 fold change
 plotMA(resLFC)
@@ -100,7 +100,7 @@ resLFC = resLFC %>%
   left_join(., genes_length_tb, by = "gene")
 
 if(normalize){
-  saveRDS(resLFC, here(paste0("./mouse_cortex/output/de_ea_", pipeline, "_lfc_norm.rds")))
+  saveRDS(resLFC, here(paste0("./mouse_cortex/output/de_ie_", pipeline, "_lfc_norm.rds")))
 } else {
-  saveRDS(resLFC, here(paste0("./mouse_cortex/output/de_ea_", pipeline, "_lfc.rds")))
+  saveRDS(resLFC, here(paste0("./mouse_cortex/output/de_ie_", pipeline, "_lfc.rds")))
 }

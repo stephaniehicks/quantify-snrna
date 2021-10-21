@@ -1048,7 +1048,7 @@ res = res %>%
 
 ```{r}
 pipeline = "preandmrna"
-res = readRDS(here(paste0("./mouse_cortex/output/de_ea_", pipeline, "_lfc_cqn.rds")))
+res = readRDS(here(paste0("./mouse_cortex/output/de_ie_", pipeline, "_lfc_cqn.rds")))
 
 res = res %>%
   left_join(., genes_rowsums_tb %>% distinct(gene, transcripts, preandmrna, introncollapse, intronseparate), by = "gene") # from binned by overall expression
@@ -1074,6 +1074,40 @@ p = res %>%
   theme_bw()
 print(p)
 # saveRDS(p, here(paste0("./mouse_cortex/plots/de_length_bias_hist_", pipeline, "_ea.rds")))
+```
+
+```{r}
+pipeline = "preandmrna"
+res_no_cqn = readRDS(here(paste0("./mouse_cortex/output/de_ie_", pipeline, "_lfc.rds")))
+res_with_cqn = readRDS(here(paste0("./mouse_cortex/output/de_ie_", pipeline, "_lfc_cqn.rds")))
+
+res_no_cqn_ranked = res_no_cqn %>%
+  arrange(padj) %>%
+  mutate(rank_no_cqn = 1:n(),
+         padj_no_cqn = padj) %>%
+  select(gene, padj_no_cqn, rank_no_cqn, length)
+
+res_with_cqn_ranked = res_with_cqn %>%
+  arrange(padj) %>%
+  mutate(rank_with_cqn = 1:n(),
+         padj_with_cqn = padj) %>%
+  select(gene, padj_with_cqn, rank_with_cqn)
+
+res_combined = res_no_cqn_ranked %>%
+  inner_join(., res_with_cqn_ranked, by = "gene")
+
+res_combined %>%
+  filter(!is.na(padj_no_cqn) & !is.na(padj_with_cqn)) %>%
+  # filter(padj_no_cqn < 0.05) %>%
+  mutate(length_label = ifelse(length > quantile(length, 0.9), "> 90th percentile", NA),
+         length_label = ifelse(length < quantile(length, 0.1), "< 10th percentile", length_label),
+         significant_both = (padj_no_cqn < 0.05) & (padj_with_cqn < 0.05)) %>%
+  filter(!is.na(length_label)) %>%
+  ggplot(aes(x = rank_no_cqn, y = rank_with_cqn, color = significant_both)) + 
+  facet_wrap(~ length_label, nrow = 1, labeller = label_both) +
+  geom_abline(slope = 1, intercept = 0) +
+  geom_point(alpha = 0.5) + 
+  theme_bw()
 ```
 
 
@@ -1315,6 +1349,7 @@ plot_dt %>%
   guides(color = guide_legend(override.aes = list(alpha = 1))) +
   theme_bw()
 ```
+
 
 
 ### Distributions

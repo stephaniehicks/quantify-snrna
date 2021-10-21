@@ -18,7 +18,6 @@ suppressPackageStartupMessages({
 })
 
 # Read in SingleCellExperiment objects
-normalize = FALSE
 run_number = "all" # give run_number or "all" for all of them together
 sce_ls = list()
 sce_ls[["transcripts"]] = readRDS(here("mouse_cortex", "salmon_quants", "transcripts_pipeline", paste0("sce_", run_number, ".rds")))
@@ -29,7 +28,7 @@ sce_ls[["intronseparate"]] = readRDS(here("mouse_cortex", "salmon_quants", "intr
 pipeline = "preandmrna"
 select_cells = colData(sce_ls[[pipeline]]) %>%
   as.data.frame() %>%
-  filter(ding_labels %in% c("Inhibitory neuron", "Endothelial")) %>%
+  filter(ding_labels %in% c("Excitatory neuron", "Astrocyte")) %>%
   filter(cortex == "cortex2") %>%
   row.names()
 sce_sub = sce_ls[[pipeline]][, select_cells]
@@ -69,7 +68,19 @@ colnames(counts_sub) = colData(sce_sub)$ding_labels
 counts_sub = t(rowsum(t(counts_sub), paste(colnames(counts_sub), sample(1:5, ncol(counts_sub), replace = TRUE))))
 counts_sub = round(counts_sub)
 
-# Run cQN
+pdata = as.data.frame(tibble(group = colnames(counts_sub),
+                             ding_labels = sapply(colnames(counts_sub), function(x) gsub(".{2}$", "", x))))
+
+rownames(pdata) = colnames(counts_sub)
+seq_data = newSeqExpressionSet(counts = counts_sub,
+                               featureData = as.data.frame(genes_length_tb),
+                               phenoData = pdata)
+
+dds = DESeqDataSetFromMatrix(countData = counts(seq_data), # take integers 
+                             colData = pData(seq_data),
+                             design = ~ ding_labels)
+
+# Run cQN to get normalizationFactors
 tic()
 cqn_res = cqn(counts = counts_sub, 
               lengths = genes_length_tb$length, # length
@@ -79,45 +90,14 @@ cqn_res = cqn(counts = counts_sub,
               verbose = FALSE)
 toc()
 
-counts_normalized <- cqn_res$y + cqn_res$offset # log2 normalized expression values
-print(dim(counts_normalized))
-print(dim(sce_sub))
-rownames(counts_normalized) = rownames(sce_sub)
-colnames(counts_normalized) = colnames(counts_sub)
-
-# Normalize with EDASeq
-pdata = as.data.frame(tibble(group = colnames(counts_sub),
-                             ding_labels = sapply(colnames(counts_sub), function(x) gsub(".{2}$", "", x))))
-rownames(pdata) = colnames(counts_sub)
-seq_data = newSeqExpressionSet(counts = 2^counts_normalized,
-                               featureData = as.data.frame(genes_length_tb),
-                               phenoData = pdata)
-if(normalize){
-  tic("normalize with EDASeq")
-  seq_data_within = withinLaneNormalization(seq_data, "length", which = "full", offset = TRUE)
-  seq_data_norm = betweenLaneNormalization(seq_data_within, which = "full")
-  toc()
-} else {
-  seq_data_norm = seq_data
-}
-
-# Store counts and intermediate quantities (dds is a SummarizedExperiment)
-# dds = DESeqDataSetFromMatrix(countData = ceiling(counts(sce_sub)[, ]), # take integers 
-#                              colData = colData(sce_sub),
-#                              design = ~ cortex + ding_labels)
-
-dds = DESeqDataSetFromMatrix(countData = ceiling(counts(seq_data_norm)[, ]), # take integers 
-                             colData = pData(seq_data_norm),
-                             design = ~ ding_labels)
-
-if(normalize){
-  normFactors <- exp(-1 * offst(seq_data_norm))
-  normFactors <- normFactors / exp(rowMeans(log(normFactors)))
-  normalizationFactors(dds) <- normFactors
-}
+# Get offset from cqn to use as normalizationfactors in DESeq function
+cqnOffset <- cqn_res$glm.offset
+cqnNormFactors <- exp(cqnOffset)
+normFactors <- cqnNormFactors / exp(rowMeans(log(cqnNormFactors)))
 
 # Compute log2fold change and p-values
-tic("DEseq")
+tic("DESeq")
+normalizationFactors(dds) <- normFactors
 dds = DESeq(dds)
 toc()
 
@@ -126,7 +106,7 @@ res
 
 # Shrinkage of LFC when count values are too low
 resultsNames(dds)
-resLFC = lfcShrink(dds, coef="ding_labels_Inhibitory.neuron_vs_Endothelial", type="apeglm")
+resLFC = lfcShrink(dds, coef="ding_labels_Excitatory.neuron_vs_Astrocyte", type="apeglm")
 
 # MA plot for shrunken log2 fold change
 plotMA(resLFC)
@@ -146,8 +126,4 @@ resLFC = resLFC %>%
 
 # Save results
 saveRDS(seq_data, here(paste0("./mouse_cortex/output/counts_ea_", pipeline, "_cqn.rds")))
-if(normalize){
-  saveRDS(resLFC, here(paste0("./mouse_cortex/output/de_ea_", pipeline, "_lfc_cqn_norm.rds")))
-} else {
-  saveRDS(resLFC, here(paste0("./mouse_cortex/output/de_ea_", pipeline, "_lfc_cqn.rds")))
-}
+saveRDS(resLFC, here(paste0("./mouse_cortex/output/de_ea_", pipeline, "_lfc_cqn.rds")))
