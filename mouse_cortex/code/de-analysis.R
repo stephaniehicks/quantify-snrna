@@ -1,7 +1,7 @@
 # de-analysis.R
 # -----------------------------------------------------------------------------
 # Author:             Albert Kuo
-# Date last modified: Sep 13, 2021
+# Date last modified: Oct 28, 2021
 #
 # Differential expression analysis
 
@@ -29,7 +29,7 @@ pipeline = "preandmrna"
 select_cells = colData(sce_ls[[pipeline]]) %>%
   as.data.frame() %>%
   filter(ding_labels %in% c("Inhibitory neuron", "Endothelial")) %>%
-  filter(cortex == "cortex1") %>%
+  filter(cortex == "cortex2") %>%
   row.names()
 sce_sub = sce_ls[[pipeline]][, select_cells]
 
