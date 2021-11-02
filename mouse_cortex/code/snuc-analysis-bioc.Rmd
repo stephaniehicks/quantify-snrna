@@ -387,10 +387,10 @@ p = genes_rowmeans_tb %>%
                                 TRUE ~ 3)) %>%
   # filter(preandmrna > 0) %>%
   # filter(preandmrna_max_nA8 == 0) %>%
-  # filter(cell_type %in% c("Excitatory neuron", "Microglia", "Astrocyte")) %>%
-  filter(cortex == "cortex1") %>%
+  filter(cell_type %in% c("Excitatory neuron", "Astrocyte")) %>%
+  filter(cortex == "cortex2") %>%
   ggplot(aes(x = length, y = preandmrna, color = cell_type)) +
-  facet_wrap(cell_group ~ .) +
+  # facet_wrap(cell_group ~ .) +
   # geom_point(alpha = 0.01) +
   geom_smooth() + 
   scale_x_log10() +
@@ -400,7 +400,7 @@ p = genes_rowmeans_tb %>%
   theme_bw() 
 
 print(p)
-# saveRDS(p, here("./mouse_cortex/plots/gene_length_bias_transcripts_cortex_1.rds"))
+saveRDS(p, here("./mouse_cortex/plots/gene_length_bias_ea_cortex2.rds"))
 ```
 #### GC content
 
@@ -1048,7 +1048,7 @@ res = res %>%
 
 ```{r}
 pipeline = "preandmrna"
-res = readRDS(here(paste0("./mouse_cortex/output/de_ie_", pipeline, "_lfc_cqn.rds")))
+res = readRDS(here(paste0("./mouse_cortex/output/de_ie_", pipeline, "_lfc.rds")))
 
 res = res %>%
   left_join(., genes_rowsums_tb %>% distinct(gene, transcripts, preandmrna, introncollapse, intronseparate), by = "gene") # from binned by overall expression
@@ -1062,18 +1062,18 @@ p = res %>%
   labs(x = "Gene length") +
   theme_bw()
 print(p)
-# saveRDS(p, here(paste0("./mouse_cortex/plots/de_length_bias_", pipeline, "_ea.rds")))
+saveRDS(p, here(paste0("./mouse_cortex/plots/de_length_bias_", pipeline, "_ie.rds")))
 
 # Density histograms for all genes (orange) vs differential genes (blue)
 p = res %>%
   ggplot(aes(x = length, y = ..density..)) +
-  geom_histogram(fill = "#E69F00", alpha = 0.5) +
-  geom_histogram(data = res %>% filter(padj < 0.05), aes(x = length, y = ..density..), fill = "#56B4E9", alpha = 0.5) +
+  geom_density(fill = "#E69F00", alpha = 0.5) +
+  geom_density(data = res %>% filter(padj < 0.05), aes(x = length, y = ..density..), fill = "#56B4E9", alpha = 0.5) +
   scale_x_log10() +
   labs(x = "Gene length", y = "Density") +
   theme_bw()
 print(p)
-# saveRDS(p, here(paste0("./mouse_cortex/plots/de_length_bias_hist_", pipeline, "_ea.rds")))
+saveRDS(p, here(paste0("./mouse_cortex/plots/de_length_bias_dens_", pipeline, "_ie.rds")))
 ```
 
 ```{r}
@@ -1438,13 +1438,13 @@ pheatmap(logFCs, breaks=seq(-5, 5, length.out=101))
 ```
 
 
-#### Proportion of zero plots
+#### Downsampling/proportion of zero plots
 
 First, I make all the column sums comparable by downsampling (this is a stochastic transformation as opposed to scaling).
 
 ```{r}
 # Subset to cluster
-i = 1
+i = 4
 counts_sub_cluster = counts(sce_sub)
 # counts_sub_cluster = counts(sce_sub)[, colData(sce_sub)$labels_kmeans == i] # Subset to k-means cluster
 # group into 3 groups by colSums
@@ -1456,7 +1456,7 @@ summary(colSums(counts_sub_cluster))
 # Downsample matrix
 tic()
 set.seed(1)
-counts_sub_cluster_scaled = Down_Sample_Matrix(ceiling(counts_sub_cluster))
+counts_sub_cluster_scaled = Down_Sample_Matrix(round(counts_sub_cluster))
 toc()
 # counts_sub_cluster_scaled = counts_sub_cluster_scaled[rowSums(counts_sub_cluster_scaled) != 0, ]
 summary(colSums(counts_sub_cluster_scaled))
@@ -1635,12 +1635,12 @@ plot_dt %>%
 
 
 ```{r}
-# Filter to protein coding genes
-protein_coding_genes = rowData(sce) %>% as_tibble() %>% filter(transcript_type == "protein_coding") %>% pull(gene_id)
-counts_sub_drop = counts_sub_cluster_scaled[rownames(counts_sub_cluster_scaled) %in% protein_coding_genes, ]
-# Filter to genes with rowMeans > median
-row_means = rowMeans(counts_sub_drop)
-counts_sub_drop = counts_sub_drop[row_means > mean(row_means), ]
+# # Filter to protein coding genes
+# protein_coding_genes = rowData(sce) %>% as_tibble() %>% filter(transcript_type == "protein_coding") %>% pull(gene_id)
+# counts_sub_drop = counts_sub_cluster_scaled[rownames(counts_sub_cluster_scaled) %in% protein_coding_genes, ]
+# # Filter to genes with rowMeans > median
+# row_means = rowMeans(counts_sub_drop)
+# counts_sub_drop = counts_sub_drop[row_means > mean(row_means), ]
 
 # Poisson (grouped)
 chi_obs_pois = p_chisq_test_2_grouped(counts_sub_cluster, distribution = "poisson")
