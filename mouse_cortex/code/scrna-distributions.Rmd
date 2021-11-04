@@ -129,6 +129,17 @@ lambdas_m = emp_values$means %*% t(emp_values$size_factors_ratios)
 lambdas = as.vector(lambdas_m)
 counts_vec = sapply(lambdas, function(x) rpois(n = 1, lambda = x))
 counts_ls[[32]] = matrix(counts_vec, ncol = 347, nrow = 31701)
+
+# Negative binomial simulation with sampled mean and dispersion and adjusting for size factors
+emp_values_2 = readRDS(here("./mouse_cortex/output/emp_values.rds"))
+lambdas_m = emp_values_2$means %*% t(emp_values$size_factors_ratios)
+lambdas_m = as.vector(lambdas_m)
+sizes = rep(emp_values_2$sizes, 347)
+counts_vec = sapply(seq_len(length(lambdas_m)),
+                        function(k) rnbinom(n = 1,
+                                            mu = lambdas_m[k],
+                                            size = sizes[k]))
+counts_ls[[33]] = matrix(counts_vec, ncol = 347, nrow = 21483)
 ```
 
 
@@ -299,13 +310,16 @@ plot_dt_pois_ls = list()
 plot_dt_nb_1_ls = list()
 plot_dt_nb_2_ls = list()
 # for(i in seq_along(counts_ls)){
-for(i in 32:32){
+for(i in 32:33){
   print(i)
   counts = counts_ls[[i]]
   
-  # Filter to genes with rowMeans > median
-  # row_means = rowMeans(counts)
-  # counts = counts[row_means > mean(row_means), ]
+  # Downsample
+  # counts = Down_Sample_Matrix(round(counts))
+  
+  # Filter to genes with rowMeans > mean
+  row_means = rowMeans(counts)
+  counts = counts[row_means > mean(row_means), ]
 
   # Poisson
   chi_obs_pois = p_chisq_test_2_grouped(counts, distribution = "poisson")
@@ -371,12 +385,12 @@ for(i in 11:14){
 }
 ```
 
-```{r fig.width = 3, fig.height = 2}
+```{r fig.width = 4, fig.height = 2}
 # Poisson plots
 plot_dt_pois = bind_rows(plot_dt_pois_ls)
 
 plot_dt_pois %>%
-  filter(i %in% 32:32) %>%
+  filter(i %in% 32:33) %>%
   # filter(expression > 50) %>%
     ggplot(aes(x = chi_quantile,
              y = chi_obs,
