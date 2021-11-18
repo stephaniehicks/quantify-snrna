@@ -293,6 +293,7 @@ p_chisq_test_2 = function(m, distribution = "poisson"){
   
   f_obs = m
   f_hyp = mu_ij
+  # f_hyp[T] = 1
   
   if(distribution == "poisson"){
     chi_square = rowSums((f_obs-f_hyp)^2/f_hyp)
@@ -306,6 +307,7 @@ p_chisq_test_2 = function(m, distribution = "poisson"){
     
     # Option 2 (edgeR)
     phi = 1/edgeR::estimateCommonDisp(m)
+    # phi = 0.3
     
     # Option 2.5 (use edgeR mean)
     mu_ij = edgeR::glmFit(m, dispersion = 1/phi)$fitted.values
@@ -352,7 +354,7 @@ p_chisq_test_2 = function(m, distribution = "poisson"){
 }
 
 # Bin by sample and group cells
-p_chisq_test_2_grouped = function(m, distribution = "poisson"){
+p_chisq_test_2_grouped = function(m, distribution = "poisson", phi = 1){
   m = round(m)
   n_col = ncol(m)
   total_sum = sum(m)
@@ -362,23 +364,35 @@ p_chisq_test_2_grouped = function(m, distribution = "poisson"){
   # lambda_alt = rowSums(t(t(m)/c_i))/ncol(m)
   mu_ij = outer(lambda_j, c_i)
   
-  # Discard genes with average mu_ij too low (< ~0.01)
-  p = 0.25 # restrict component variance to be within < 2*(1+p)
-  n_groups_min = ifelse(distribution == "poisson", 2, 3) # min number of groups allowed
-  cutoff = (1/(2*p))*(n_groups_min/n_col)      
-  avg_mu = R_j/n_col
-  m = m[(avg_mu > cutoff), ]
-  # m = m[fixed_ind, ]
-  mu_ij = mu_ij[(avg_mu > cutoff), ]
-  # mu_ij = mu_ij[fixed_ind, ]
-  
   # Find group size
-  min_mu = min(avg_mu[avg_mu > cutoff]) # smallest average mu_ij in remaining genes
-  r = ceiling(1/(2*min_mu*p))
+  n_groups_min = ifelse(distribution == "poisson", 2, 3) # min number of groups allowed
+  r_max = n_col/n_groups_min # maximum group size allowed
+  if(distribution == "poisson"){
+    p = 0.25 # restrict component variance to be within < 2*(1+p)
+    # Discard genes with average mu_ij too low (< ~0.01)
+    cutoff = 1/(2*r_max*p)
+    avg_mu = R_j/n_col
+    m = m[(avg_mu > cutoff), ]
+    # m = m[fixed_ind, ]
+    mu_ij = mu_ij[(avg_mu > cutoff), ]
+    # mu_ij = mu_ij[fixed_ind, ]
+    
+    min_mu = min(avg_mu[avg_mu > cutoff]) # smallest average mu_ij in remaining genes
+    r = ceiling(1/(2*min_mu*p))
+  } else {
+    p = 0.25
+    epsilon = 0.001
+    k = 3/(p*r_max) + epsilon # smallest k possible
+    cutoff = k/2*(sqrt((2*k*p*r_max-2)/(2*k*p*r_max-6))-1)
+    avg_mu = R_j/n_col
+    m = m[(avg_mu > cutoff), ]
+    mu_ij = mu_ij[(avg_mu > cutoff), ]
+    
+    r = ceiling(r_max) # just choose the maximum group size allowed for now
+  }
   
   # Assign cells to groups
   n_groups = max(n_groups_min, round(n_col/r))
-  # n_groups = 3
   group_size_max = max(n_col, ceiling(n_col/n_groups))
   group_assign = rep(1:n_groups, group_size_max)
   group_assign = group_assign[1:n_col]
@@ -394,7 +408,9 @@ p_chisq_test_2_grouped = function(m, distribution = "poisson"){
     chi_square = rowSums((f_obs-f_hyp)^2/f_hyp)
   } else if(distribution == "nb 1"){ # single overdispersion parameter
     # Option 2 (edgeR)
-    phi = 1/edgeR::estimateCommonDisp(m)
+    # phi = 1/edgeR::estimateCommonDisp(m) # size parameter
+    phi = phi
+    print(phi)
     
     # Option 2.5 (use edgeR mean)
     # mu_ij = edgeR::glmFit(m, dispersion = 1/phi)$fitted.values

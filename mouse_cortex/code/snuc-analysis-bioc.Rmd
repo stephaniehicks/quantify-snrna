@@ -402,6 +402,52 @@ p = genes_rowmeans_tb %>%
 print(p)
 saveRDS(p, here("./mouse_cortex/plots/gene_length_bias_ea_cortex2.rds"))
 ```
+
+```{r}
+# Simulation on how differences in distribution of gene length between cell type contribute to cell-type specific gene length biases
+set.seed(1)
+n = 5000
+gene_lengths = rnorm(n = n, mean = 10, sd = 2)
+gene_lengths[gene_lengths < 0] = 0
+
+epsilon = 0.01
+sim = tibble(gene_id = 1:n,
+             length = gene_lengths,
+             expression = length,
+             neuron_prob = dnorm(length, mean = 12, sd = 5),
+             neuron_expression = rbinom(n = n, size = 1, prob = neuron_prob)*length,
+             endothelial_prob = dnorm(length, mean = 8, sd = 5),
+             endothelial_expression = rbinom(n = n, size = 1, prob = endothelial_prob)*length)
+```
+
+
+```{r}
+# Overall length bias 
+sim %>%
+  ggplot(aes(x = length, y = expression)) + 
+  geom_point(alpha = 0.01) + 
+  theme_bw()
+
+# Cell type specific probability of expression
+sim %>%
+  ggplot() + 
+  geom_line(aes(x = length, y = neuron_prob), color = "blue") + 
+  geom_line(aes(x = length, y = endothelial_prob), color = "red") + 
+  labs(y = "prob") +
+  theme_bw()
+
+# Cell type specific length bias
+sim %>% 
+  ggplot() +
+  geom_point(aes(x = length, y = neuron_expression), alpha = 0.01, color = "blue") +
+  geom_smooth(aes(x = length, y = neuron_expression), method = "loess", color = "blue") +
+  geom_point(aes(x = length, y = endothelial_expression), alpha = 0.01, color = "red") +
+  geom_smooth(aes(x = length, y = endothelial_expression), method = "loess", color = "red") +
+  labs(y = "expression") +
+  theme_bw()
+```
+
+
 #### GC content
 
 ```{r}
@@ -1676,7 +1722,7 @@ chi_obs_nb = p_chisq_test_2(counts_sub_cluster_scaled, distribution = "nb 1")
 plot_dt = tibble(chi_obs = chi_obs_nb) %>%
   arrange(chi_obs) %>%
   drop_na() %>%
-  mutate(chi_quantile = qchisq(p = (1:length(chi_obs))/length(chi_obs), df = ncol(counts_sub_cluster_scaled) - 1),
+  mutate(chi_quantile = qchisq(p = (1:length(chi_obs))/length(chi_obs), df = ncol(counts_sub_cluster_scaled) - 2),
          percentile_color = case_when(chi_obs > quantile(chi_obs, 0.995) ~ "> 99.5",
                                       chi_obs > quantile(chi_obs, 0.95) ~ "> 95",
                                       chi_obs > quantile(chi_obs, 0.90) ~ "> 90",

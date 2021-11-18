@@ -310,16 +310,18 @@ plot_dt_pois_ls = list()
 plot_dt_nb_1_ls = list()
 plot_dt_nb_2_ls = list()
 # for(i in seq_along(counts_ls)){
-for(i in 32:33){
+for(i in 27:30){
   print(i)
   counts = counts_ls[[i]]
+  sizes = c(0.3, 1, 10, 100)
+  phi = sizes[i-26]
   
   # Downsample
   # counts = Down_Sample_Matrix(round(counts))
   
   # Filter to genes with rowMeans > mean
-  row_means = rowMeans(counts)
-  counts = counts[row_means > mean(row_means), ]
+  # row_means = rowMeans(counts)
+  # counts = counts[row_means > mean(row_means), ]
 
   # Poisson
   chi_obs_pois = p_chisq_test_2_grouped(counts, distribution = "poisson")
@@ -338,7 +340,7 @@ for(i in 32:33){
            i = i)
 
   # # Negative binomial (single overdispersion parameter)
-  # chi_obs_nb = p_chisq_test_2_grouped(counts, distribution = "nb 1")
+  # chi_obs_nb = p_chisq_test_2_grouped(counts, distribution = "nb 1", phi = phi)
   # plot_dt_nb_1_ls[[i]] = tibble(chi_obs = chi_obs_nb[[1]]) %>%
   #                               # expression = rowSums(counts),
   #                               # var = apply(counts, 1, var),
@@ -352,7 +354,7 @@ for(i in 32:33){
   #                                       chi_obs > quantile(chi_obs, 0.90, na.rm = TRUE) ~ "> 90",
   #                                       T ~ "rest"),
   #          i = i)
-  # 
+
   # # Negative binomial (gene-specific overdispersion parameter)
   # chi_obs_nb = p_chisq_test_2_grouped(counts, distribution = "nb 2")
   # plot_dt_nb_2_ls[[i]] = tibble(chi_obs = chi_obs_nb[[1]],
@@ -385,12 +387,51 @@ for(i in 11:14){
 }
 ```
 
-```{r fig.width = 4, fig.height = 2}
+```{r}
+# NB sim that should mirror the grouped nb counts (group size r = 347/3)
+counts_ls[[34]] = matrix(rnbinom(n = 3*21483, size = (347/3)*0.3, mu = (347/3)*1), ncol = 3, nrow = 21483)
+
+tibble(f_obs = sort(unlist(f_obs)),
+       f_sim = sort(unlist(counts_ls[[34]]))) %>%
+  ggplot(aes(x = f_obs, y = f_sim)) + 
+  geom_point(alpha = 0.1) + 
+  geom_abline(slope = 1, intercept = 0) + 
+  theme_bw()
+```
+
+```{r}
+# Negative binomial (single overdispersion parameter)
+counts_sub_cluster_scaled = matrix(rnbinom(n = 3*21483, size = 0.3, mu = 1), ncol = 3, nrow = 21483)
+
+# Ungrouped chi-squared test
+chi_obs_nb = p_chisq_test_2(counts_sub_cluster_scaled, distribution = "nb 1")
+plot_dt = tibble(chi_obs = chi_obs_nb) %>%
+  arrange(chi_obs) %>%
+  drop_na() %>%
+  mutate(chi_quantile = qchisq(p = (1:length(chi_obs))/length(chi_obs), df = ncol(counts_sub_cluster_scaled) - 2),
+         percentile_color = case_when(chi_obs > quantile(chi_obs, 0.995) ~ "> 99.5",
+                                      chi_obs > quantile(chi_obs, 0.95) ~ "> 95",
+                                      chi_obs > quantile(chi_obs, 0.90) ~ "> 90",
+                                      T ~ "rest"))
+
+plot_dt %>%
+  # filter(expression > 50) %>%
+    ggplot(aes(x = chi_quantile,
+             y = chi_obs,
+             color = percentile_color)) + 
+  geom_point(size = 0.5) + 
+  geom_abline(slope = 1, intercept = 0) +
+  # coord_cartesian(ylim = c(250, 1000)) +
+  theme_bw()
+```
+
+
+```{r fig.width = 6, fig.height = 2}
 # Poisson plots
 plot_dt_pois = bind_rows(plot_dt_pois_ls)
 
 plot_dt_pois %>%
-  filter(i %in% 32:33) %>%
+  filter(i %in% 27:30) %>%
   # filter(expression > 50) %>%
     ggplot(aes(x = chi_quantile,
              y = chi_obs,
@@ -421,12 +462,12 @@ plot_dt_pois %>%
   theme_bw()
 ```
 
-```{r fig.height = 3, fig.width = 10}
+```{r fig.width = 6, fig.height = 2}
 # Negative binomial plots (single overdispersion parameter)
 plot_dt_nb_1 = bind_rows(plot_dt_nb_1_ls)
 
 plot_dt_nb_1 %>%
-  filter(i %in% 11:14) %>%
+  filter(i %in% 27:30) %>%
   # filter(expression > 50) %>%
     ggplot(aes(x = chi_quantile,
              y = chi_obs,
