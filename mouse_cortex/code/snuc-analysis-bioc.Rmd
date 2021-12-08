@@ -320,7 +320,7 @@ model_tb %>%
 #### By cell type
 
 ```{r}
-# Get rowsums for every pipeline and cell type group
+# Get rowmeans for every pipeline and cell type group
 common_cells = Reduce(intersect, sapply(sce_ls, colnames)) 
 
 ding_cell_types = unique(colData(sce_ls[[1]])$ding_labels)
@@ -404,6 +404,123 @@ saveRDS(p, here("./mouse_cortex/plots/gene_length_bias_ea_cortex2.rds"))
 ```
 
 ```{r}
+# Get probability of expression per gene for every pipeline and cell type group
+common_cells = Reduce(intersect, sapply(sce_ls, colnames)) 
+
+ding_cell_types = unique(colData(sce_ls[[1]])$ding_labels)
+ding_cell_types = ding_cell_types[!is.na(ding_cell_types)]
+
+for(i in seq_along(sce_ls)){
+  pipeline_name = names(sce_ls)[i]
+  tmp_tb_ls = list()
+  
+  # Subset to cell type
+  for(cell_type in ding_cell_types){
+    sce = sce_ls[[i]]
+    
+    cells_ct = colData(sce) %>% 
+      as.data.frame() %>% 
+      filter(ding_labels == cell_type) %>% 
+      rownames()
+    cells_ct = intersect(cells_ct, common_cells)
+    
+    # Subset to cortex
+    for(c in c("cortex1", "cortex2")){
+      cortex_cells = colData(sce) %>% 
+        as.data.frame() %>% 
+        filter(cortex == c) %>%
+        rownames()
+      
+      cells = intersect(cells_ct, cortex_cells)
+      
+      m = counts(sce[, cells])
+      genes_rowprobs = rowMeans(m != 0) # For a given, what proportion of cells had nonzero expression
+      tmp_tb_ls[[paste(cell_type, c)]] = tibble(gene = names(genes_rowprobs),
+                                                !!pipeline_name := genes_rowprobs,
+                                                cell_type = cell_type,
+                                                cortex = c)
+    }
+  }
+  tmp_tb = bind_rows(tmp_tb_ls)
+  
+  if(i == 1){
+    genes_rowprobs_tb = tmp_tb
+  } else {
+    genes_rowprobs_tb = genes_rowprobs_tb %>%
+      left_join(., tmp_tb, by = c("gene", "cell_type", "cortex"))
+  }
+}
+
+# Bin by length
+genes_length_tb = rowData(sce_ls[["transcripts"]]) %>%
+  as_tibble() %>%
+  select(start, end, transcript_length) %>%
+  mutate(length = end - start,
+         gene = rownames(rowData(sce_ls[["transcripts"]]))) %>%
+  select(gene, length, transcript_length)
+
+genes_rowprobs_tb = genes_rowprobs_tb %>%
+  left_join(genes_length_tb, by = "gene")
+```
+
+```{r}
+p = genes_rowprobs_tb %>%
+  mutate(cell_group = case_when(cell_type %in% c("Excitatory neuron", "Inhibitory neuron") ~ 1,
+                                cell_type %in% c("Endothelial", "Microglia") ~ 2,
+                                TRUE ~ 3)) %>%
+  # filter(preandmrna > 0.9) %>%
+  filter(cell_type %in% c("Excitatory neuron", "Astrocyte")) %>%
+  filter(cortex == "cortex2") %>%
+  ggplot(aes(x = length, y = preandmrna, color = cell_type)) +
+  # facet_wrap(cell_group ~ .) +
+  geom_point(alpha = 0.01) +
+  geom_smooth() + 
+  scale_x_log10() +
+  # scale_y_log10() +
+  # scale_y_continuous(limits = c(0, 10)) +
+  labs(x = "Gene length", y = "Probability of expression", color = "Cell Type") +
+  theme_bw() 
+
+print(p)
+```
+
+##### For one cell
+
+```{r}
+genes_length_tb = rowData(sce_ls[["preandmrna"]]) %>%
+  as_tibble() %>%
+  select(start, end, transcript_length) %>%
+  mutate(length = end - start,
+         gene = rownames(rowData(sce_ls[["preandmrna"]]))) %>%
+  select(gene, length, transcript_length)
+
+m = counts(sce[, 1])
+m = rowMeans(m)
+tmp_tb = tibble(gene = names(m),
+                preandmrna = m)
+
+tmp_tb = tmp_tb %>% 
+  inner_join(., genes_length_tb, by = "gene")
+```
+
+
+```{r}
+tmp_tb %>%
+  filter(preandmrna != 0) %>%
+  ggplot(aes(x = length, y = preandmrna)) + 
+  geom_point(alpha = 0.1) +
+  # geom_smooth() + 
+  scale_x_log10() +
+  # scale_y_log10() +
+  scale_y_continuous(limits = c(0, 100)) +
+  labs(x = "Gene length", y = "Expression", title = "Removing Expression = 0") +
+  theme_bw() 
+```
+
+
+##### Simulation 
+
+```{r}
 # Simulation on how differences in distribution of gene length between cell type contribute to cell-type specific gene length biases
 set.seed(1)
 n = 5000
@@ -413,19 +530,22 @@ gene_lengths[gene_lengths < 0] = 0
 epsilon = 0.01
 sim = tibble(gene_id = 1:n,
              length = gene_lengths,
-             expression = length,
+             neuron_bias = length,
+             endothelial_bias = length*2,
              neuron_prob = dnorm(length, mean = 12, sd = 5),
-             neuron_expression = rbinom(n = n, size = 1, prob = neuron_prob)*length,
+             neuron_expression = rbinom(n = n, size = 1, prob = neuron_prob)*neuron_bias,
              endothelial_prob = dnorm(length, mean = 8, sd = 5),
-             endothelial_expression = rbinom(n = n, size = 1, prob = endothelial_prob)*length)
+             endothelial_expression = rbinom(n = n, size = 1, prob = endothelial_prob)*endothelial_bias)
 ```
 
 
 ```{r}
 # Overall length bias 
 sim %>%
-  ggplot(aes(x = length, y = expression)) + 
-  geom_point(alpha = 0.01) + 
+  select(length, neuron_bias, endothelial_bias) %>%
+  pivot_longer(-length, names_to = "cell_type", values_to = "expression") %>%
+  ggplot(aes(x = length, y = expression, color = cell_type)) + 
+  geom_point(alpha = 0.1) + 
   theme_bw()
 
 # Cell type specific probability of expression
@@ -1292,17 +1412,31 @@ genes_length_tb = genes_length_tb[keep_genes, ]
 size_factors = colData(sce_sub)$sizeFactor
 
 # Aggregate over cell types
+
+# aggregated as mean of nonzero counts, then multiply all genes by some constant factor = number of cells
 counts_sub = as.matrix(counts(sce_sub))
 colnames(counts_sub) = colData(sce_sub)$ding_labels
-counts_sub = t(rowsum(t(counts_sub), colnames(counts_sub)))
+tmp_rowmeans = list()
+cell_types = unique(colnames(counts_sub))
+for(ct in cell_types){
+  tmp = counts_sub[, colnames(counts_sub) == ct]
+  # tmp = counts_sub[1:5, 1:5]
+  tmp[tmp == 0] = NA
+  tmp_rowmeans[[ct]] = apply(tmp, 1, function(x) mean(x, na.rm = TRUE))*ncol(tmp)
+}
+counts_sub = do.call(cbind, tmp_rowmeans) 
+colnames(counts_sub) = cell_types
+
+# aggregated as rowsums
+# counts_sub = t(rowsum(t(counts_sub), colnames(counts_sub)))
+
 counts_sub = round(counts_sub)
+counts_sub[is.nan(counts_sub)] = 0 # may be OK to fill in NaN with 0 depending on cQN treats zero counts (need to check)
 
 tic()
-cqn_res = cqn(counts = counts_sub, 
-              # lengths = genes_length_tb$length, # length
-              lengths = 1000,
-              lengthMethod = "fixed",
-              x = genes_length_tb$length, # GC content
+cqn_res = cqn(counts = counts_sub,
+              lengths = genes_length_tb$length, # length
+              x = genes_length_tb$gc, # GC content
               # subindex = which(rowMeans(counts_sub) > 15), # Default is rowMeans > 50
               verbose = TRUE)
 toc()

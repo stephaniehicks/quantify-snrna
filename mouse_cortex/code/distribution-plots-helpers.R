@@ -294,6 +294,7 @@ p_chisq_test_2 = function(m, distribution = "poisson"){
   f_obs = m
   f_hyp = mu_ij
   # f_hyp[T] = 1
+  # mu_ij = 1
   
   if(distribution == "poisson"){
     chi_square = rowSums((f_obs-f_hyp)^2/f_hyp)
@@ -310,10 +311,11 @@ p_chisq_test_2 = function(m, distribution = "poisson"){
     # phi = 0.3
     
     # Option 2.5 (use edgeR mean)
-    mu_ij = edgeR::glmFit(m, dispersion = 1/phi)$fitted.values
-    f_hyp = mu_ij
+    # mu_ij = edgeR::glmFit(m, dispersion = 1/phi)$fitted.values
+    # f_hyp = mu_ij
     
     f_var = mu_ij + mu_ij^2/phi
+    summand_sqrt = as.vector((f_obs-f_hyp)/sqrt(f_var)) # for diagnostic purposes
     chi_square = rowSums((f_obs-f_hyp)^2/f_var)
   } else if(distribution == "nb 2"){
     # Option 1

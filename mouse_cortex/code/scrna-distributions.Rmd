@@ -401,13 +401,13 @@ tibble(f_obs = sort(unlist(f_obs)),
 
 ```{r}
 # Negative binomial (single overdispersion parameter)
-counts_sub_cluster_scaled = matrix(rnbinom(n = 3*21483, size = 0.3, mu = 1), ncol = 3, nrow = 21483)
+counts_sub_cluster_scaled = matrix(rnbinom(n = 30*21483, size = 0.3, mu = 1), ncol = 30, nrow = 21483)
 
 # Ungrouped chi-squared test
 chi_obs_nb = p_chisq_test_2(counts_sub_cluster_scaled, distribution = "nb 1")
 plot_dt = tibble(chi_obs = chi_obs_nb) %>%
   arrange(chi_obs) %>%
-  drop_na() %>%
+  # drop_na() %>%
   mutate(chi_quantile = qchisq(p = (1:length(chi_obs))/length(chi_obs), df = ncol(counts_sub_cluster_scaled) - 2),
          percentile_color = case_when(chi_obs > quantile(chi_obs, 0.995) ~ "> 99.5",
                                       chi_obs > quantile(chi_obs, 0.95) ~ "> 95",
