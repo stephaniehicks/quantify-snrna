@@ -756,6 +756,16 @@ celltype_markers_length_tb %>%
   scale_y_log10() +
   coord_flip() +
   theme_bw()
+
+# Histogram for two cell types
+celltype_markers_length_tb %>%
+  filter(cell_type %in% c("Neurons", "Astrocytes")) %>%
+  ggplot(aes(x = length, fill = cell_type)) + 
+  # geom_density() +
+  geom_histogram(position = "identity", alpha = 0.5) +
+  scale_x_log10() +
+  # coord_flip() +
+  theme_bw()
 ```
 
 
