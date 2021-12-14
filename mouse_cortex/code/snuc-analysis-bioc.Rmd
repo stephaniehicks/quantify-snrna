@@ -756,16 +756,6 @@ celltype_markers_length_tb %>%
   scale_y_log10() +
   coord_flip() +
   theme_bw()
-
-# Histogram for two cell types
-celltype_markers_length_tb %>%
-  filter(cell_type %in% c("Neurons", "Astrocytes")) %>%
-  ggplot(aes(x = length, fill = cell_type)) + 
-  # geom_density() +
-  geom_histogram(position = "identity", alpha = 0.5) +
-  scale_x_log10() +
-  # coord_flip() +
-  theme_bw()
 ```
 
 
@@ -1338,6 +1328,91 @@ res_combined %>%
 #   theme_bw()
 ```
 
+#### Remove biological length bias
+
+We should model the gene expression as, for example, a binomial (or Poisson/NB). If the expression is Binomial(n, p), p is a mixture of 2 probabilities: p = p_BC*p_TC:
+* p_BC = a biological cell-type specific gene length bias, e.g. the distribution of marker genes by length differs between cell types
+* p_TC = a technical cell-type specific gene length bias
+
+So to estimate p_TC, we need to somehow isolate it from p_BC:
+
+1. Estimate p_BC as a function of gene length using the distribution of marker genes from singleR.
+2. Then downsample the counts for a given gene according to p_BC. Resulting downsampled counts will have parameter p_TC.
+3. Estimate the normalization factors in cQN using the downsampled counts. Use these normalization factors on the original counts.
+
+```{r}
+# estimate p_BC
+pred_celltypes = readRDS(here("mouse_cortex", "salmon_quants", "transcripts_pipeline", "singler_results.rds"))
+all.markers <- metadata(pred_celltypes)$de.genes
+
+# Subset to singleR labels that appear in (preandmrna pipeline) data
+celltype_markers = all.markers[unique(colData(sce_ls[["preandmrna"]])$singleR_labels_pruned)]
+celltype_markers = sapply(celltype_markers, unlist)
+celltype_markers_tb_ls = list()
+for(i in seq_along(celltype_markers)){
+  if(is.null(unlist(celltype_markers[i]))) next
+  celltype_markers_tb_ls[[i]] = tibble(cell_type = names(celltype_markers)[i],
+                               gene_name = unique(unlist(celltype_markers[i])))
+}
+celltype_markers_tb = bind_rows(celltype_markers_tb_ls) 
+
+# Plot density
+density_neurons = density(log10(celltype_markers_length_tb %>% filter(cell_type == "Neurons") %>% pull(length)))
+density_endothelial = density(log10(celltype_markers_length_tb %>% filter(cell_type == "Endothelial cells") %>% pull(length)))
+density_est = list("Inhibitory neuron" = approxfun(density_neurons),
+                   "Endothelial" = approxfun(density_endothelial))
+
+celltype_markers_length_tb %>%
+  filter(cell_type %in% c("Neurons", "Endothelial cells")) %>%
+  ggplot(aes(x = length, fill = cell_type)) + 
+  geom_density(alpha = 0.5) +
+  # geom_histogram(position = "identity", alpha = 0.5) +
+  scale_x_log10() +
+  # coord_flip() +
+  theme_bw()
+```
+
+```{r}
+# downsample by marker gene density
+down_sample = function(x, p){
+  i = x[1]
+  prob = p[i]
+  if(is.na(prob)) return(x)
+  return(unlist(lapply(x[2:length(x)], function(y){rbinom(1, y, prob)})))
+}
+  
+downsample_by_density = function(m, density_est, lengths){
+  cell_types = sapply(colnames(m), function(s) gsub("[[:digit:]]", "", s))
+  unique_cell_types = unique(cell_types)
+  
+  cell_type_1 = unique_cell_types[1]
+  cell_type_2 = unique_cell_types[2]
+  
+  # densities
+  d1 = sapply(log10(lengths), density_est[[cell_type_1]])
+  d2 = sapply(log10(lengths), density_est[[cell_type_2]])
+  
+  # cell type 1
+  matrix_1 = m[, which(cell_types == cell_type_1), drop = FALSE]
+  p1 = d2/d1 # downsample if d2 < d1
+  p1[p1 > 1] = 1
+  matrix_1 = cbind(1:nrow(matrix_1), matrix_1) # temporarily store row number
+  matrix_1 = apply(matrix_1, 1, down_sample, p = p1)
+  
+  # cell type 2
+  matrix_2 = m[, which(cell_types == cell_type_2), drop = FALSE]
+  p2 = d1/d2 # downsample if d1 < d2
+  p2[p2 > 1] = 1
+  matrix_2 = cbind(1:nrow(matrix_2), matrix_2) # temporarily store row number
+  matrix_2 = apply(matrix_2, 1, down_sample, p = p2)
+  
+  m_new = cbind(matrix_1, matrix_2)
+  colnames(m_new) = c(cell_types[which(cell_types == cell_type_1)], cell_types[which(cell_types == cell_type_2)])
+  
+  return(m_new)
+}
+```
+
 
 #### cQN
 
@@ -1347,47 +1422,6 @@ suppressPackageStartupMessages({
   library(scales)
   library(EDASeq)
 })
-```
-
-
-```{r}
-# Example in documentation
-data(montgomery.subset) # counts
-data(sizeFactors.subset) # size factors
-data(uCovar)             # gene length and GC-content
-
-cqn.subset <- cqn(montgomery.subset, lengths = uCovar$length,
-                  x = uCovar$gccontent, sizeFactors = sizeFactors.subset,
-                  verbose = TRUE)
-
-RPKM.cqn <- cqn.subset$y + cqn.subset$offset # normalized expression values
-
-# groups
-grp1 <- c("NA06985", "NA06994", "NA07037", "NA10847", "NA11920")
-grp2 <- c("NA11918", "NA11931", "NA12003", "NA12006", "NA12287")
-
-# compare
-RPM <- sweep(log2(montgomery.subset + 1), 2, log2(sizeFactors.subset/10^6))
-RPKM.std <- sweep(RPM, 1, log2(uCovar$length / 10^3))
-whGenes <- which(rowMeans(RPKM.std) >= 2 & uCovar$length >= 100)
-M.std <- rowMeans(RPKM.std[whGenes, grp1]) - rowMeans(RPKM.std[whGenes, grp2])
-A.std <- rowMeans(RPKM.std[whGenes,])
-M.cqn <- rowMeans(RPKM.cqn[whGenes, grp1]) - rowMeans(RPKM.cqn[whGenes, grp2])
-A.cqn <- rowMeans(RPKM.cqn[whGenes,])
-
-par(mfrow = c(1,2))
-gccontent <- uCovar$gccontent[whGenes]
-whHigh <- which(gccontent > quantile(gccontent, 0.9))
-whLow <- which(gccontent < quantile(gccontent, 0.1))
-plot(A.std[whHigh], M.std[whHigh], cex = 0.2, pch = 16, xlab = "A",
-ylab = "M", main = "Standard RPKM",
-
-ylim = c(-4,4), xlim = c(0,12), col = "red")
-points(A.std[whLow], M.std[whLow], cex = 0.2, pch = 16, col = "blue")
-plot(A.cqn[whHigh], M.cqn[whHigh], cex = 0.2, pch = 16, xlab = "A",
-ylab = "M", main = "CQN normalized RPKM",
-ylim = c(-4,4), xlim = c(0,12), col = "red")
-points(A.cqn[whLow], M.cqn[whLow], cex = 0.2, pch = 16, col = "blue")
 ```
 
 Run on cluster using `cqn.sh`. 
@@ -1416,32 +1450,17 @@ rownames(genes_length_tb) = genes_length_tb$gene
 # Remove genes with missing GC content
 keep_genes = which(!is.na(genes_length_tb$gc))
 sce_sub = sce_sub[keep_genes, ]
-counts_sub = as.matrix(round(counts(sce_sub)))
 
 genes_length_tb = genes_length_tb[keep_genes, ]
 size_factors = colData(sce_sub)$sizeFactor
 
 # Aggregate over cell types
-
-# aggregated as mean of nonzero counts, then multiply all genes by some constant factor = number of cells
-counts_sub = as.matrix(counts(sce_sub))
+counts_sub = as.matrix(round(counts(sce_sub)))
 colnames(counts_sub) = colData(sce_sub)$ding_labels
-tmp_rowmeans = list()
-cell_types = unique(colnames(counts_sub))
-for(ct in cell_types){
-  tmp = counts_sub[, colnames(counts_sub) == ct]
-  # tmp = counts_sub[1:5, 1:5]
-  tmp[tmp == 0] = NA
-  tmp_rowmeans[[ct]] = apply(tmp, 1, function(x) mean(x, na.rm = TRUE))*ncol(tmp)
-}
-counts_sub = do.call(cbind, tmp_rowmeans) 
-colnames(counts_sub) = cell_types
+counts_sub = t(rowsum(t(counts_sub), colnames(counts_sub)))
 
-# aggregated as rowsums
-# counts_sub = t(rowsum(t(counts_sub), colnames(counts_sub)))
-
-counts_sub = round(counts_sub)
-counts_sub[is.nan(counts_sub)] = 0 # may be OK to fill in NaN with 0 depending on cQN treats zero counts (need to check)
+# Downsample according to density
+counts_sub = downsample_by_density(m = counts_sub, density_est = density_est)
 
 tic()
 cqn_res = cqn(counts = counts_sub,
