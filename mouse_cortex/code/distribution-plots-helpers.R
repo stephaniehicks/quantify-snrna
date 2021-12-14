@@ -32,7 +32,7 @@ down_sample = function(x, p){
 }
 
 downsample_by_density = function(m, density_est, lengths){
-  cell_types = sapply(colnames(m), function(s) gsub("[[:digit:]]", "", s))
+  cell_types = sapply(colnames(m), function(s) gsub("\\s+[[:digit:]]", "", s))
   unique_cell_types = unique(cell_types)
   
   cell_type_1 = unique_cell_types[1]

@@ -1356,6 +1356,14 @@ for(i in seq_along(celltype_markers)){
 }
 celltype_markers_tb = bind_rows(celltype_markers_tb_ls) 
 
+celltype_markers_length_tb = rowData(sce_ls[["preandmrna"]]) %>%
+  as_tibble() %>%
+  select(gene_name, start, end, transcript_length) %>%
+  mutate(length = end - start,
+         gene = rownames(rowData(sce_ls[["preandmrna"]]))) %>%
+  select(gene, gene_name, length, transcript_length) %>%
+  right_join(., celltype_markers_tb, by = "gene_name")
+
 # Plot density
 density_neurons = density(log10(celltype_markers_length_tb %>% filter(cell_type == "Neurons") %>% pull(length)))
 density_endothelial = density(log10(celltype_markers_length_tb %>% filter(cell_type == "Endothelial cells") %>% pull(length)))

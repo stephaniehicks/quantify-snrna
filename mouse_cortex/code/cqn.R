@@ -15,6 +15,7 @@ suppressPackageStartupMessages({
   library(tictoc)
   library(cqn)
   library(scales)
+  source(here("./mouse_cortex/code/distribution-plots-helpers.R"))
 })
 
 # Read in SingleCellExperiment objects
@@ -28,7 +29,7 @@ sce_ls[["intronseparate"]] = readRDS(here("mouse_cortex", "salmon_quants", "intr
 pipeline = "preandmrna"
 select_cells = colData(sce_ls[[pipeline]]) %>%
   as.data.frame() %>%
-  filter(ding_labels %in% c("Excitatory neuron", "Astrocyte")) %>%
+  filter(ding_labels %in% c("Inhibitory neuron", "Endothelial")) %>%
   filter(cortex == "cortex2") %>%
   row.names()
 sce_sub = sce_ls[[pipeline]][, select_cells]
@@ -45,7 +46,14 @@ for(i in seq_along(celltype_markers)){
   celltype_markers_tb_ls[[i]] = tibble(cell_type = names(celltype_markers)[i],
                                        gene_name = unique(unlist(celltype_markers[i])))
 }
-celltype_markers_tb = bind_rows(celltype_markers_tb_ls) 
+celltype_markers_tb = bind_rows(celltype_markers_tb_ls)
+celltype_markers_length_tb = rowData(sce_ls[[pipeline]]) %>%
+  as_tibble() %>%
+  dplyr::select(gene_name, start, end, transcript_length) %>%
+  mutate(length = end - start,
+         gene = rownames(rowData(sce_ls[[pipeline]]))) %>%
+  dplyr::select(gene, gene_name, length, transcript_length) %>%
+  right_join(., celltype_markers_tb, by = "gene_name")
 
 density_neurons = density(log10(celltype_markers_length_tb %>% filter(cell_type == "Neurons") %>% pull(length)))
 density_endothelial = density(log10(celltype_markers_length_tb %>% filter(cell_type == "Endothelial cells") %>% pull(length)))
@@ -55,10 +63,10 @@ density_est = list("Inhibitory neuron" = approxfun(density_neurons),
 # Get gene lengths
 genes_length_tb = rowData(sce_sub) %>%
   as_tibble() %>%
-  select(start, end) %>%
+  dplyr::select(start, end) %>%
   mutate(length = end - start,
          gene = rownames(rowData(sce_sub))) %>%
-  select(gene, length)
+  dplyr::select(gene, length)
 genes_length_tb = as.data.frame(genes_length_tb)
 
 # Get GC content
@@ -128,7 +136,7 @@ res
 
 # Shrinkage of LFC when count values are too low
 resultsNames(dds)
-resLFC = lfcShrink(dds, coef="ding_labels_Excitatory.neuron_vs_Astrocyte", type="apeglm")
+resLFC = lfcShrink(dds, coef="ding_labels_Inhibitory.neuron_vs_Endothelial", type="apeglm")
 
 # MA plot for shrunken log2 fold change
 plotMA(resLFC)
@@ -136,10 +144,10 @@ plotMA(resLFC)
 # Add gene length to table
 genes_length_tb = rowData(sce_ls[[pipeline]]) %>%
   as_tibble() %>%
-  select(start, end) %>%
+  dplyr::select(start, end) %>%
   mutate(length = end - start,
          gene = rownames(rowData(sce_ls[[pipeline]]))) %>%
-  select(gene, length)
+  dplyr::select(gene, length)
 
 resLFC = resLFC %>%
   as_tibble() %>%
@@ -147,5 +155,5 @@ resLFC = resLFC %>%
   left_join(., genes_length_tb, by = "gene")
 
 # Save results
-saveRDS(seq_data, here(paste0("./mouse_cortex/output/counts_ea_", pipeline, "_cqn.rds")))
-saveRDS(resLFC, here(paste0("./mouse_cortex/output/de_ea_", pipeline, "_lfc_cqn.rds")))
+saveRDS(seq_data, here(paste0("./mouse_cortex/output/counts_ea_", pipeline, "_cqn_bc.rds")))
+saveRDS(resLFC, here(paste0("./mouse_cortex/output/de_ea_", pipeline, "_lfc_cqn_bc.rds")))
