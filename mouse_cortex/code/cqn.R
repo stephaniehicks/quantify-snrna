@@ -1,7 +1,7 @@
 # cqn.R
 # -----------------------------------------------------------------------------
 # Author:             Albert Kuo
-# Date last modified: Oct 20, 2021
+# Date last modified: Dec 14, 2021
 #
 # Run cQN to normalize and then run DE analysis.
 
@@ -32,6 +32,25 @@ select_cells = colData(sce_ls[[pipeline]]) %>%
   filter(cortex == "cortex2") %>%
   row.names()
 sce_sub = sce_ls[[pipeline]][, select_cells]
+
+# Estimate p_BC
+pred_celltypes = readRDS(here("mouse_cortex", "salmon_quants", "transcripts_pipeline", "singler_results.rds"))
+all.markers <- metadata(pred_celltypes)$de.genes
+
+celltype_markers = all.markers[unique(colData(sce_ls[[pipeline]])$singleR_labels_pruned)]
+celltype_markers = sapply(celltype_markers, unlist)
+celltype_markers_tb_ls = list()
+for(i in seq_along(celltype_markers)){
+  if(is.null(unlist(celltype_markers[i]))) next
+  celltype_markers_tb_ls[[i]] = tibble(cell_type = names(celltype_markers)[i],
+                                       gene_name = unique(unlist(celltype_markers[i])))
+}
+celltype_markers_tb = bind_rows(celltype_markers_tb_ls) 
+
+density_neurons = density(log10(celltype_markers_length_tb %>% filter(cell_type == "Neurons") %>% pull(length)))
+density_endothelial = density(log10(celltype_markers_length_tb %>% filter(cell_type == "Endothelial cells") %>% pull(length)))
+density_est = list("Inhibitory neuron" = approxfun(density_neurons),
+                   "Endothelial" = approxfun(density_endothelial))
 
 # Get gene lengths
 genes_length_tb = rowData(sce_sub) %>%
@@ -76,13 +95,16 @@ seq_data = newSeqExpressionSet(counts = counts_sub,
                                featureData = as.data.frame(genes_length_tb),
                                phenoData = pdata)
 
-dds = DESeqDataSetFromMatrix(countData = counts(seq_data), # take integers 
+dds = DESeqDataSetFromMatrix(countData = counts(seq_data),
                              colData = pData(seq_data),
                              design = ~ ding_labels)
 
-# Run cQN to get normalizationFactors
+# Downsample according to density p_BC
+counts_leftover = downsample_by_density(m = counts_sub, density_est = density_est, lengths = genes_length_tb$length)
+
+# Run cQN on leftover counts to get normalizationFactors
 tic()
-cqn_res = cqn(counts = counts_sub, 
+cqn_res = cqn(counts = counts_leftover, 
               lengths = genes_length_tb$length, # length
               x = genes_length_tb$gc, # GC content
               # subindex = which(rowMeans(counts_sub) > 15), # Default is rowMeans > 50

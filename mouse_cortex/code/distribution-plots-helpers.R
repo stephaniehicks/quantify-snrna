@@ -1,7 +1,7 @@
 # distribution-plots-helpers.R
 # -----------------------------------------------------------------------------
 # Author:             Albert Kuo
-# Date last modified: Apr 13, 2021
+# Date last modified: Dec 14, 2021
 #
 # Helper functions for distribution-plots.R
 
@@ -21,6 +21,46 @@ Down_Sample_Matrix<-function(expr_mat,min_lib_size=NULL){
     unlist(lapply(x,function(y){rbinom(1, y, prob)}))
   }
   apply(expr_mat, 2, down_sample)
+}
+
+# Downsample counts by the relative cell-type specific density over length estimated using marker genes
+down_sample = function(x, p){
+  i = x[1]
+  prob = p[i]
+  if(is.na(prob)) return(x)
+  return(unlist(lapply(x, function(y){rbinom(1, y, prob)})))
+}
+
+downsample_by_density = function(m, density_est, lengths){
+  cell_types = sapply(colnames(m), function(s) gsub("[[:digit:]]", "", s))
+  unique_cell_types = unique(cell_types)
+  
+  cell_type_1 = unique_cell_types[1]
+  cell_type_2 = unique_cell_types[2]
+  
+  # densities
+  d1 = sapply(log10(lengths), density_est[[cell_type_1]])
+  d2 = sapply(log10(lengths), density_est[[cell_type_2]])
+  
+  # cell type 1
+  matrix_1 = m[, which(cell_types == cell_type_1), drop = FALSE]
+  p1 = d2/d1 # downsample if d2 < d1
+  p1[p1 > 1] = 1
+  matrix_1 = cbind(1:nrow(matrix_1), matrix_1) # temporarily store row number
+  matrix_1 = t(apply(matrix_1, 1, down_sample, p = p1))[, 2:ncol(matrix_1), drop = FALSE]
+  
+  # cell type 2
+  matrix_2 = m[, which(cell_types == cell_type_2), drop = FALSE]
+  p2 = d1/d2 # downsample if d1 < d2
+  p2[p2 > 1] = 1
+  matrix_2 = cbind(1:nrow(matrix_2), matrix_2) # temporarily store row number
+  matrix_2 = t(apply(matrix_2, 1, down_sample, p = p2))[, 2:ncol(matrix_2), drop = FALSE]
+  
+  m_new = cbind(matrix_1, matrix_2)
+  colnames(m_new) = c(cell_types[which(cell_types == cell_type_1)], cell_types[which(cell_types == cell_type_2)])
+  m_new = m_new[, cell_types]
+  
+  return(m_new)
 }
 
 # Plot P(X_i = 0) against average expression level mu_i
@@ -293,8 +333,8 @@ p_chisq_test_2 = function(m, distribution = "poisson"){
   
   f_obs = m
   f_hyp = mu_ij
-  # f_hyp[T] = 1
-  # mu_ij = 1
+  # f_hyp[T] = 100
+  # mu_ij = 100
   
   if(distribution == "poisson"){
     chi_square = rowSums((f_obs-f_hyp)^2/f_hyp)
@@ -307,8 +347,8 @@ p_chisq_test_2 = function(m, distribution = "poisson"){
     # phi = 1/coef(model)["I(means^2)"]
     
     # Option 2 (edgeR)
-    phi = 1/edgeR::estimateCommonDisp(m)
-    # phi = 0.3
+    # phi = 1/edgeR::estimateCommonDisp(m)
+    phi = 0.3
     
     # Option 2.5 (use edgeR mean)
     # mu_ij = edgeR::glmFit(m, dispersion = 1/phi)$fitted.values
