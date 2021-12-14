@@ -1373,12 +1373,12 @@ celltype_markers_length_tb %>%
 ```
 
 ```{r}
-# downsample by marker gene density
+# Downsample counts by the relative cell-type specific density over length estimated using marker genes
 down_sample = function(x, p){
   i = x[1]
   prob = p[i]
   if(is.na(prob)) return(x)
-  return(unlist(lapply(x[2:length(x)], function(y){rbinom(1, y, prob)})))
+  return(unlist(lapply(x, function(y){rbinom(1, y, prob)})))
 }
   
 downsample_by_density = function(m, density_est, lengths){
@@ -1397,14 +1397,14 @@ downsample_by_density = function(m, density_est, lengths){
   p1 = d2/d1 # downsample if d2 < d1
   p1[p1 > 1] = 1
   matrix_1 = cbind(1:nrow(matrix_1), matrix_1) # temporarily store row number
-  matrix_1 = apply(matrix_1, 1, down_sample, p = p1)
+  matrix_1 = t(apply(matrix_1, 1, down_sample, p = p1))[, 2:ncol(matrix_1), drop = FALSE]
   
   # cell type 2
   matrix_2 = m[, which(cell_types == cell_type_2), drop = FALSE]
   p2 = d1/d2 # downsample if d1 < d2
   p2[p2 > 1] = 1
   matrix_2 = cbind(1:nrow(matrix_2), matrix_2) # temporarily store row number
-  matrix_2 = apply(matrix_2, 1, down_sample, p = p2)
+  matrix_2 = t(apply(matrix_2, 1, down_sample, p = p2))[, 2:ncol(matrix_2), drop = FALSE]
   
   m_new = cbind(matrix_1, matrix_2)
   colnames(m_new) = c(cell_types[which(cell_types == cell_type_1)], cell_types[which(cell_types == cell_type_2)])
@@ -1460,10 +1460,10 @@ colnames(counts_sub) = colData(sce_sub)$ding_labels
 counts_sub = t(rowsum(t(counts_sub), colnames(counts_sub)))
 
 # Downsample according to density
-counts_sub = downsample_by_density(m = counts_sub, density_est = density_est)
+counts_leftover = downsample_by_density(m = counts_sub, density_est = density_est, lengths = genes_length_tb$length)
 
 tic()
-cqn_res = cqn(counts = counts_sub,
+cqn_res = cqn(counts = counts_leftover,
               lengths = genes_length_tb$length, # length
               x = genes_length_tb$gc, # GC content
               # subindex = which(rowMeans(counts_sub) > 15), # Default is rowMeans > 50
