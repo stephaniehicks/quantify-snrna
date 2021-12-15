@@ -1214,38 +1214,38 @@ res = res %>%
 
 ```{r}
 pipeline = "preandmrna"
-res = readRDS(here(paste0("./mouse_cortex/output/de_ie_", pipeline, "_lfc.rds")))
+res = readRDS(here(paste0("./mouse_cortex/output/de_ie_", pipeline, "_lfc_cqn_bc.rds")))
 
-res = res %>%
-  left_join(., genes_rowsums_tb %>% distinct(gene, transcripts, preandmrna, introncollapse, intronseparate), by = "gene") # from binned by overall expression
+# res = res %>%
+  # left_join(., genes_rowsums_tb %>% distinct(gene, transcripts, preandmrna, introncollapse, intronseparate), by = "gene") # from binned by overall expression
 
 # Length vs log2fold change
 p = res %>%
   ggplot(aes(x = length, y = log2FoldChange)) + 
-  geom_point(alpha = 0.05) +
+  geom_point(aes(color = padj < 0.05), alpha = 0.05) +
   geom_smooth() +
   scale_x_log10() +
   labs(x = "Gene length") +
   theme_bw()
 print(p)
-saveRDS(p, here(paste0("./mouse_cortex/plots/de_length_bias_", pipeline, "_ie.rds")))
+# saveRDS(p, here(paste0("./mouse_cortex/plots/de_length_bias_", pipeline, "_ie.rds")))
 
 # Density histograms for all genes (orange) vs differential genes (blue)
 p = res %>%
   ggplot(aes(x = length, y = ..density..)) +
-  geom_density(fill = "#E69F00", alpha = 0.5) +
-  geom_density(data = res %>% filter(padj < 0.05), aes(x = length, y = ..density..), fill = "#56B4E9", alpha = 0.5) +
+  geom_histogram(fill = "#E69F00", alpha = 0.5) +
+  geom_histogram(data = res %>% filter(padj < 0.05), aes(x = length, y = ..density..), fill = "#56B4E9", alpha = 0.5) +
   scale_x_log10() +
   labs(x = "Gene length", y = "Density") +
   theme_bw()
 print(p)
-saveRDS(p, here(paste0("./mouse_cortex/plots/de_length_bias_dens_", pipeline, "_ie.rds")))
+# saveRDS(p, here(paste0("./mouse_cortex/plots/de_length_bias_dens_", pipeline, "_ie.rds")))
 ```
 
 ```{r}
 pipeline = "preandmrna"
 res_no_cqn = readRDS(here(paste0("./mouse_cortex/output/de_ie_", pipeline, "_lfc.rds")))
-res_with_cqn = readRDS(here(paste0("./mouse_cortex/output/de_ie_", pipeline, "_lfc_cqn.rds")))
+res_with_cqn = readRDS(here(paste0("./mouse_cortex/output/de_ie_", pipeline, "_lfc_cqn_bc.rds")))
 
 res_no_cqn_ranked = res_no_cqn %>%
   arrange(padj) %>%
@@ -1427,7 +1427,38 @@ counts_sub = t(rowsum(t(counts_sub), colnames(counts_sub)))
 
 # Downsample according to density
 counts_leftover = downsample_by_density(m = counts_sub, density_est = density_est, lengths = genes_length_tb$length)
+```
 
+```{r}
+# Compare gene length bias before and after downsampling
+compare_glb_tb = genes_length_tb %>%
+  mutate(endothelial_before = counts_sub[, 1],
+    inhibitory_neuron_before = counts_sub[, 2],
+    endothelial_after = counts_leftover[, 1],
+    inhibitory_neuron_after = counts_leftover[, 2]) %>%
+  pivot_longer(cols = endothelial_before:inhibitory_neuron_after,
+               names_to = "type",
+               values_to = "count")
+
+# Length vs expression
+compare_glb_tb %>%
+  ggplot(aes(x = length, y = count, color = type)) +
+  geom_smooth() + 
+  scale_x_log10() +
+  scale_y_log10() + 
+  theme_bw()
+
+# Density over length
+compare_glb_tb %>%
+  filter(count != 0) %>%
+  ggplot(aes(x = length, fill = type)) +
+  geom_histogram(alpha = 0.5) + 
+  scale_x_log10() + 
+  theme_bw()
+```
+
+
+```{r}
 tic()
 cqn_res = cqn(counts = counts_leftover,
               lengths = genes_length_tb$length, # length
