@@ -1,7 +1,7 @@
 # cqn.R
 # -----------------------------------------------------------------------------
 # Author:             Albert Kuo
-# Date last modified: Dec 14, 2021
+# Date last modified: Dec 15, 2021
 #
 # Run cQN to normalize and then run DE analysis.
 
@@ -29,7 +29,7 @@ sce_ls[["intronseparate"]] = readRDS(here("mouse_cortex", "salmon_quants", "intr
 pipeline = "preandmrna"
 select_cells = colData(sce_ls[[pipeline]]) %>%
   as.data.frame() %>%
-  filter(ding_labels %in% c("Inhibitory neuron", "Endothelial")) %>%
+  filter(ding_labels %in% c("Excitatory neuron", "Astrocyte")) %>%
   filter(cortex == "cortex2") %>%
   row.names()
 sce_sub = sce_ls[[pipeline]][, select_cells]
@@ -56,9 +56,9 @@ celltype_markers_length_tb = rowData(sce_ls[[pipeline]]) %>%
   right_join(., celltype_markers_tb, by = "gene_name")
 
 density_neurons = density(log10(celltype_markers_length_tb %>% filter(cell_type == "Neurons") %>% pull(length)))
-density_endothelial = density(log10(celltype_markers_length_tb %>% filter(cell_type == "Endothelial cells") %>% pull(length)))
-density_est = list("Inhibitory neuron" = approxfun(density_neurons),
-                   "Endothelial" = approxfun(density_endothelial))
+density_astrocyte = density(log10(celltype_markers_length_tb %>% filter(cell_type == "Astrocytes") %>% pull(length)))
+density_est = list("Excitatory neuron" = approxfun(density_neurons),
+                   "Astrocyte" = approxfun(density_astrocyte))
 
 # Get gene lengths
 genes_length_tb = rowData(sce_sub) %>%
@@ -136,7 +136,7 @@ res
 
 # Shrinkage of LFC when count values are too low
 resultsNames(dds)
-resLFC = lfcShrink(dds, coef="ding_labels_Inhibitory.neuron_vs_Endothelial", type="apeglm")
+resLFC = lfcShrink(dds, coef="ding_labels_Excitatory.neuron_vs_Astrocyte", type="apeglm")
 
 # MA plot for shrunken log2 fold change
 plotMA(resLFC)

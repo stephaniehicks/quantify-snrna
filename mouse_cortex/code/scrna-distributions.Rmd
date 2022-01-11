@@ -401,11 +401,39 @@ tibble(f_obs = sort(unlist(f_obs)),
 
 ```{r}
 # Negative binomial (single overdispersion parameter)
-counts_sub_cluster_scaled = matrix(rnbinom(n = 30*21483, size = 0.3, mu = 1), ncol = 30, nrow = 21483)
+counts_sub_cluster_scaled = matrix(rnbinom(n = 300*21483, size = 10, mu = 1), ncol = 300, nrow = 21483)
 
+m = counts_sub_cluster_scaled
+total_sum = sum(m)
+c_i = colSums(m)                # proportion of counts in sample i
+lambda_j = rowSums(m)/total_sum # proportion of counts in gene j
+# lambda_alt = rowSums(t(t(m)/c_i))/ncol(m)
+mu_ij = outer(lambda_j, c_i)
+
+f_obs = m
+f_hyp = mu_ij
+# f_hyp[T] = 100
+# mu_ij = 100
+
+# Option 2 (edgeR)
+# phi = 1/edgeR::estimateCommonDisp(m)
+phi = 10
+
+# Option 2.5 (use edgeR mean)
+# mu_ij = edgeR::glmFit(m, dispersion = 1/phi)$fitted.values
+# f_hyp = mu_ij
+
+f_var = mu_ij + mu_ij^2/phi
+summand_sqrt = as.vector((f_obs-f_hyp)/sqrt(f_var)) # for diagnostic purposes
+chi_square = rowSums((f_obs-f_hyp)^2/f_var)
+print(mean(summand_sqrt))
+print(var(summand_sqrt))
+```
+
+
+```{r}
 # Ungrouped chi-squared test
-chi_obs_nb = p_chisq_test_2(counts_sub_cluster_scaled, distribution = "nb 1")
-plot_dt = tibble(chi_obs = chi_obs_nb) %>%
+plot_dt = tibble(chi_obs = chi_square) %>%
   arrange(chi_obs) %>%
   # drop_na() %>%
   mutate(chi_quantile = qchisq(p = (1:length(chi_obs))/length(chi_obs), df = ncol(counts_sub_cluster_scaled) - 2),

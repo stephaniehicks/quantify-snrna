@@ -1214,11 +1214,30 @@ res = res %>%
 
 ```{r}
 pipeline = "preandmrna"
-res = readRDS(here(paste0("./mouse_cortex/output/de_ie_", pipeline, "_lfc_cqn_bc.rds")))
+res_1 = readRDS(here(paste0("./mouse_cortex/output/de_ea_", pipeline, "_lfc.rds")))
+res_2 = readRDS(here(paste0("./mouse_cortex/output/de_ea_", pipeline, "_lfc_cqn.rds")))
+res_3 = readRDS(here(paste0("./mouse_cortex/output/de_ea_", pipeline, "_lfc_cqn_bc.rds")))
 
 # res = res %>%
   # left_join(., genes_rowsums_tb %>% distinct(gene, transcripts, preandmrna, introncollapse, intronseparate), by = "gene") # from binned by overall expression
 
+label_res = function(res){
+  # Label which genes are marker genes
+  singler_marker_genes = celltype_markers_length_tb %>%
+    filter(cell_type %in% c("Neurons", "Astrocytes")) %>% # need to change this for different cell types
+    pull(gene)
+  
+  res = res %>%
+    mutate(is_marker_gene = (gene %in% singler_marker_genes),
+           is_differential_gene = padj < 0.05)
+  return(res)
+}
+
+res_1 = label_res(res_1)
+res_2 = label_res(res_2)
+res_3 = label_res(res_3)
+
+res = res_1
 # Length vs log2fold change
 p = res %>%
   ggplot(aes(x = length, y = log2FoldChange)) + 
@@ -1240,6 +1259,15 @@ p = res %>%
   theme_bw()
 print(p)
 # saveRDS(p, here(paste0("./mouse_cortex/plots/de_length_bias_dens_", pipeline, "_ie.rds")))
+
+
+res_1 %>%
+  right_join(., res_2, by = "gene") %>%
+  ggplot(aes(x = is_differential_gene.y, fill = is_differential_gene.x)) + 
+  facet_wrap(~ is_marker_gene.y, scales = "free", labeller = label_both) +
+  geom_bar() +
+  theme_bw() +
+  theme(legend.position = "top")
 ```
 
 ```{r}
@@ -1366,12 +1394,12 @@ celltype_markers_length_tb = rowData(sce_ls[["preandmrna"]]) %>%
 
 # Plot density
 density_neurons = density(log10(celltype_markers_length_tb %>% filter(cell_type == "Neurons") %>% pull(length)))
-density_endothelial = density(log10(celltype_markers_length_tb %>% filter(cell_type == "Endothelial cells") %>% pull(length)))
-density_est = list("Inhibitory neuron" = approxfun(density_neurons),
-                   "Endothelial" = approxfun(density_endothelial))
+density_endothelial = density(log10(celltype_markers_length_tb %>% filter(cell_type == "Astrocytes") %>% pull(length)))
+density_est = list("Excitatory neuron" = approxfun(density_neurons),
+                   "Astrocyte" = approxfun(density_endothelial))
 
 celltype_markers_length_tb %>%
-  filter(cell_type %in% c("Neurons", "Endothelial cells")) %>%
+  filter(cell_type %in% c("Neurons", "Astrocytes")) %>%
   ggplot(aes(x = length, fill = cell_type)) + 
   geom_density(alpha = 0.5) +
   # geom_histogram(position = "identity", alpha = 0.5) +
@@ -1393,7 +1421,7 @@ suppressPackageStartupMessages({
 Run on cluster using `cqn.sh`. 
 
 ```{r}
-sce_sub = sce_ls[["preandmrna"]][, colData(sce_ls[["preandmrna"]])$ding_labels %in% c("Inhibitory neuron", "Endothelial") & colData(sce_ls[["preandmrna"]])$cortex == "cortex2"]
+sce_sub = sce_ls[["preandmrna"]][, colData(sce_ls[["preandmrna"]])$ding_labels %in% c("Excitatory neuron", "Astrocyte") & colData(sce_ls[["preandmrna"]])$cortex == "cortex2"]
 
 # Get gene lengths
 genes_length_tb = rowData(sce_ls[["preandmrna"]]) %>%
@@ -1432,11 +1460,11 @@ counts_leftover = downsample_by_density(m = counts_sub, density_est = density_es
 ```{r}
 # Compare gene length bias before and after downsampling
 compare_glb_tb = genes_length_tb %>%
-  mutate(endothelial_before = counts_sub[, 1],
-    inhibitory_neuron_before = counts_sub[, 2],
-    endothelial_after = counts_leftover[, 1],
-    inhibitory_neuron_after = counts_leftover[, 2]) %>%
-  pivot_longer(cols = endothelial_before:inhibitory_neuron_after,
+  mutate(astrocyte_before = counts_sub[, 1],
+    excitatory_neuron_before = counts_sub[, 2],
+    astrocyte_after = counts_leftover[, 1],
+    excitatory_neuron_after = counts_leftover[, 2]) %>%
+  pivot_longer(cols = astrocyte_before:excitatory_neuron_after,
                names_to = "type",
                values_to = "count")
 
@@ -1446,14 +1474,6 @@ compare_glb_tb %>%
   geom_smooth() + 
   scale_x_log10() +
   scale_y_log10() + 
-  theme_bw()
-
-# Density over length
-compare_glb_tb %>%
-  filter(count != 0) %>%
-  ggplot(aes(x = length, fill = type)) +
-  geom_histogram(alpha = 0.5) + 
-  scale_x_log10() + 
   theme_bw()
 ```
 
