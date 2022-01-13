@@ -1214,21 +1214,27 @@ res = res %>%
 
 ```{r}
 pipeline = "preandmrna"
-res_1 = readRDS(here(paste0("./mouse_cortex/output/de_ea_", pipeline, "_lfc.rds")))
-res_2 = readRDS(here(paste0("./mouse_cortex/output/de_ea_", pipeline, "_lfc_cqn.rds")))
-res_3 = readRDS(here(paste0("./mouse_cortex/output/de_ea_", pipeline, "_lfc_cqn_bc.rds")))
+res_1 = readRDS(here(paste0("./mouse_cortex/output/de_ie_", pipeline, "_lfc.rds")))
+res_2 = readRDS(here(paste0("./mouse_cortex/output/de_ie_", pipeline, "_lfc_cqn.rds")))
+res_3 = readRDS(here(paste0("./mouse_cortex/output/de_ie_", pipeline, "_lfc_cqn_bc.rds")))
 
 # res = res %>%
   # left_join(., genes_rowsums_tb %>% distinct(gene, transcripts, preandmrna, introncollapse, intronseparate), by = "gene") # from binned by overall expression
 
 label_res = function(res){
   # Label which genes are marker genes
-  singler_marker_genes = celltype_markers_length_tb %>%
-    filter(cell_type %in% c("Neurons", "Astrocytes")) %>% # need to change this for different cell types
+  singler_marker_genes_1 = celltype_markers_length_tb %>%
+    filter(cell_type %in% c("Neurons")) %>% # need to change this for different cell types
+    pull(gene)
+  singler_marker_genes_2 = celltype_markers_length_tb %>%
+    filter(cell_type %in% c("Endothelial cells")) %>% # need to change this for different cell types ("Astrocytes" or "Endothelial cells")
     pull(gene)
   
   res = res %>%
-    mutate(is_marker_gene = (gene %in% singler_marker_genes),
+    mutate(is_marker_gene = ifelse((gene %in% singler_marker_genes_1 &
+                                      gene %in% singler_marker_genes_2), "Both",
+                                     ifelse((gene %in% singler_marker_genes_1), "Neurons", 
+                                            ifelse((gene %in% singler_marker_genes_2), "Endothelial", "None"))),
            is_differential_gene = padj < 0.05)
   return(res)
 }
@@ -1260,6 +1266,13 @@ p = res %>%
 print(p)
 # saveRDS(p, here(paste0("./mouse_cortex/plots/de_length_bias_dens_", pipeline, "_ie.rds")))
 
+# Compare overlap between differential genes and singleR marker genes
+res_1 %>%
+  ggplot(aes(x = is_differential_gene)) + 
+  facet_wrap(~ is_marker_gene, scales = "free", labeller = label_both) +
+  geom_bar() +
+  theme_bw() +
+  theme(legend.position = "top")
 
 res_1 %>%
   right_join(., res_2, by = "gene") %>%
