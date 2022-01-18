@@ -566,7 +566,86 @@ sim %>%
   labs(y = "expression") +
   theme_bw()
 ```
+Stochastic simulation
 
+```{r}
+set.seed(1)
+n = 5000
+seq_depth = 50
+gene_lengths = 10^(rnorm(n = n, mean = 10, sd = 2))
+gene_lengths[gene_lengths < 0] = 0
+
+epsilon = 0.01
+sim = tibble(gene_id = 1:n,
+             length = gene_lengths,
+             log10_length = log10(length),
+             neuron_prob = dnorm(log10_length, mean = 12, sd = 5),
+             endothelial_prob = dnorm(log10_length, mean = 8, sd = 5),
+             neuron_bias = log10_length/max(2*log10(gene_lengths)),
+             endothelial_bias = log10_length/(max(log10(gene_lengths))),
+             neuron_expression = rbinom(n = n, size = seq_depth, prob = neuron_prob*neuron_bias),
+             endothelial_expression = rbinom(n = n, size = seq_depth, prob = endothelial_prob*endothelial_bias))
+
+# Apply downsampling
+m = as.matrix(sim %>% select(neuron_expression, endothelial_expression))
+lengths = sim$length
+density_est = list()
+density_est[["neuron_expression"]] = function(log10_length){return(dnorm(log10_length, mean = 12, sd = 5))}
+density_est[["endothelial_expression"]] = function(log10_length){dnorm(log10_length, mean = 8, sd = 5)}
+
+m_ds = downsample_by_density(m = m, density_est = density_est, lengths = lengths)
+colnames(m_ds) = paste(colnames(m), "downsampled", sep = "_")
+sim = cbind(sim, m_ds) %>%
+  as_tibble()
+```
+
+
+```{r}
+# Overall length bias 
+sim %>%
+  select(length, neuron_bias, endothelial_bias) %>%
+  pivot_longer(-length, names_to = "cell_type", values_to = "expression") %>%
+  ggplot(aes(x = length, y = expression, color = cell_type)) +
+  geom_point(alpha = 0.5) + 
+  scale_x_log10() +
+  labs(title = "p'(L, C)") +
+  theme_bw()
+
+# Cell type specific probability of expression
+sim %>%
+  ggplot() + 
+  geom_line(aes(x = length, y = neuron_prob), color = "blue") + 
+  geom_line(aes(x = length, y = endothelial_prob), color = "red") + 
+  scale_x_log10() +
+  labs(y = "prob") +
+  labs(title = "p(L, C)") +
+  theme_bw()
+
+# Cell type specific length bias
+sim %>% 
+  ggplot() +
+  geom_point(aes(x = length, y = neuron_expression), alpha = 0.01, color = "blue") +
+  geom_smooth(aes(x = length, y = neuron_expression), method = "loess", color = "blue") +
+  geom_point(aes(x = length, y = endothelial_expression), alpha = 0.01, color = "red") +
+  geom_smooth(aes(x = length, y = endothelial_expression), method = "loess", color = "red") +
+  scale_x_log10() +
+  labs(title = "Observed expression",
+       y = "expression") +
+  theme_bw()
+
+# Downsampled expression
+sim %>% 
+  ggplot() +
+  geom_point(aes(x = length, y = neuron_expression_downsampled), alpha = 0.01, color = "blue") +
+  geom_smooth(aes(x = length, y = neuron_expression_downsampled), method = "loess", color = "blue") +
+  geom_point(aes(x = length, y = endothelial_expression_downsampled), alpha = 0.01, color = "red") +
+  geom_smooth(aes(x = length, y = endothelial_expression_downsampled), method = "loess", color = "red") +
+  scale_x_log10() +
+  labs(title = "Downsampled expression",
+       subtitle = "Should only reflect the technial bias",
+       y = "expression") +
+  theme_bw()
+```
 
 #### GC content
 
