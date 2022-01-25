@@ -172,5 +172,5 @@ if(downsample & cqn){
   saveRDS(resLFC, here(paste0("./mouse_cortex/output/de_ie_", pipeline, "_lfc_cqn.rds")))
 } else {
   saveRDS(seq_data, here(paste0("./mouse_cortex/output/counts_ie_", pipeline, ".rds")))
-  saveRDS(resLFC, here(paste0("./mouse_cortex/output/de_ie_", pipeline, ".rds")))
+  saveRDS(resLFC, here(paste0("./mouse_cortex/output/de_ie_", pipeline, "_lfc.rds")))
 }
