@@ -1,7 +1,7 @@
 # cqn.R
 # -----------------------------------------------------------------------------
 # Author:             Albert Kuo
-# Date last modified: Dec 15, 2021
+# Date last modified: Jan 25, 2022
 #
 # Run cQN to normalize and then run DE analysis.
 
@@ -18,6 +18,9 @@ suppressPackageStartupMessages({
   source(here("./mouse_cortex/code/distribution-plots-helpers.R"))
 })
 
+downsample = F # boolean toggle for downsampling step
+cqn = F        # boolean toggle for cqn step
+
 # Read in SingleCellExperiment objects
 run_number = "all" # give run_number or "all" for all of them together
 sce_ls = list()
@@ -29,12 +32,12 @@ sce_ls[["intronseparate"]] = readRDS(here("mouse_cortex", "salmon_quants", "intr
 pipeline = "preandmrna"
 select_cells = colData(sce_ls[[pipeline]]) %>%
   as.data.frame() %>%
-  filter(ding_labels %in% c("Excitatory neuron", "Astrocyte")) %>%
+  filter(ding_labels %in% c("Inhibitory neuron", "Endothelial")) %>% # Inhibitory neuron, Excitatory neuron, Astrocyte, Endothelial
   filter(cortex == "cortex2") %>%
   row.names()
 sce_sub = sce_ls[[pipeline]][, select_cells]
 
-# Estimate p_BC
+# Estimate p_BC (p(L, C))
 pred_celltypes = readRDS(here("mouse_cortex", "salmon_quants", "transcripts_pipeline", "singler_results.rds"))
 all.markers <- metadata(pred_celltypes)$de.genes
 
@@ -56,9 +59,9 @@ celltype_markers_length_tb = rowData(sce_ls[[pipeline]]) %>%
   right_join(., celltype_markers_tb, by = "gene_name")
 
 density_neurons = density(log10(celltype_markers_length_tb %>% filter(cell_type == "Neurons") %>% pull(length)))
-density_astrocyte = density(log10(celltype_markers_length_tb %>% filter(cell_type == "Astrocytes") %>% pull(length)))
-density_est = list("Excitatory neuron" = approxfun(density_neurons),
-                   "Astrocyte" = approxfun(density_astrocyte))
+density_astrocyte = density(log10(celltype_markers_length_tb %>% filter(cell_type == "Endothelial cells") %>% pull(length))) # Neurons, Astrocytes, Endothelial cells
+density_est = list("Inhibitory neuron" = approxfun(density_neurons),
+                   "Endothelial" = approxfun(density_astrocyte))
 
 # Get gene lengths
 genes_length_tb = rowData(sce_sub) %>%
@@ -108,26 +111,32 @@ dds = DESeqDataSetFromMatrix(countData = counts(seq_data),
                              design = ~ ding_labels)
 
 # Downsample according to density p_BC
-counts_leftover = downsample_by_density(m = counts_sub, density_est = density_est, lengths = genes_length_tb$length)
+if(downsample){
+  counts_leftover = downsample_by_density(m = counts_sub, density_est = density_est, lengths = genes_length_tb$length)
+} else {
+  counts_leftover = counts_sub
+}
 
 # Run cQN on leftover counts to get normalizationFactors
-tic()
-cqn_res = cqn(counts = counts_leftover, 
-              lengths = genes_length_tb$length, # length
-              x = genes_length_tb$gc, # GC content
-              # subindex = which(rowMeans(counts_sub) > 15), # Default is rowMeans > 50
-              # sizeFactors = size_factors,
-              verbose = FALSE)
-toc()
-
-# Get offset from cqn to use as normalizationfactors in DESeq function
-cqnOffset <- cqn_res$glm.offset
-cqnNormFactors <- exp(cqnOffset)
-normFactors <- cqnNormFactors / exp(rowMeans(log(cqnNormFactors)))
+if(cqn){
+  tic()
+  cqn_res = cqn(counts = counts_leftover, 
+                lengths = genes_length_tb$length, # length
+                x = genes_length_tb$gc, # GC content
+                # subindex = which(rowMeans(counts_sub) > 15), # Default is rowMeans > 50
+                # sizeFactors = size_factors,
+                verbose = FALSE)
+  toc()
+  
+  # Get offset from cqn to use as normalizationfactors in DESeq function
+  cqnOffset <- cqn_res$glm.offset
+  cqnNormFactors <- exp(cqnOffset)
+  normFactors <- cqnNormFactors / exp(rowMeans(log(cqnNormFactors)))
+  normalizationFactors(dds) <- normFactors
+}
 
 # Compute log2fold change and p-values
 tic("DESeq")
-normalizationFactors(dds) <- normFactors
 dds = DESeq(dds)
 toc()
 
@@ -136,7 +145,7 @@ res
 
 # Shrinkage of LFC when count values are too low
 resultsNames(dds)
-resLFC = lfcShrink(dds, coef="ding_labels_Excitatory.neuron_vs_Astrocyte", type="apeglm")
+resLFC = lfcShrink(dds, coef="ding_labels_Inhibitory.neuron_vs_Endothelial", type="apeglm") # Excitatory.neuron_vs_Astrocyte, Inhibitory.neuron_vs_Endothelial
 
 # MA plot for shrunken log2 fold change
 plotMA(resLFC)
@@ -155,5 +164,13 @@ resLFC = resLFC %>%
   left_join(., genes_length_tb, by = "gene")
 
 # Save results
-saveRDS(seq_data, here(paste0("./mouse_cortex/output/counts_ea_", pipeline, "_cqn_bc.rds")))
-saveRDS(resLFC, here(paste0("./mouse_cortex/output/de_ea_", pipeline, "_lfc_cqn_bc.rds")))
+if(downsample & cqn){
+  saveRDS(seq_data, here(paste0("./mouse_cortex/output/counts_ie_", pipeline, "_cqn_bc.rds"))) # ea, ie
+  saveRDS(resLFC, here(paste0("./mouse_cortex/output/de_ie_", pipeline, "_lfc_cqn_bc.rds")))
+} else if(cqn){
+  saveRDS(seq_data, here(paste0("./mouse_cortex/output/counts_ie_", pipeline, "_cqn.rds")))
+  saveRDS(resLFC, here(paste0("./mouse_cortex/output/de_ie_", pipeline, "_lfc_cqn.rds")))
+} else {
+  saveRDS(seq_data, here(paste0("./mouse_cortex/output/counts_ie_", pipeline, ".rds")))
+  saveRDS(resLFC, here(paste0("./mouse_cortex/output/de_ie_", pipeline, ".rds")))
+}
