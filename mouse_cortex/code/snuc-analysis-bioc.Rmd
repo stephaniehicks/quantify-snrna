@@ -1515,9 +1515,9 @@ res = res %>%
 
 ```{r}
 pipeline = "preandmrna"
-res_1 = readRDS(here(paste0("./mouse_cortex/output/de_ie_", pipeline, "_lfc.rds")))
-res_2 = readRDS(here(paste0("./mouse_cortex/output/de_ie_", pipeline, "_lfc_cqn.rds")))
-res_3 = readRDS(here(paste0("./mouse_cortex/output/de_ie_", pipeline, "_lfc_cqn_bc.rds")))
+res_1 = readRDS(here(paste0("./mouse_cortex/output/de_ea_", pipeline, "_lfc.rds")))
+res_2 = readRDS(here(paste0("./mouse_cortex/output/de_ea_", pipeline, "_lfc_cqn.rds")))
+res_3 = readRDS(here(paste0("./mouse_cortex/output/de_ea_", pipeline, "_lfc_cqn_bc.rds")))
 
 # res = res %>%
   # left_join(., genes_rowsums_tb %>% distinct(gene, transcripts, preandmrna, introncollapse, intronseparate), by = "gene") # from binned by overall expression
@@ -1526,10 +1526,10 @@ label_res = function(res, pairwise = FALSE){
   # Label which genes are marker genes
   if(pairwise){ # Use pairwise differential genes only
     celltype_markers = all.markers[unique(colData(sce_ls[["preandmrna"]])$singleR_labels_pruned)]
-    singler_marker_genes_1 = celltype_markers$Neurons$`Endothelial cells`
-    singler_marker_genes_2 = celltype_markers$`Endothelial cells`$Neurons
-    # singler_marker_genes_1 = celltype_markers$Neurons$`Astrocytes`
-    # singler_marker_genes_2 = celltype_markers$`Astrocytes`$Neurons
+    # singler_marker_genes_1 = celltype_markers$Neurons$`Endothelial cells`
+    # singler_marker_genes_2 = celltype_markers$`Endothelial cells`$Neurons
+    singler_marker_genes_1 = celltype_markers$Neurons$`Astrocytes`
+    singler_marker_genes_2 = celltype_markers$`Astrocytes`$Neurons
     
     singler_marker_genes_1 = rowData(sce_ls[["preandmrna"]]) %>% as_tibble() %>% 
       filter(gene_name %in% singler_marker_genes_1) %>% pull(gene_id)
@@ -1540,7 +1540,7 @@ label_res = function(res, pairwise = FALSE){
       filter(cell_type %in% c("Neurons")) %>% # need to change this for different cell types
       pull(gene)
     singler_marker_genes_2 = celltype_markers_length_tb %>%
-      filter(cell_type %in% c("Endothelial cells")) %>% # need to change this for different cell types ("Astrocytes" or "Endothelial cells")
+      filter(cell_type %in% c("Astrocytes")) %>% # need to change this for different cell types ("Astrocytes" or "Endothelial cells")
       pull(gene)
   }
   
@@ -1548,7 +1548,7 @@ label_res = function(res, pairwise = FALSE){
     mutate(is_marker_gene = ifelse((gene %in% singler_marker_genes_1 &
                                       gene %in% singler_marker_genes_2), "Both",
                                    ifelse((gene %in% singler_marker_genes_1), "Neurons", 
-                                          ifelse((gene %in% singler_marker_genes_2), "Endothelial", "None"))),
+                                          ifelse((gene %in% singler_marker_genes_2), "Astrocytes", "None"))),
            is_differential_gene = padj < 0.05)
   return(res)
 }
@@ -1583,14 +1583,14 @@ print(p)
 # Compare overlap between differential genes and singleR marker genes
 res_1 %>%
   ggplot(aes(x = is_differential_gene)) + 
-  facet_wrap(~ is_marker_gene, scales = "free", labeller = label_both) +
+  facet_wrap(~ is_marker_gene, scales = "free_y", labeller = label_both) +
   geom_bar() +
   labs(title = "Pairwise marker genes only") +
   theme_bw() +
   theme(legend.position = "top")
 
 res_1 %>%
-  right_join(., res_3, by = "gene") %>%
+  right_join(., res_2, by = "gene") %>%
   ggplot(aes(x = is_differential_gene.y, fill = is_differential_gene.x)) + 
   facet_wrap(~ is_marker_gene.y, scales = "free_y", labeller = label_both) +
   geom_bar() +
@@ -1616,6 +1616,37 @@ res_3 %>%
     adorn_percentages("row") %>%
     adorn_pct_formatting(digits = 2) %>%
     adorn_ns
+```
+
+```{r}
+## Top n differential versus proportion of marker genes recovered (maximize biological signal)
+get_prop = function(res, label_normalization){
+  res = res %>%
+    arrange(padj) %>%
+    mutate(n_marker_genes_1 = cumsum(is_marker_gene == "Astrocytes"),
+           n_marker_genes_2 = cumsum(is_marker_gene == "Neurons"),
+           n = row_number(),
+           prop_marker_genes_1 = n_marker_genes_1/n,
+           prop_marker_genes_2 = n_marker_genes_2/n,
+           label = label_normalization) %>%
+    select(gene, padj, n, prop_marker_genes_1, prop_marker_genes_2, label) %>%
+    pivot_longer(cols = starts_with("prop_marker_genes"),
+                 names_to = "marker_genes_celltype",
+                 values_to = "proportion")
+}
+
+res_prop_1 = get_prop(res_1, label_normalization = "None")
+res_prop_2 = get_prop(res_2, label_normalization = "cQN only")
+res_prop_3 = get_prop(res_3, label_normalization = "downsampling and cQN")
+res_prop = bind_rows(res_prop_1, res_prop_2, res_prop_3)
+
+res_prop %>%
+  ggplot(aes(x = n, y = proportion, color = label)) + 
+  geom_line() +
+  geom_point() + 
+  facet_wrap(~ marker_genes_celltype, nrow = 2, scales = "free_y") +
+  xlim(c(0, 5000)) +
+  theme_bw()
 ```
 
 ```{r}
