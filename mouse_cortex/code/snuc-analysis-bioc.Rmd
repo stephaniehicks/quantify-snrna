@@ -13,7 +13,7 @@ output:
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
-  ## Exploratory Analysis
+## Exploratory Analysis
 
 ```{r}
 suppressPackageStartupMessages({
@@ -1526,10 +1526,12 @@ label_res = function(res, pairwise = FALSE){
   # Label which genes are marker genes
   if(pairwise){ # Use pairwise differential genes only
     celltype_markers = all.markers[unique(colData(sce_ls[["preandmrna"]])$singleR_labels_pruned)]
-    # singler_marker_genes_1 = celltype_markers$Neurons$`Endothelial cells`
-    # singler_marker_genes_2 = celltype_markers$`Endothelial cells`$Neurons
-    singler_marker_genes_1 = celltype_markers$Neurons$`Astrocytes`
-    singler_marker_genes_2 = celltype_markers$`Astrocytes`$Neurons
+    # singler_marker_genes_1 = c(celltype_markers$Neurons$`Endothelial cells`, celltype_markers$`Neurons activated`$`Endothelial cells`)
+    # singler_marker_genes_2 = c(celltype_markers$`Endothelial cells`$Neurons, celltype_markers$`Endothelial cells`$`Neurons activated`)
+    singler_marker_genes_1 = c(celltype_markers$Neurons$`Astrocytes`, celltype_markers$Neurons$`Astrocytes activated`,
+                               celltype_markers$`Neurons activated`$`Astrocytes`, celltype_markers$`Neurons activated`$`Astrocytes activated`)
+    singler_marker_genes_2 = c(celltype_markers$`Astrocytes`$Neurons, celltype_markers$`Astrocytes`$`Neurons activated`,
+                               celltype_markers$`Astrocytes activated`$Neurons, celltype_markers$`Astrocytes`$`Neurons activated`)
     
     singler_marker_genes_1 = rowData(sce_ls[["preandmrna"]]) %>% as_tibble() %>% 
       filter(gene_name %in% singler_marker_genes_1) %>% pull(gene_id)
@@ -1598,6 +1600,19 @@ res_1 %>%
   theme_bw() +
   theme(legend.position = "top")
 
+res_1 %>%
+  right_join(., res_2, by = "gene") %>%
+  ggplot(aes(x = length.x, color = is_differential_gene.y)) +
+  geom_density() +
+  scale_x_log10() +
+  facet_wrap(~ is_marker_gene.y, scales = "free_y", labeller = label_both) +
+  labs(title = "Pairwise marker genes only") +
+  theme_bw() +
+  theme(legend.position = "top")
+```
+
+
+```{r}
 # Tables
 library(janitor)
 ## Differential genes
