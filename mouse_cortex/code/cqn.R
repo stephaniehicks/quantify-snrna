@@ -64,10 +64,11 @@ celltype_markers_length_tb = rowData(sce_ls[[pipeline]]) %>%
   dplyr::select(gene, gene_name, length, transcript_length) %>%
   right_join(., celltype_markers_tb, by = "gene_name")
 
-density_1 = density(log10(celltype_markers_length_tb %>% filter(cell_type == cell_type_1) %>% pull(length)))
-density_2 = density(log10(celltype_markers_length_tb %>% filter(cell_type == cell_type_2) %>% pull(length))) 
-density_est = list(cell_type_labels[1] = approxfun(density_1),
-                   cell_type_labels[2] = approxfun(density_2))
+length_name = ifelse(pipeline == "transcripts", "transcript_length", "length")
+density_1 = density(log10(celltype_markers_length_tb %>% filter(cell_type == cell_type_1) %>% pull(!!length_name)))
+density_2 = density(log10(celltype_markers_length_tb %>% filter(cell_type == cell_type_2) %>% pull(!!length_name))) 
+density_est = list(approxfun(density_1), approxfun(density_2))
+names(density_est) = cell_type_labels
 
 # Get gene lengths
 genes_length_tb = rowData(sce_sub) %>%
@@ -118,9 +119,11 @@ dds = DESeqDataSetFromMatrix(countData = counts(seq_data),
 
 # Downsample according to density p_BC
 if(downsample){
-  lengths_use = ifelse(pipeline == "transcripts", 
-                       genes_length_tb$transcript_length, 
-                       genes_length_tb$length)
+  if(pipeline == "transcripts"){
+    lengths_use = genes_length_tb$transcript_length
+  } else {
+    lengths_use = genes_length_tb$length
+  }
   counts_leftover = downsample_by_density(m = counts_sub, density_est = density_est, 
                                           lengths = lengths_use)
 } else {
@@ -130,9 +133,11 @@ if(downsample){
 # Run cQN on leftover counts to get normalizationFactors
 if(cqn){
   tic()
-  lengths_use = ifelse(pipeline == "transcripts", 
-                       genes_length_tb$transcript_length, 
-                       genes_length_tb$length)
+  if(pipeline == "transcripts"){
+    lengths_use = genes_length_tb$transcript_length
+  } else {
+    lengths_use = genes_length_tb$length
+  }
   cqn_res = cqn(counts = counts_leftover, 
                 lengths = lengths_use, # length
                 x = genes_length_tb$gc, # GC content
