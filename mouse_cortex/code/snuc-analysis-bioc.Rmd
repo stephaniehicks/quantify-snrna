@@ -190,7 +190,7 @@ toc()
 ```
 
 
-### Gene Length Bias 
+### Gene length bias 
 
 #### Overall length bias
 
@@ -380,17 +380,17 @@ genes_rowmeans_tb = genes_rowmeans_tb %>%
 ```
 
 ```{r}
-# Plot gene length bias by cell type
+# Plot gene length bias by cell type/cortex
 p = genes_rowmeans_tb %>%
   mutate(cell_group = case_when(cell_type %in% c("Excitatory neuron", "Inhibitory neuron") ~ 1,
                                 cell_type %in% c("Endothelial", "Microglia") ~ 2,
                                 TRUE ~ 3)) %>%
   # filter(preandmrna > 0) %>%
   # filter(preandmrna_max_nA8 == 0) %>%
-  filter(cell_type %in% c("Excitatory neuron", "Astrocyte")) %>%
-  filter(cortex == "cortex2") %>%
+  # filter(cell_type %in% c("Excitatory neuron", "Astrocyte")) %>%
+  # filter(cortex == "cortex2") %>%
   ggplot(aes(x = length, y = preandmrna, color = cell_type)) +
-  # facet_wrap(cell_group ~ .) +
+  facet_wrap(cell_group ~ cortex) +
   # geom_point(alpha = 0.01) +
   geom_smooth() + 
   scale_x_log10() +
@@ -400,7 +400,26 @@ p = genes_rowmeans_tb %>%
   theme_bw() 
 
 print(p)
-saveRDS(p, here("./mouse_cortex/plots/gene_length_bias_ea_cortex2.rds"))
+# saveRDS(p, here("./mouse_cortex/plots/gene_length_bias_ea_cortex2.rds"))
+
+# Plot gene length bias by cortex/cell type
+genes_rowmeans_tb %>%
+  mutate(cell_group = case_when(cell_type %in% c("Excitatory neuron", "Inhibitory neuron") ~ 1,
+                                cell_type %in% c("Endothelial", "Microglia") ~ 2,
+                                TRUE ~ 3)) %>%
+  # filter(preandmrna > 0) %>%
+  # filter(preandmrna_max_nA8 == 0) %>%
+  # filter(cell_type %in% c("Excitatory neuron", "Astrocyte")) %>%
+  # filter(cortex == "cortex2") %>%
+  ggplot(aes(x = length, y = preandmrna, color = cortex)) +
+  facet_wrap(cell_type ~ .) +
+  # geom_point(alpha = 0.01) +
+  geom_smooth() + 
+  scale_x_log10() +
+  scale_y_log10() +
+  # scale_y_continuous(limits = c(0, 10)) +
+  labs(x = "Gene length", y = "Mean expression", color = "Cell Type") +
+  theme_bw() 
 ```
 
 ```{r}
@@ -1466,7 +1485,7 @@ plot_dt %>%
 
 #### DESeq 
 
-Run `de-analysis.R` on cluster.
+Run `de-analysis.R` or `cqn.R` on cluster.
 
 ```{r}
 library(DESeq2)
@@ -1748,6 +1767,86 @@ res_combined %>%
 #   scale_x_log10(limits = c(0.1, 1e7)) +
 #   scale_y_continuous(limits = c(0, 1)) +
 #   theme_bw()
+```
+
+### DE analysis (human samples)
+
+Download data from https://github.com/LieberInstitute/10xPilot_snRNAseq-human 
+
+```{r}
+load(here("./mouse_cortex/data/SCE_AMY-n5_tran-etal.rda")) # sce.amy.tran
+sce = sce.amy.tran
+``` 
+
+```{r}
+table(colData(sce)$donor)
+table(colData(sce)$cellType)
+```
+
+#### Gene length bias
+
+```{r}
+# Read in gene lengths (run on cluster with get-gc-content.R)
+gc_content_human = readRDS(here("./mouse_cortex/output/gc_content_human.rds"))
+gc_content_human = gc_content_human %>% 
+  as_tibble(rownames = "gene") %>% 
+  dplyr::rename(length_biomart = length)
+
+rowData(sce) = rowData(sce) %>%
+  as.data.frame() %>%
+  left_join(., gc_content_human, by = c("gene_id" = "gene"))
+```
+
+```{r}
+# Get rowmeans for every cell type and sample
+tmp_tb_ls = list()
+cell_types = unique(colData(sce)$cellType)
+samples = unique(colData(sce)$donor)
+cdata = colData(sce) %>% as.data.frame()
+
+for(cell_type in cell_types){
+  print(cell_type)
+  cells_ct = cdata %>%
+    filter(cellType == cell_type) %>%
+    rownames()
+  
+  for(s in samples){
+    sample_cells = cdata %>%
+      filter(donor == s) %>%
+      rownames()
+    
+    m = counts(sce[, sample_cells]) 
+    genes_rowmeans = rowMeans(m)
+    tmp_tb_ls[[paste(cell_type, s)]] = tibble(gene = names(genes_rowmeans),
+                                              mean_expression = genes_rowmeans,
+                                              cell_type = cell_type,
+                                              sample = s,
+                                              length_biomart = 1,
+                                              gc = 2)
+                                              # length_biomart = rowData(sce)$length_biomart,
+                                              # gc = rowData(sce)$gc)
+  }
+}
+
+genes_rowmeans_human_tb = bind_rows(tmp_tb_ls)
+```
+
+```{r}
+# Plot gene length bias by cortex/cell type
+genes_rowmeans_human_tb %>%
+  # filter(mean_expression > 0) %>%
+  # filter(preandmrna_max_nA8 == 0) %>%
+  filter(cell_type %in% c("Inhib_D")) %>%
+  # filter(cortex == "cortex2") %>%
+  ggplot(aes(x = length_biomart, y = mean_expression, color = sample)) +
+  facet_wrap(cell_type ~ .) +
+  geom_point(alpha = 0.01) +
+  geom_smooth() + 
+  scale_x_log10() +
+  scale_y_log10() +
+  # scale_y_continuous(limits = c(0, 10)) +
+  labs(x = "Gene length", y = "Mean expression", color = "Sample") +
+  theme_bw()
 ```
 
 
