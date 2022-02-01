@@ -1839,7 +1839,7 @@ genes_rowmeans_human_tb %>%
   filter(cell_type %in% c("Inhib_D")) %>%
   # filter(cortex == "cortex2") %>%
   ggplot(aes(x = length_biomart, y = mean_expression, color = sample)) +
-  facet_wrap(cell_type ~ .) +
+  facet_wrap(cell_type ~ protocol + sequencer) +
   geom_point(alpha = 0.01) +
   geom_smooth() + 
   scale_x_log10() +

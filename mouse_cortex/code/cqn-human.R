@@ -28,13 +28,14 @@ load(here("mouse_cortex", "data", "SCE_AMY-n5_tran-etal.rda"))
 # load(here("mouse_cortex", "data", "SCE_sACC-n5_tran-etal.rda"))
 
 # Comparison
-abb = "donor1-2"
+abb = "donor1-2_Inhib_D"
 coef = "ding_labels_donor1_vs_donor2"
+cell_type = c("Inhib_D")
 samples = c("donor1", "donor2")
 
 select_cells = colData(sce_ls[[pipeline]]) %>%
   as.data.frame() %>%
-  filter(cellType %in% c("Inhib_D")) %>%
+  filter(cellType %in% cell_type) %>%
   filter(donor %in% samples) %>%
   row.names()
 sce_sub = sce[, select_cells]
