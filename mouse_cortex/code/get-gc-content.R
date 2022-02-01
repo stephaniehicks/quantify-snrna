@@ -13,7 +13,7 @@ suppressPackageStartupMessages({
   library(tictoc)
 })
 
-org = "mmusculus_gene_ensembl"
+org = "hsa"
 
 if(org == "mmusculus_gene_ensembl"){
   # Read in SingleCellExperiment objects
@@ -42,9 +42,11 @@ if(org == "mmusculus_gene_ensembl"){
   load(here("mouse_cortex", "data", "SCE_NAc-n8_tran-etal.rda"))
   load(here("mouse_cortex", "data", "SCE_sACC-n5_tran-etal.rda"))
   
-  id = Reduce(union, list(rownames(sce.amy.tran), rownames(sce.dlpfc.tran),
-                          rownames(sce.hpc.tran), rownames(sce.nac.tran),
-                          rownames(sce.sacc.tran)))
+  id = Reduce(union, list(rowData(sce.amy.tran)$gene_id,
+                          rowData(sce.dlpfc.tran)$gene_id,
+                          rowData(sce.hpc.tran)$gene_id,
+                          rowData(sce.nac.tran)$gene_id,
+                          rowData(sce.sacc.tran)$gene_id))
   
   tic()
   gc = getGeneLengthAndGCContent(id, org, mode=c("biomart"))
