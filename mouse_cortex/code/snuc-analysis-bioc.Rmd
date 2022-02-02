@@ -1533,7 +1533,7 @@ res = res %>%
 
 
 ```{r}
-pipeline = "preandmrna"
+pipeline = "transcripts"
 res_1 = readRDS(here(paste0("./mouse_cortex/output/de_ea_", pipeline, "_lfc.rds")))
 res_2 = readRDS(here(paste0("./mouse_cortex/output/de_ea_", pipeline, "_lfc_cqn.rds")))
 res_3 = readRDS(here(paste0("./mouse_cortex/output/de_ea_", pipeline, "_lfc_cqn_bc.rds")))
@@ -1821,10 +1821,8 @@ for(cell_type in cell_types){
                                               mean_expression = genes_rowmeans,
                                               cell_type = cell_type,
                                               sample = s,
-                                              length_biomart = 1,
-                                              gc = 2)
-                                              # length_biomart = rowData(sce)$length_biomart,
-                                              # gc = rowData(sce)$gc)
+                                              length_biomart = rowData(sce)$length_biomart,
+                                              gc = rowData(sce)$gc)
   }
 }
 
@@ -1839,7 +1837,7 @@ genes_rowmeans_human_tb %>%
   filter(cell_type %in% c("Inhib_D")) %>%
   # filter(cortex == "cortex2") %>%
   ggplot(aes(x = length_biomart, y = mean_expression, color = sample)) +
-  facet_wrap(cell_type ~ protocol + sequencer) +
+  facet_wrap(cell_type ~ .) +
   geom_point(alpha = 0.01) +
   geom_smooth() + 
   scale_x_log10() +

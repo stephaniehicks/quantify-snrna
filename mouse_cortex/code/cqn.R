@@ -18,14 +18,14 @@ suppressPackageStartupMessages({
   source(here("./mouse_cortex/code/distribution-plots-helpers.R"))
 })
 
-downsample = F # boolean toggle for downsampling step
+downsample = T # boolean toggle for downsampling step
 cqn = T        # boolean toggle for cqn step
 
-abb = "ie"
+abb = "ea"
 cell_type_1 = "Neurons" # Neurons, Astrocytes, Endothelial cells
-cell_type_2 = "Endothelial cells"
-cell_type_labels = c("Inhibitory neuron", "Endothelial") # Inhibitory neuron, Excitatory neuron, Astrocyte, Endothelial
-coef_comparison = "ding_labels_Inhibitory.neuron_vs_Endothelial" # Excitatory.neuron_vs_Astrocyte, Inhibitory.neuron_vs_Endothelial
+cell_type_2 = "Astrocytes"
+cell_type_labels = c("Excitatory neuron", "Astrocyte") # Inhibitory neuron, Excitatory neuron, Astrocyte, Endothelial
+coef_comparison = "Excitatory.neuron_vs_Astrocyte" # Excitatory.neuron_vs_Astrocyte, Inhibitory.neuron_vs_Endothelial
 
 # Read in SingleCellExperiment objects
 run_number = "all" # give run_number or "all" for all of them together
