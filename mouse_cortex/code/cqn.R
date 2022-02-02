@@ -1,7 +1,7 @@
 # cqn.R
 # -----------------------------------------------------------------------------
 # Author:             Albert Kuo
-# Date last modified: Feb 1, 2022
+# Date last modified: Feb 2, 2022
 #
 # Run cQN to normalize and then run DE analysis.
 
@@ -21,11 +21,10 @@ suppressPackageStartupMessages({
 downsample = T # boolean toggle for downsampling step
 cqn = T        # boolean toggle for cqn step
 
-abb = "ea"
+abb = "ie"
 cell_type_1 = "Neurons" # Neurons, Astrocytes, Endothelial cells
 cell_type_2 = "Astrocytes"
 cell_type_labels = c("Excitatory neuron", "Astrocyte") # Inhibitory neuron, Excitatory neuron, Astrocyte, Endothelial
-coef_comparison = "Excitatory.neuron_vs_Astrocyte" # Excitatory.neuron_vs_Astrocyte, Inhibitory.neuron_vs_Endothelial
 
 # Read in SingleCellExperiment objects
 run_number = "all" # give run_number or "all" for all of them together
@@ -163,10 +162,10 @@ res
 
 # Shrinkage of LFC when count values are too low
 resultsNames(dds)
-resLFC = lfcShrink(dds, coef=coef_comparison, type="apeglm")
+resLFC = lfcShrink(dds, coef=resultsNames(dds)[resultsNames(dds) != "Intercept"], type="apeglm")
 
 # MA plot for shrunken log2 fold change
-plotMA(resLFC)
+# plotMA(resLFC)
 
 # Add gene length to table
 resLFC = resLFC %>%
