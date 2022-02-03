@@ -1774,13 +1774,18 @@ res_combined %>%
 Download data from https://github.com/LieberInstitute/10xPilot_snRNAseq-human 
 
 ```{r}
-load(here("./mouse_cortex/data/SCE_AMY-n5_tran-etal.rda")) # sce.amy.tran
+# load(here("mouse_cortex", "data", "SCE_AMY-n5_tran-etal.rda"))
+# load(here("mouse_cortex", "data", "SCE_DLPFC-n3_tran-etal.rda"))
+# load(here("mouse_cortex", "data", "SCE_HPC-n3_tran-etal.rda"))
+# load(here("mouse_cortex", "data", "SCE_NAc-n8_tran-etal.rda"))
+# load(here("mouse_cortex", "data", "SCE_sACC-n5_tran-etal.rda"))
 sce = sce.amy.tran
 ``` 
 
 ```{r}
 table(colData(sce)$donor)
 table(colData(sce)$cellType)
+table(colData(sce)$cellType, colData(sce)$donor)
 ```
 
 #### Gene length bias
@@ -1800,7 +1805,7 @@ rowData(sce) = rowData(sce) %>%
 ```{r}
 # Get rowmeans for every cell type and sample
 tmp_tb_ls = list()
-cell_types = unique(colData(sce)$cellType)
+cell_types = names(table(colData(sce)$cellType)[table(colData(sce)$cellType) > 500])
 samples = unique(colData(sce)$donor)
 cdata = colData(sce) %>% as.data.frame()
 
@@ -1815,7 +1820,10 @@ for(cell_type in cell_types){
       filter(donor == s) %>%
       rownames()
     
-    m = counts(sce[, sample_cells]) 
+    cells = intersect(cells_ct, sample_cells)
+    if(length(cells) < 50) next
+    
+    m = counts(sce[, cells]) 
     genes_rowmeans = rowMeans(m)
     tmp_tb_ls[[paste(cell_type, s)]] = tibble(gene = names(genes_rowmeans),
                                               mean_expression = genes_rowmeans,
@@ -1834,11 +1842,12 @@ genes_rowmeans_human_tb = bind_rows(tmp_tb_ls)
 genes_rowmeans_human_tb %>%
   # filter(mean_expression > 0) %>%
   # filter(preandmrna_max_nA8 == 0) %>%
-  filter(cell_type %in% c("Inhib_D")) %>%
+  # filter(cell_type %in% c("Inhib_D")) %>%
+  # filter(sample %in% c("donor4", "donor5")) %>%
   # filter(cortex == "cortex2") %>%
   ggplot(aes(x = length_biomart, y = mean_expression, color = sample)) +
   facet_wrap(cell_type ~ .) +
-  geom_point(alpha = 0.01) +
+  # geom_point(alpha = 0.01) +
   geom_smooth() + 
   scale_x_log10() +
   scale_y_log10() +
@@ -1846,6 +1855,36 @@ genes_rowmeans_human_tb %>%
   labs(x = "Gene length", y = "Mean expression", color = "Sample") +
   theme_bw()
 ```
+#### cQN & DESeq
+
+```{r}
+abb = "donor5-8_Micro"
+res_1 = readRDS(here(paste0("./mouse_cortex/output/de_", abb, "_human_lfc.rds")))
+res_2 = readRDS(here(paste0("./mouse_cortex/output/de_", abb, "_human_lfc_cqn.rds")))
+
+res = res_2
+# Length vs log2fold change
+p = res %>%
+  ggplot(aes(x = length_biomart, y = log2FoldChange)) + 
+  geom_point(aes(color = padj < 0.05), alpha = 0.05) +
+  geom_smooth() +
+  scale_x_log10() +
+  ylim(c(-5, 5)) +
+  labs(x = "Gene length") +
+  theme_bw()
+print(p)
+
+# Density histograms for all genes (orange) vs differential genes (blue)
+p = res %>%
+  ggplot(aes(x = length_biomart, y = ..density..)) +
+  geom_histogram(fill = "#E69F00", alpha = 0.5) +
+  geom_histogram(data = res %>% filter(padj < 0.05), aes(x = length_biomart, y = ..density..), fill = "#56B4E9", alpha = 0.5) +
+  scale_x_log10() +
+  labs(x = "Gene length", y = "Density") +
+  theme_bw()
+print(p)
+```
+
 
 
 ### Distributions
