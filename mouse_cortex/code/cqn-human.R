@@ -28,12 +28,12 @@ load(here("mouse_cortex", "data", "SCE_AMY-n5_tran-etal.rda"))
 # load(here("mouse_cortex", "data", "SCE_sACC-n5_tran-etal.rda"))
 
 # Comparison
-abb = "donor1-2_Inhib_D"
-coef = "ding_labels_donor1_vs_donor2"
-cell_type = c("Inhib_D")
-samples = c("donor1", "donor2")
+abb = "donor5-8_Micro"
+cell_type = c("Micro")
+samples = c("donor5", "donor8")
 
-select_cells = colData(sce_ls[[pipeline]]) %>%
+sce = sce.amy.tran
+select_cells = colData(sce) %>%
   as.data.frame() %>%
   filter(cellType %in% cell_type) %>%
   filter(donor %in% samples) %>%
@@ -52,11 +52,13 @@ rowData(sce) = rowData(sce) %>%
   left_join(., gc_content_human, by = c("gene_id" = "gene"))
 
 # Remove genes with missing GC content or length
-keep_genes = which(!is.na(gc_content_human$gc) & !is.na(gc_content$length_biomart))
+keep_genes = which(!is.na(gc_content_human$gc) & !is.na(gc_content_human$length_biomart))
 sce_sub = sce_sub[keep_genes, ]
 counts_sub = as.matrix(round(counts(sce_sub)))
 
 gc_content_human = gc_content_human[keep_genes, ]
+gc_content_human = as.data.frame(gc_content_human)
+rownames(gc_content_human) = gc_content_human$gene
 size_factors = colData(sce_sub)$sizeFactor
 # nonzero_sums = which(rowSums(counts_sub) != 0)
 # counts_sub = counts_sub[nonzero_sums, ]
@@ -66,13 +68,14 @@ counts_sub = as.matrix(counts(sce_sub))
 colnames(counts_sub) = colData(sce_sub)$donor
 counts_sub = t(rowsum(t(counts_sub), paste(colnames(counts_sub), sample(1:5, ncol(counts_sub), replace = TRUE))))
 counts_sub = round(counts_sub)
+rownames(counts_sub) = rownames(gc_content_human)
 
 pdata = as.data.frame(tibble(group = colnames(counts_sub),
                              sample_labels = sapply(colnames(counts_sub), function(x) gsub(".{2}$", "", x))))
 
 rownames(pdata) = colnames(counts_sub)
 seq_data = newSeqExpressionSet(counts = counts_sub,
-                               featureData = as.data.frame(gc_content_human),
+                               featureData = gc_content_human,
                                phenoData = pdata)
 
 dds = DESeqDataSetFromMatrix(countData = counts(seq_data),
@@ -108,7 +111,8 @@ res
 
 # Shrinkage of LFC when count values are too low
 resultsNames(dds)
-resLFC = lfcShrink(dds, coef=coef, type="apeglm") # 
+resLFC = lfcShrink(dds, coef=resultsNames(dds)[resultsNames(dds) != "Intercept"], 
+                   type="apeglm") 
 
 # MA plot for shrunken log2 fold change
 plotMA(resLFC)
@@ -116,12 +120,12 @@ plotMA(resLFC)
 # Add gene length and GC content to table
 genes_length_tb = rowData(sce) %>%
   as_tibble() %>%
-  dplyr::select(gene, length_biomart, gc)
+  dplyr::select(gene_id, length_biomart, gc)
 
 resLFC = resLFC %>%
   as_tibble() %>%
   mutate(gene = rownames(res)) %>%
-  left_join(., genes_length_tb, by = "gene")
+  left_join(., genes_length_tb, by = c("gene" = "gene_id"))
 
 # Save results
 if(cqn){
