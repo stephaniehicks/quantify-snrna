@@ -1533,10 +1533,13 @@ res = res %>%
 
 
 ```{r}
-pipeline = "transcripts"
-res_1 = readRDS(here(paste0("./mouse_cortex/output/de_ea_", pipeline, "_lfc.rds")))
-res_2 = readRDS(here(paste0("./mouse_cortex/output/de_ea_", pipeline, "_lfc_cqn.rds")))
-res_3 = readRDS(here(paste0("./mouse_cortex/output/de_ea_", pipeline, "_lfc_cqn_bc.rds")))
+# pipeline = "transcripts"
+# res_1 = readRDS(here(paste0("./mouse_cortex/output/de_ie_", pipeline, "_lfc.rds")))
+# res_2 = readRDS(here(paste0("./mouse_cortex/output/de_ie_", pipeline, "_lfc_cqn.rds")))
+# res_3 = readRDS(here(paste0("./mouse_cortex/output/de_ie_", pipeline, "_lfc_cqn_bc.rds")))
+
+res_1 = readRDS(here(paste0("./mouse_cortex/output/de_ie_", "transcripts", "_lfc.rds")))
+res_2 = readRDS(here(paste0("./mouse_cortex/output/de_ie_", "preandmrna", "_lfc.rds")))
 
 # res = res %>%
   # left_join(., genes_rowsums_tb %>% distinct(gene, transcripts, preandmrna, introncollapse, intronseparate), by = "gene") # from binned by overall expression
@@ -1545,12 +1548,12 @@ label_res = function(res, pairwise = FALSE){
   # Label which genes are marker genes
   if(pairwise){ # Use pairwise differential genes only
     celltype_markers = all.markers[unique(colData(sce_ls[["preandmrna"]])$singleR_labels_pruned)]
-    # singler_marker_genes_1 = c(celltype_markers$Neurons$`Endothelial cells`, celltype_markers$`Neurons activated`$`Endothelial cells`)
-    # singler_marker_genes_2 = c(celltype_markers$`Endothelial cells`$Neurons, celltype_markers$`Endothelial cells`$`Neurons activated`)
-    singler_marker_genes_1 = c(celltype_markers$Neurons$`Astrocytes`, celltype_markers$Neurons$`Astrocytes activated`,
-                               celltype_markers$`Neurons activated`$`Astrocytes`, celltype_markers$`Neurons activated`$`Astrocytes activated`)
-    singler_marker_genes_2 = c(celltype_markers$`Astrocytes`$Neurons, celltype_markers$`Astrocytes`$`Neurons activated`,
-                               celltype_markers$`Astrocytes activated`$Neurons, celltype_markers$`Astrocytes`$`Neurons activated`)
+    singler_marker_genes_1 = c(celltype_markers$Neurons$`Endothelial cells`, celltype_markers$`Neurons activated`$`Endothelial cells`)
+    singler_marker_genes_2 = c(celltype_markers$`Endothelial cells`$Neurons, celltype_markers$`Endothelial cells`$`Neurons activated`)
+    # singler_marker_genes_1 = c(celltype_markers$Neurons$`Astrocytes`, celltype_markers$Neurons$`Astrocytes activated`,
+    #                            celltype_markers$`Neurons activated`$`Astrocytes`, celltype_markers$`Neurons activated`$`Astrocytes activated`)
+    # singler_marker_genes_2 = c(celltype_markers$`Astrocytes`$Neurons, celltype_markers$`Astrocytes`$`Neurons activated`,
+    #                            celltype_markers$`Astrocytes activated`$Neurons, celltype_markers$`Astrocytes`$`Neurons activated`)
     
     singler_marker_genes_1 = rowData(sce_ls[["preandmrna"]]) %>% as_tibble() %>% 
       filter(gene_name %in% singler_marker_genes_1) %>% pull(gene_id)
@@ -1561,7 +1564,7 @@ label_res = function(res, pairwise = FALSE){
       filter(cell_type %in% c("Neurons")) %>% # need to change this for different cell types
       pull(gene)
     singler_marker_genes_2 = celltype_markers_length_tb %>%
-      filter(cell_type %in% c("Astrocytes")) %>% # need to change this for different cell types ("Astrocytes" or "Endothelial cells")
+      filter(cell_type %in% c("Endothelial cells")) %>% # need to change this for different cell types ("Astrocytes" or "Endothelial cells")
       pull(gene)
   }
   
@@ -1569,14 +1572,14 @@ label_res = function(res, pairwise = FALSE){
     mutate(is_marker_gene = ifelse((gene %in% singler_marker_genes_1 &
                                       gene %in% singler_marker_genes_2), "Both",
                                    ifelse((gene %in% singler_marker_genes_1), "Neurons", 
-                                          ifelse((gene %in% singler_marker_genes_2), "Astrocytes", "None"))),
+                                          ifelse((gene %in% singler_marker_genes_2), "Endothelial", "None"))),
            is_differential_gene = padj < 0.05)
   return(res)
 }
 
 res_1 = label_res(res_1, pairwise = T)
 res_2 = label_res(res_2, pairwise = T)
-res_3 = label_res(res_3, pairwise = T)
+# res_3 = label_res(res_3, pairwise = T)
 
 res = res_1
 # Length vs log2fold change
@@ -1657,7 +1660,7 @@ res_3 %>%
 get_prop = function(res, label_normalization){
   res = res %>%
     arrange(padj) %>%
-    mutate(n_marker_genes_1 = cumsum(is_marker_gene == "Astrocytes"),
+    mutate(n_marker_genes_1 = cumsum(is_marker_gene == "Endothelial"),
            n_marker_genes_2 = cumsum(is_marker_gene == "Neurons"),
            n = row_number(),
            prop_marker_genes_1 = n_marker_genes_1/n,
@@ -1669,10 +1672,14 @@ get_prop = function(res, label_normalization){
                  values_to = "proportion")
 }
 
-res_prop_1 = get_prop(res_1, label_normalization = "None")
-res_prop_2 = get_prop(res_2, label_normalization = "cQN only")
-res_prop_3 = get_prop(res_3, label_normalization = "downsampling and cQN")
-res_prop = bind_rows(res_prop_1, res_prop_2, res_prop_3)
+# res_prop_1 = get_prop(res_1, label_normalization = "None")
+# res_prop_2 = get_prop(res_2, label_normalization = "cQN only")
+# res_prop_3 = get_prop(res_3, label_normalization = "downsampling and cQN")
+# res_prop = bind_rows(res_prop_1, res_prop_2, res_prop_3)
+
+res_prop_1 = get_prop(res_1, label_normalization = "transcripts")
+res_prop_2 = get_prop(res_2, label_normalization = "preandmrna")
+res_prop = bind_rows(res_prop_1, res_prop_2)
 
 res_prop %>%
   ggplot(aes(x = n, y = proportion, color = label)) + 
