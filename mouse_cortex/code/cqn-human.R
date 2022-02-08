@@ -1,7 +1,7 @@
 # cqn-human.R
 # -----------------------------------------------------------------------------
 # Author:             Albert Kuo
-# Date last modified: Feb 1, 2022
+# Date last modified: Feb 8, 2022
 #
 # Copy of cqn.R to run on human samples
 
@@ -18,21 +18,21 @@ suppressPackageStartupMessages({
   source(here("./mouse_cortex/code/distribution-plots-helpers.R"))
 })
 
-cqn = F        # boolean toggle for cqn step
+cqn = T        # boolean toggle for cqn step
 
 # Load SCE objects
-load(here("mouse_cortex", "data", "SCE_AMY-n5_tran-etal.rda"))
-# load(here("mouse_cortex", "data", "SCE_DLPFC-n3_tran-etal.rda"))
+# load(here("mouse_cortex", "data", "SCE_AMY-n5_tran-etal.rda"))
+load(here("mouse_cortex", "data", "SCE_DLPFC-n3_tran-etal.rda"))
 # load(here("mouse_cortex", "data", "SCE_HPC-n3_tran-etal.rda"))
 # load(here("mouse_cortex", "data", "SCE_NAc-n8_tran-etal.rda"))
 # load(here("mouse_cortex", "data", "SCE_sACC-n5_tran-etal.rda"))
 
 # Comparison
-abb = "donor5-8_Micro"
-cell_type = c("Micro")
-samples = c("donor5", "donor8")
+abb = "donor1-2_Oligo"
+cell_type = c("Oligo")
+samples = c("donor1", "donor2")
+sce = sce.dlpfc.tran
 
-sce = sce.amy.tran
 select_cells = colData(sce) %>%
   as.data.frame() %>%
   filter(cellType %in% cell_type) %>%
@@ -63,10 +63,10 @@ size_factors = colData(sce_sub)$sizeFactor
 # nonzero_sums = which(rowSums(counts_sub) != 0)
 # counts_sub = counts_sub[nonzero_sums, ]
 
-# Aggregate over sample pseudo-groups (5 per donor)
+# Aggregate over sample pseudo-groups (2 per donor)
 counts_sub = as.matrix(counts(sce_sub))
 colnames(counts_sub) = colData(sce_sub)$donor
-counts_sub = t(rowsum(t(counts_sub), paste(colnames(counts_sub), sample(1:5, ncol(counts_sub), replace = TRUE))))
+counts_sub = t(rowsum(t(counts_sub), paste(colnames(counts_sub), sample(1:2, ncol(counts_sub), replace = TRUE))))
 counts_sub = round(counts_sub)
 rownames(counts_sub) = rownames(gc_content_human)
 
@@ -122,16 +122,23 @@ genes_length_tb = rowData(sce) %>%
   as_tibble() %>%
   dplyr::select(gene_id, length_biomart, gc)
 
-resLFC = resLFC %>%
+res = res %>%
   as_tibble() %>%
   mutate(gene = rownames(res)) %>%
+  left_join(., genes_length_tb, by = c("gene" = "gene_id"))
+
+resLFC = resLFC %>%
+  as_tibble() %>%
+  mutate(gene = rownames(resLFC)) %>%
   left_join(., genes_length_tb, by = c("gene" = "gene_id"))
 
 # Save results
 if(cqn){
   saveRDS(seq_data, here(paste0("./mouse_cortex/output/counts_", abb, "_", "human", "_cqn.rds")))
+  saveRDS(res, here(paste0("./mouse_cortex/output/de_", abb, "_", "human", "_cqn.rds")))
   saveRDS(resLFC, here(paste0("./mouse_cortex/output/de_", abb, "_", "human", "_lfc_cqn.rds")))
 } else {
   saveRDS(seq_data, here(paste0("./mouse_cortex/output/counts_", abb, "_", "human", ".rds")))
+  saveRDS(res, here(paste0("./mouse_cortex/output/de_", abb, "_", "human", ".rds")))
   saveRDS(resLFC, here(paste0("./mouse_cortex/output/de_", abb, "_", "human", "_lfc.rds")))
 }
