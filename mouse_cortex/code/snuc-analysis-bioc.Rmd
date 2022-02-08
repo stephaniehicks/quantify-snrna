@@ -1538,8 +1538,9 @@ res = res %>%
 # res_2 = readRDS(here(paste0("./mouse_cortex/output/de_ie_", pipeline, "_lfc_cqn.rds")))
 # res_3 = readRDS(here(paste0("./mouse_cortex/output/de_ie_", pipeline, "_lfc_cqn_bc.rds")))
 
-res_1 = readRDS(here(paste0("./mouse_cortex/output/de_ie_", "transcripts", "_lfc.rds")))
-res_2 = readRDS(here(paste0("./mouse_cortex/output/de_ie_", "preandmrna", "_lfc.rds")))
+res_1 = readRDS(here(paste0("./mouse_cortex/output/de_ea_", "transcripts", "_lengthsforcepreandmrna_FALSE", "_lfc.rds")))
+res_2 = readRDS(here(paste0("./mouse_cortex/output/de_ea_", "preandmrna", "_lengthsforcepreandmrna_FALSE", "_lfc.rds")))
+res_3 = readRDS(here(paste0("./mouse_cortex/output/de_ea_", "transcripts", "_lengthsforcepreandmrna_TRUE", "_lfc.rds")))
 
 # res = res %>%
   # left_join(., genes_rowsums_tb %>% distinct(gene, transcripts, preandmrna, introncollapse, intronseparate), by = "gene") # from binned by overall expression
@@ -1679,7 +1680,8 @@ get_prop = function(res, label_normalization){
 
 res_prop_1 = get_prop(res_1, label_normalization = "transcripts")
 res_prop_2 = get_prop(res_2, label_normalization = "preandmrna")
-res_prop = bind_rows(res_prop_1, res_prop_2)
+res_prop_3 = get_prop(res_3, label_normalization = "transcripts-full-length")
+res_prop = bind_rows(res_prop_1, res_prop_2, res_prop_3)
 
 res_prop %>%
   ggplot(aes(x = n, y = proportion, color = label)) + 
@@ -1781,12 +1783,12 @@ res_combined %>%
 Download data from https://github.com/LieberInstitute/10xPilot_snRNAseq-human 
 
 ```{r}
-# load(here("mouse_cortex", "data", "SCE_AMY-n5_tran-etal.rda"))
-# load(here("mouse_cortex", "data", "SCE_DLPFC-n3_tran-etal.rda"))
+load(here("mouse_cortex", "data", "SCE_AMY-n5_tran-etal.rda"))
+load(here("mouse_cortex", "data", "SCE_DLPFC-n3_tran-etal.rda"))
 # load(here("mouse_cortex", "data", "SCE_HPC-n3_tran-etal.rda"))
 # load(here("mouse_cortex", "data", "SCE_NAc-n8_tran-etal.rda"))
 # load(here("mouse_cortex", "data", "SCE_sACC-n5_tran-etal.rda"))
-sce = sce.amy.tran
+sce = sce.dlpfc.tran
 ``` 
 
 ```{r}
@@ -1833,6 +1835,7 @@ for(cell_type in cell_types){
     m = counts(sce[, cells]) 
     genes_rowmeans = rowMeans(m)
     tmp_tb_ls[[paste(cell_type, s)]] = tibble(gene = names(genes_rowmeans),
+                                              gene_id = rowData(sce)$gene_id,
                                               mean_expression = genes_rowmeans,
                                               cell_type = cell_type,
                                               sample = s,
@@ -1845,7 +1848,7 @@ genes_rowmeans_human_tb = bind_rows(tmp_tb_ls)
 ```
 
 ```{r}
-# Plot gene length bias by cortex/cell type
+# Plot gene length bias by sample
 genes_rowmeans_human_tb %>%
   # filter(mean_expression > 0) %>%
   # filter(preandmrna_max_nA8 == 0) %>%
@@ -1861,23 +1864,98 @@ genes_rowmeans_human_tb %>%
   # scale_y_continuous(limits = c(0, 10)) +
   labs(x = "Gene length", y = "Mean expression", color = "Sample") +
   theme_bw()
+
+# Plot GC bias by sample
+genes_rowmeans_human_tb %>%
+  # filter(mean_expression > 0) %>%
+  # filter(preandmrna_max_nA8 == 0) %>%
+  # filter(cell_type %in% c("Inhib_D")) %>%
+  # filter(sample %in% c("donor4", "donor5")) %>%
+  # filter(cortex == "cortex2") %>%
+  ggplot(aes(x = gc, y = mean_expression, color = sample)) +
+  facet_wrap(cell_type ~ .) +
+  # geom_point(alpha = 0.01) +
+  geom_smooth() + 
+  scale_x_log10() +
+  scale_y_log10() +
+  # scale_y_continuous(limits = c(0, 10)) +
+  labs(x = "GC content", y = "Mean expression", color = "Sample") +
+  theme_bw()
+```
+
+```{r}
+# Plot gene length bias by sample
+genes_rowmeans_human_tb %>%
+  # filter(mean_expression > 0) %>%
+  # filter(preandmrna_max_nA8 == 0) %>%
+  filter(cell_type %in% c("Oligo")) %>%
+  filter(sample %in% c("donor1", "donor2")) %>%
+  # filter(cortex == "cortex2") %>%
+  ggplot(aes(x = length_biomart, y = mean_expression, color = sample)) +
+  facet_wrap(cell_type ~ .) +
+  geom_point(alpha = 0.01) +
+  geom_smooth() + 
+  scale_x_log10() +
+  scale_y_log10() +
+  # scale_y_continuous(limits = c(0, 10)) +
+  labs(x = "Gene length", y = "Mean expression", color = "Sample") +
+  theme_bw()
+
+# Plot GC bias by sample
+genes_rowmeans_human_tb %>%
+  # filter(mean_expression > 0) %>%
+  # filter(preandmrna_max_nA8 == 0) %>%
+  filter(cell_type %in% c("Oligo")) %>%
+  filter(sample %in% c("donor1", "donor2")) %>%
+  # filter(cortex == "cortex2") %>%
+  ggplot(aes(x = gc, y = mean_expression, color = sample)) +
+  facet_wrap(cell_type ~ .) +
+  geom_point(alpha = 0.01) +
+  geom_smooth() + 
+  scale_x_log10() +
+  scale_y_log10() +
+  # scale_y_continuous(limits = c(0, 10)) +
+  labs(x = "GC content", y = "Mean expression", color = "Sample") +
+  theme_bw()
+```
+
+```{r}
+genes_rowmeans_human_tb %>%
+  filter(cell_type %in% c("Inhib_D")) %>%
+  filter(sample %in% c("donor4", "donor5")) %>%
+  arrange(-length_biomart)
 ```
 #### cQN & DESeq
 
 ```{r}
-abb = "donor5-8_Micro"
+abb = "donor1-2_Oligo"
 res_1 = readRDS(here(paste0("./mouse_cortex/output/de_", abb, "_human_lfc.rds")))
 res_2 = readRDS(here(paste0("./mouse_cortex/output/de_", abb, "_human_lfc_cqn.rds")))
 
 res = res_2
 # Length vs log2fold change
 p = res %>%
+  # filter(!is.na(padj)) %>%
   ggplot(aes(x = length_biomart, y = log2FoldChange)) + 
-  geom_point(aes(color = padj < 0.05), alpha = 0.05) +
+  geom_point(aes(color = padj < 0.05), alpha = 0.3) +
   geom_smooth() +
   scale_x_log10() +
-  ylim(c(-5, 5)) +
-  labs(x = "Gene length") +
+  # ylim(c(-5, 5)) +
+  labs(x = "Gene length",
+       y = "log2FoldChange") +
+  theme_bw()
+print(p)
+
+# GC content vs log2fold change
+p = res %>%
+  # filter(!is.na(padj)) %>%
+  ggplot(aes(x = gc, y = log2FoldChange)) + 
+  geom_point(aes(color = padj < 0.05), alpha = 0.3) +
+  geom_smooth() +
+  scale_x_log10() +
+  # ylim(c(-5, 5)) +
+  labs(x = "GC content",
+       y = "log2FoldChange") +
   theme_bw()
 print(p)
 
@@ -1892,7 +1970,17 @@ p = res %>%
 print(p)
 ```
 
+```{r}
+# Try to recreate DESeq2's log2FoldChange
+seq_data = readRDS(here(paste0("./mouse_cortex/output/counts_donor4-5_Inhib_D_human_cqn.rds")))
+counts(seq_data["ENSG00000269821", ])
+tmp = counts(seq_data["ENSG00000269821", ])/colSums(counts(seq_data))
+log2(mean(tmp[3:4]))-log2(mean(tmp[1:2]))
+mean(log2(tmp[3:4]))-mean(log2(tmp[1:2]))
 
+res_1 %>%
+  filter(gene == "ENSG00000269821")
+```
 
 ### Distributions
 
