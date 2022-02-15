@@ -227,7 +227,8 @@ genes_rowsums_tb = genes_rowsums_tb %>%
   
 # Median % increase in each bin
 genes_rowsums_tb = genes_rowsums_tb %>%
-  mutate(bin = ntile(length, 10))
+  mutate(bin = ntile(length, 10)) %>%
+  mutate(bin_transcript = ntile(transcript_length, 10))
 
 genes_rowsums_tb %>%
   group_by(bin) %>%
@@ -258,6 +259,34 @@ genes_rowsums_tb %>%
   scale_y_log10() +
   labs(x = "Bin (by gene length)") +
   theme_bw()
+
+# Gene rowsum across the 4 pipelines, where bin on the x-axis is by full preandmrna length
+genes_rowsums_tb %>%
+  pivot_longer(cols = c("transcripts", "preandmrna", "introncollapse", "intronseparate"),
+               names_to = "pipeline",
+               values_to = "count") %>%
+  mutate(pipeline = fct_relevel(pipeline, c("transcripts", "preandmrna", "introncollapse", "intronseparate"))) %>%
+  ggplot(aes(x = as.factor(bin), y = count, color = pipeline)) + 
+  geom_boxplot() + 
+  scale_y_log10() + 
+  labs(x = "Bin (by full gene length)") + 
+  theme_bw() +
+  theme(legend.position = "top")
+
+# Length bias of intronic reads (preandmrna - transcripts) versus exonic reads (transcripts)
+genes_rowsums_tb %>%
+  mutate(intronic_reads = preandmrna - transcripts,
+         exonic_reads = transcripts) %>%
+  select(intronic_reads, exonic_reads, bin, bin_transcript) %>%
+  pivot_longer(cols = ends_with("reads"),
+               names_to = "source",
+               values_to = "count") %>%
+  ggplot(aes(x = as.factor(bin_transcript), y = count, color = source)) + 
+  geom_boxplot() + 
+  scale_y_log10() +
+  labs(x = "Bin (by transcript length)") + 
+  theme_bw() +
+  theme(legend.position = "top")
 
 # Gene length by bin
 genes_rowsums_tb %>%
@@ -1538,9 +1567,9 @@ res = res %>%
 # res_2 = readRDS(here(paste0("./mouse_cortex/output/de_ie_", pipeline, "_lfc_cqn.rds")))
 # res_3 = readRDS(here(paste0("./mouse_cortex/output/de_ie_", pipeline, "_lfc_cqn_bc.rds")))
 
-res_1 = readRDS(here(paste0("./mouse_cortex/output/de_ea_", "transcripts", "_lengthsforcepreandmrna_FALSE", "_lfc.rds")))
-res_2 = readRDS(here(paste0("./mouse_cortex/output/de_ea_", "preandmrna", "_lengthsforcepreandmrna_FALSE", "_lfc.rds")))
-res_3 = readRDS(here(paste0("./mouse_cortex/output/de_ea_", "transcripts", "_lengthsforcepreandmrna_TRUE", "_lfc.rds")))
+res_1 = readRDS(here(paste0("./mouse_cortex/output/de_ie_", "transcripts", "_lengthsforcepreandmrna_FALSE", "_lfc.rds")))
+res_2 = readRDS(here(paste0("./mouse_cortex/output/de_ie_", "preandmrna", "_lfc.rds")))
+res_3 = readRDS(here(paste0("./mouse_cortex/output/de_ie_", "transcripts", "_lengthsforcepreandmrna_TRUE", "_lfc.rds")))
 
 # res = res %>%
   # left_join(., genes_rowsums_tb %>% distinct(gene, transcripts, preandmrna, introncollapse, intronseparate), by = "gene") # from binned by overall expression
@@ -1580,58 +1609,58 @@ label_res = function(res, pairwise = FALSE){
 
 res_1 = label_res(res_1, pairwise = T)
 res_2 = label_res(res_2, pairwise = T)
-# res_3 = label_res(res_3, pairwise = T)
+res_3 = label_res(res_3, pairwise = T)
 
 res = res_1
 # Length vs log2fold change
 p = res %>%
-  ggplot(aes(x = length, y = log2FoldChange)) + 
+  ggplot(aes(x = transcript_length, y = log2FoldChange)) + 
   geom_point(aes(color = padj < 0.05), alpha = 0.05) +
   geom_smooth() +
   scale_x_log10() +
-  labs(x = "Gene length") +
+  labs(x = "Transcript length") +
   theme_bw()
 print(p)
 # saveRDS(p, here(paste0("./mouse_cortex/plots/de_length_bias_", pipeline, "_ie.rds")))
 
 # Density histograms for all genes (orange) vs differential genes (blue)
 p = res %>%
-  ggplot(aes(x = length, y = ..density..)) +
+  ggplot(aes(x = transcript_length, y = ..density..)) +
   geom_histogram(fill = "#E69F00", alpha = 0.5) +
-  geom_histogram(data = res %>% filter(padj < 0.05), aes(x = length, y = ..density..), fill = "#56B4E9", alpha = 0.5) +
+  geom_histogram(data = res %>% filter(padj < 0.05), aes(x = transcript_length, y = ..density..), fill = "#56B4E9", alpha = 0.5) +
   scale_x_log10() +
-  labs(x = "Gene length", y = "Density") +
+  labs(x = "Transcript length", y = "Density") +
   theme_bw()
 print(p)
 # saveRDS(p, here(paste0("./mouse_cortex/plots/de_length_bias_dens_", pipeline, "_ie.rds")))
 
 # Compare overlap between differential genes and singleR marker genes
-res_1 %>%
-  ggplot(aes(x = is_differential_gene)) + 
-  facet_wrap(~ is_marker_gene, scales = "free_y", labeller = label_both) +
-  geom_bar() +
-  labs(title = "Pairwise marker genes only") +
-  theme_bw() +
-  theme(legend.position = "top")
-
-res_1 %>%
-  right_join(., res_2, by = "gene") %>%
-  ggplot(aes(x = is_differential_gene.y, fill = is_differential_gene.x)) + 
-  facet_wrap(~ is_marker_gene.y, scales = "free_y", labeller = label_both) +
-  geom_bar() +
-  labs(title = "Pairwise marker genes only") +
-  theme_bw() +
-  theme(legend.position = "top")
-
-res_1 %>%
-  right_join(., res_2, by = "gene") %>%
-  ggplot(aes(x = length.x, color = is_differential_gene.y)) +
-  geom_density() +
-  scale_x_log10() +
-  facet_wrap(~ is_marker_gene.y, scales = "free_y", labeller = label_both) +
-  labs(title = "Pairwise marker genes only") +
-  theme_bw() +
-  theme(legend.position = "top")
+# res_1 %>%
+#   ggplot(aes(x = is_differential_gene)) + 
+#   facet_wrap(~ is_marker_gene, scales = "free_y", labeller = label_both) +
+#   geom_bar() +
+#   labs(title = "Pairwise marker genes only") +
+#   theme_bw() +
+#   theme(legend.position = "top")
+# 
+# res_1 %>%
+#   right_join(., res_2, by = "gene") %>%
+#   ggplot(aes(x = is_differential_gene.y, fill = is_differential_gene.x)) + 
+#   facet_wrap(~ is_marker_gene.y, scales = "free_y", labeller = label_both) +
+#   geom_bar() +
+#   labs(title = "Pairwise marker genes only") +
+#   theme_bw() +
+#   theme(legend.position = "top")
+# 
+# res_1 %>%
+#   right_join(., res_2, by = "gene") %>%
+#   ggplot(aes(x = length.x, color = is_differential_gene.y)) +
+#   geom_density() +
+#   scale_x_log10() +
+#   facet_wrap(~ is_marker_gene.y, scales = "free_y", labeller = label_both) +
+#   labs(title = "Pairwise marker genes only") +
+#   theme_bw() +
+#   theme(legend.position = "top")
 ```
 
 
@@ -1680,8 +1709,8 @@ get_prop = function(res, label_normalization){
 
 res_prop_1 = get_prop(res_1, label_normalization = "transcripts")
 res_prop_2 = get_prop(res_2, label_normalization = "preandmrna")
-res_prop_3 = get_prop(res_3, label_normalization = "transcripts-full-length")
-res_prop = bind_rows(res_prop_1, res_prop_2, res_prop_3)
+# res_prop_3 = get_prop(res_3, label_normalization = "transcripts_full_length")
+res_prop = bind_rows(res_prop_1, res_prop_2)
 
 res_prop %>%
   ggplot(aes(x = n, y = proportion, color = label)) + 
