@@ -1,7 +1,7 @@
 # cqn.R
 # -----------------------------------------------------------------------------
 # Author:             Albert Kuo
-# Date last modified: Feb 2, 2022
+# Date last modified: Feb 16, 2022
 #
 # Run cQN to normalize and then run DE analysis.
 
@@ -18,10 +18,10 @@ suppressPackageStartupMessages({
   source(here("./mouse_cortex/code/distribution-plots-helpers.R"))
 })
 
-downsample = T # boolean toggle for downsampling step
-cqn = T        # boolean toggle for cqn step
+downsample = F # boolean toggle for downsampling step
+cqn = F        # boolean toggle for cqn step
 
-abb = "ie"
+abb = "ea"
 cell_type_1 = "Neurons" # Neurons, Astrocytes, Endothelial cells
 cell_type_2 = "Astrocytes"
 cell_type_labels = c("Excitatory neuron", "Astrocyte") # Inhibitory neuron, Excitatory neuron, Astrocyte, Endothelial
@@ -34,7 +34,9 @@ sce_ls[["preandmrna"]] = readRDS(here("mouse_cortex", "salmon_quants", "preandmr
 sce_ls[["introncollapse"]] = readRDS(here("mouse_cortex", "salmon_quants", "introncollapse_pipeline", paste0("sce_", run_number, ".rds")))
 sce_ls[["intronseparate"]] = readRDS(here("mouse_cortex", "salmon_quants", "intronseparate_pipeline", paste0("sce_", run_number, ".rds")))
 
-pipeline = "transcripts"
+pipeline = "intronseparate"
+lengths_force_preandmrna = F # if TRUE, always use preandmrna length regardless of pipeline
+
 select_cells = colData(sce_ls[[pipeline]]) %>%
   as.data.frame() %>%
   filter(ding_labels %in% cell_type_labels) %>% 
@@ -63,7 +65,7 @@ celltype_markers_length_tb = rowData(sce_ls[[pipeline]]) %>%
   dplyr::select(gene, gene_name, length, transcript_length) %>%
   right_join(., celltype_markers_tb, by = "gene_name")
 
-length_name = ifelse(pipeline == "transcripts", "transcript_length", "length")
+length_name = ifelse(pipeline == "transcripts" && !lengths_force_preandmrna, "transcript_length", "length")
 density_1 = density(log10(celltype_markers_length_tb %>% filter(cell_type == cell_type_1) %>% pull(!!length_name)))
 density_2 = density(log10(celltype_markers_length_tb %>% filter(cell_type == cell_type_2) %>% pull(!!length_name))) 
 density_est = list(approxfun(density_1), approxfun(density_2))
@@ -90,6 +92,7 @@ rownames(genes_length_tb) = genes_length_tb$gene
 
 # Remove genes with missing GC content
 keep_genes = which(!is.na(genes_length_tb$gc))
+colnames(rowData(sce_sub)) = paste(colnames(rowData(sce_sub)), "_temp_fix")
 sce_sub = sce_sub[keep_genes, ]
 counts_sub = as.matrix(round(counts(sce_sub)))
 
@@ -118,7 +121,7 @@ dds = DESeqDataSetFromMatrix(countData = counts(seq_data),
 
 # Downsample according to density p_BC
 if(downsample){
-  if(pipeline == "transcripts"){
+  if(pipeline == "transcripts" && !lengths_force_preandmrna){
     lengths_use = genes_length_tb$transcript_length
   } else {
     lengths_use = genes_length_tb$length
@@ -175,12 +178,18 @@ resLFC = resLFC %>%
 
 # Save results
 if(downsample & cqn){
-  saveRDS(seq_data, here(paste0("./mouse_cortex/output/counts_", abb, "_", pipeline, "_cqn_bc.rds"))) # ea, ie
-  saveRDS(resLFC, here(paste0("./mouse_cortex/output/de_", abb, "_", pipeline, "_lfc_cqn_bc.rds")))
+  saveRDS(seq_data, here(paste0("./mouse_cortex/output/counts_", abb, "_", pipeline, 
+                                "_lengthsforcepreandmrna_", lengths_force_preandmrna, "_cqn_bc.rds"))) # ea, ie
+  saveRDS(resLFC, here(paste0("./mouse_cortex/output/de_", abb, "_", pipeline, 
+                              "_lengthsforcepreandmrna_", lengths_force_preandmrna, "_lfc_cqn_bc.rds")))
 } else if(cqn){
-  saveRDS(seq_data, here(paste0("./mouse_cortex/output/counts_", abb, "_", pipeline, "_cqn.rds")))
-  saveRDS(resLFC, here(paste0("./mouse_cortex/output/de_", abb, "_", pipeline, "_lfc_cqn.rds")))
+  saveRDS(seq_data, here(paste0("./mouse_cortex/output/counts_", abb, "_", pipeline, 
+                                "_lengthsforcepreandmrna_", lengths_force_preandmrna, "_cqn.rds")))
+  saveRDS(resLFC, here(paste0("./mouse_cortex/output/de_", abb, "_", pipeline, 
+                              "_lengthsforcepreandmrna_", lengths_force_preandmrna, "_lfc_cqn.rds")))
 } else {
-  saveRDS(seq_data, here(paste0("./mouse_cortex/output/counts_", abb, "_", pipeline, ".rds")))
-  saveRDS(resLFC, here(paste0("./mouse_cortex/output/de_", abb, "_", pipeline, "_lfc.rds")))
+  saveRDS(seq_data, here(paste0("./mouse_cortex/output/counts_", abb, "_", pipeline, 
+                                "_lengthsforcepreandmrna_", lengths_force_preandmrna, ".rds")))
+  saveRDS(resLFC, here(paste0("./mouse_cortex/output/de_", abb, "_", pipeline, 
+                              "_lengthsforcepreandmrna_", lengths_force_preandmrna, "_lfc.rds")))
 }
