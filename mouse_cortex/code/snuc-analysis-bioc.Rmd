@@ -290,8 +290,12 @@ genes_rowsums_tb %>%
 
 # Gene length by bin
 genes_rowsums_tb %>%
-  filter(!is.na(transcripts) & !is.na(preandmrna)) %>%
   ggplot(aes(x = as.factor(bin), y = length)) +
+  scale_y_log10() +
+  geom_boxplot() +
+  theme_bw()
+genes_rowsums_tb %>%
+  ggplot(aes(x = as.factor(bin), y = transcript_length)) +
   scale_y_log10() +
   geom_boxplot() +
   theme_bw()
@@ -1569,7 +1573,8 @@ res = res %>%
 
 res_1 = readRDS(here(paste0("./mouse_cortex/output/de_ie_", "transcripts", "_lengthsforcepreandmrna_FALSE", "_lfc.rds")))
 res_2 = readRDS(here(paste0("./mouse_cortex/output/de_ie_", "preandmrna", "_lfc.rds")))
-res_3 = readRDS(here(paste0("./mouse_cortex/output/de_ie_", "transcripts", "_lengthsforcepreandmrna_TRUE", "_lfc.rds")))
+res_3 = readRDS(here(paste0("./mouse_cortex/output/de_ie_", "introncollapse", "_lengthsforcepreandmrna_FALSE", "_lfc.rds")))
+res_4 = readRDS(here(paste0("./mouse_cortex/output/de_ie_", "intronseparate", "_lengthsforcepreandmrna_FALSE", "_lfc.rds")))
 
 # res = res %>%
   # left_join(., genes_rowsums_tb %>% distinct(gene, transcripts, preandmrna, introncollapse, intronseparate), by = "gene") # from binned by overall expression
@@ -1610,7 +1615,11 @@ label_res = function(res, pairwise = FALSE){
 res_1 = label_res(res_1, pairwise = T)
 res_2 = label_res(res_2, pairwise = T)
 res_3 = label_res(res_3, pairwise = T)
+res_4 = label_res(res_4, pairwise = T)
+```
 
+
+```{r}
 res = res_1
 # Length vs log2fold change
 p = res %>%
@@ -1695,8 +1704,9 @@ get_prop = function(res, label_normalization){
            n = row_number(),
            prop_marker_genes_1 = n_marker_genes_1/n,
            prop_marker_genes_2 = n_marker_genes_2/n,
+           prop_marker_genes_all = (n_marker_genes_1 + n_marker_genes_2)/(2*n),
            label = label_normalization) %>%
-    select(gene, padj, n, prop_marker_genes_1, prop_marker_genes_2, label) %>%
+    select(gene, padj, n, prop_marker_genes_1, prop_marker_genes_2, prop_marker_genes_all, label) %>%
     pivot_longer(cols = starts_with("prop_marker_genes"),
                  names_to = "marker_genes_celltype",
                  values_to = "proportion")
@@ -1709,16 +1719,18 @@ get_prop = function(res, label_normalization){
 
 res_prop_1 = get_prop(res_1, label_normalization = "transcripts")
 res_prop_2 = get_prop(res_2, label_normalization = "preandmrna")
-# res_prop_3 = get_prop(res_3, label_normalization = "transcripts_full_length")
-res_prop = bind_rows(res_prop_1, res_prop_2)
+res_prop_3 = get_prop(res_3, label_normalization = "introncollapse")
+res_prop_4 = get_prop(res_4, label_normalization = "intronseparate")
+res_prop = bind_rows(res_prop_1, res_prop_2, res_prop_3, res_prop_4)
 
 res_prop %>%
   ggplot(aes(x = n, y = proportion, color = label)) + 
   geom_line() +
-  geom_point() + 
-  facet_wrap(~ marker_genes_celltype, nrow = 2, scales = "free_y") +
-  xlim(c(0, 5000)) +
-  theme_bw()
+  # geom_point() + 
+  facet_wrap(~ marker_genes_celltype, nrow = 3, scales = "free_y") +
+  xlim(c(0, 2000)) +
+  theme_bw() 
+  
 ```
 
 ```{r}
