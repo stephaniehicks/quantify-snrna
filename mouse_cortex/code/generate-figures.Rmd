@@ -56,6 +56,17 @@ apply_fig1_aesthetics_bic = function(plt){
     theme(axis.text = element_text(size = 14),
           axis.title = element_text(size = 15),
           plot.title = element_text(size = 20))
+  return(plt)
+}
+
+# Apply plot aesthetics to QQ plots
+apply_fig1_aesthetics_qq = function(plt, title){
+  plt = plt +
+    labs(title = title) +
+    theme(axis.text = element_text(size = 14),
+          axis.title = element_text(size = 15),
+          plot.title = element_text(size = 20),
+          legend.position = "none")
 }
 ```
 
@@ -63,12 +74,16 @@ apply_fig1_aesthetics_bic = function(plt){
 a = readRDS(here("./mouse_cortex/plots/meanvar_plot_preandmrna_excitatory_neuron_cortex_1.rds"))
 b = readRDS(here("./mouse_cortex/plots/prob0_plot_preandmrna_excitatory_neuron_cortex_1.rds"))
 c = readRDS(here("./mouse_cortex/plots/bic_plot_preandmrna_excitatory_neuron_cortex_1.rds")) 
-d = readRDS(here("./mouse_cortex/plots/meanvar_plot_preandmrna_inhibitory_neuron_cortex_1.rds"))
-e = readRDS(here("./mouse_cortex/plots/prob0_plot_preandmrna_inhibitory_neuron_cortex_1.rds"))
-f = readRDS(here("./mouse_cortex/plots/bic_plot_preandmrna_inhibitory_neuron_cortex_1.rds")) 
-g = readRDS(here("./mouse_cortex/plots/meanvar_plot_preandmrna_astrocyte_cortex_1.rds"))
-h = readRDS(here("./mouse_cortex/plots/prob0_plot_preandmrna_astrocyte_cortex_1.rds"))
-i = readRDS(here("./mouse_cortex/plots/bic_plot_preandmrna_astrocyte_cortex_1.rds"))
+d = readRDS(here("./mouse_cortex/plots/qq_plot_poisson_preandmrna_excitatory_neuron_cortex_1.rds"))
+e = readRDS(here("./mouse_cortex/plots/meanvar_plot_preandmrna_inhibitory_neuron_cortex_1.rds"))
+f = readRDS(here("./mouse_cortex/plots/prob0_plot_preandmrna_inhibitory_neuron_cortex_1.rds"))
+g = readRDS(here("./mouse_cortex/plots/bic_plot_preandmrna_inhibitory_neuron_cortex_1.rds")) 
+h = readRDS(here("./mouse_cortex/plots/qq_plot_poisson_preandmrna_inhibitory_neuron_cortex_1.rds"))
+i = readRDS(here("./mouse_cortex/plots/meanvar_plot_preandmrna_astrocyte_cortex_1.rds"))
+j = readRDS(here("./mouse_cortex/plots/prob0_plot_preandmrna_astrocyte_cortex_1.rds"))
+k = readRDS(here("./mouse_cortex/plots/bic_plot_preandmrna_astrocyte_cortex_1.rds"))
+l = readRDS(here("./mouse_cortex/plots/qq_plot_poisson_preandmrna_astrocyte_cortex_1.rds"))
+
 
 # Extract legend
 legend <- get_legend(
@@ -83,29 +98,32 @@ legend <- get_legend(
 )
 
 # Edit titles and labels
-a = apply_fig1_aesthetics(a, title = "Excitatory neuron") 
-b = apply_fig1_aesthetics(b, title = "Excitatory neuron", y = "Fraction of zero droplets")
-c = apply_fig1_aesthetics_bic(c) + labs(title = "Excitatory neuron")
-d = apply_fig1_aesthetics(d, title = "Inhibitory neuron")
-e = apply_fig1_aesthetics(e, title = "Inhibitory neuron", y = "Fraction of zero droplets")
-f = apply_fig1_aesthetics_bic(f) + labs(title = "Inhibitory neuron")
-g = apply_fig1_aesthetics(g, title = "Astrocyte")
-h = apply_fig1_aesthetics(h, title = "Astrocyte", y = "Fraction of zero droplets")
-i = apply_fig1_aesthetics_bic(i) + labs(title = "Astrocyte")
+a2 = apply_fig1_aesthetics(a, title = "Excitatory neuron") 
+b2 = apply_fig1_aesthetics(b, title = "Excitatory neuron", y = "Fraction of zero droplets")
+c2 = apply_fig1_aesthetics_bic(c) + labs(title = "Excitatory neuron")
+d2 = apply_fig1_aesthetics_qq(d, title = "Excitatory neuron")
+e2 = apply_fig1_aesthetics(e, title = "Inhibitory neuron")
+f2 = apply_fig1_aesthetics(f, title = "Inhibitory neuron", y = "Fraction of zero droplets")
+g2 = apply_fig1_aesthetics_bic(g) + labs(title = "Inhibitory neuron")
+h2 = apply_fig1_aesthetics_qq(h, title = "Inhibitory neuron")
+i2 = apply_fig1_aesthetics(i, title = "Astrocyte")
+j2 = apply_fig1_aesthetics(j, title = "Astrocyte", y = "Fraction of zero droplets")
+k2 = apply_fig1_aesthetics_bic(k) + labs(title = "Astrocyte")
+l2 = apply_fig1_aesthetics_qq(l, title = "Astrocyte")
 
 p = plot_grid(legend,
-              plot_grid(a, NULL, b, NULL, c, 
-                        d, NULL, e, NULL, f, 
-                        g, NULL, h, NULL, i, 
-                        nrow = 3, labels = c("a", "", "b", "", "c",
-                                             "d", "", "e", "", "f", 
-                                             "g", "", "h", "", "i"), 
-                        label_size = 20, rel_widths = c(1, 0.02, 1, 0.02, 1,
-                                                        1, 0.02, 1, 0.02, 1,
-                                                        1, 0.02, 1, 0.02, 1)),
+              plot_grid(a2, NULL, b2, NULL, c2, NULL, d2,
+                        e2, NULL, f2, NULL, g2, NULL, h2,
+                        i2, NULL, j2, NULL, k2, NULL, l2, 
+                        nrow = 3, labels = c("a", "", "b", "", "c", "", "d",
+                                             "e", "", "f", "", "g", "", "h",
+                                             "i", "", "j", "", "k", "", "l"), 
+                        label_size = 20, rel_widths = c(1, 0.02, 1, 0.02, 1, 0.02, 1,
+                                                        1, 0.02, 1, 0.02, 1, 0.02, 1,
+                                                        1, 0.02, 1, 0.02, 1, 0.02, 1)),
               ncol = 1, rel_heights = c(.2, 3))
 print(p)
-ggsave(here("./publication/figures/figure_1_raw.png"), plot = p, width = 12, height = 10)
+ggsave(here("./publication/figures/figure_1_raw.png"), plot = p, width = 16, height = 12)
 ```
 
 # Figure 2 (library size)
@@ -260,7 +278,7 @@ ggsave(here("./publication/figures/figure_5.png"), plot = p, width = 8, height =
 ```
 
 
-# Figure 6 (Gene length bias plot)
+# Figure 6 (Cell-type specific gene length bias plot)
 
 These were manually generated from `snuc-analysis-bioc.Rmd`. (a) comes from the gene length bias - by cell type section. (b) comes from DE analysis.
 
@@ -300,6 +318,42 @@ p = plot_grid(a_pad, pg1,
 print(p)
 ggsave(here("./publication/figures/figure_6.png"), plot = p, width = 10, height = 12)
 ```
+
+# Figure 7 (Gene length bias plot)
+
+These were manually generated from `snuc-analysis-bioc.Rmd`. See gene length bias - overall length bias section. 
+
+```{r}
+a = readRDS(here("./mouse_cortex/plots/preandmrna_length_bias.rds"))
+b = readRDS(here("./mouse_cortex/plots/transcript_length_bias.rds"))
+
+a2 = a +
+  labs(y = "Count") +
+  theme(legend.position = "none")
+
+b2 = b + 
+  labs(y = "Count") +
+  theme(legend.position = "none")
+
+# Extract legend
+legend <- get_legend(
+  a + 
+    scale_color_manual(name = "Source",
+                       labels = c("Exonic reads", "Intronic reads"),
+                       values = c("#F8766D", "#00BFC4"))
+)
+
+p = plot_grid(legend,
+              plot_grid(a2, b2,
+                        nrow = 1,
+                        labels = c("a", "b")),
+              nrow = 2,
+              rel_heights = c(0.1, 0.9))
+print(p)
+
+ggsave(here("./publication/figures/figure_7.png"), plot = p, width = 8, height = 4)
+```
+
 
 # Supplementary Figure 1 (lib size by gene type)
 
@@ -440,6 +494,21 @@ p = plot_grid(plot_grid(NULL, pca, NULL, nrow = 3, rel_heights = c(.1, .8, .1)),
               nrow = 1)
 print(p)
 ggsave(here(paste0("./publication/figures/sfigure_5.png")), plot = p, width = 15, height = 9)
+```
+
+# Supplementary Figure 6 (gene length bias across pipeline and distribution of lengths within each bin)
+
+```{r}
+a = readRDS(here("./mouse_cortex/plots/preandmrna_gene_length_bin.rds"))
+b = readRDS(here("./mouse_cortex/plots/transcript_gene_length_bin.rds"))
+c = readRDS(here("./mouse_cortex/plots/preandmrna_length_bias_pipelines.rds"))
+d = readRDS(here("./mouse_cortex/plots/transcripts_length_bias_pipelines.rds"))
+
+p = plot_grid(a, b, c, d,
+              labels = "auto",
+              nrow = 2)
+print(p)
+ggsave(here(paste0("./publication/figures/sfigure_6.png")), plot = p, width = 12, height = 8)
 ```
 
 

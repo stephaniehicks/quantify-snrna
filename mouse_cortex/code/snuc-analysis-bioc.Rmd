@@ -259,46 +259,90 @@ genes_rowsums_tb %>%
   scale_y_log10() +
   labs(x = "Bin (by gene length)") +
   theme_bw()
+```
 
-# Gene rowsum across the 4 pipelines, where bin on the x-axis is by full preandmrna length
-genes_rowsums_tb %>%
-  pivot_longer(cols = c("transcripts", "preandmrna", "introncollapse", "intronseparate"),
-               names_to = "pipeline",
-               values_to = "count") %>%
-  mutate(pipeline = fct_relevel(pipeline, c("transcripts", "preandmrna", "introncollapse", "intronseparate"))) %>%
-  ggplot(aes(x = as.factor(bin), y = count, color = pipeline)) + 
-  geom_boxplot() + 
-  scale_y_log10() + 
-  labs(x = "Bin (by full gene length)") + 
-  theme_bw() +
-  theme(legend.position = "top")
 
+```{r} 
+# Make plots for Figure
 # Length bias of intronic reads (preandmrna - transcripts) versus exonic reads (transcripts)
-genes_rowsums_tb %>%
+tmp = genes_rowsums_tb %>%
   mutate(intronic_reads = preandmrna - transcripts,
          exonic_reads = transcripts) %>%
   select(intronic_reads, exonic_reads, bin, bin_transcript) %>%
   pivot_longer(cols = ends_with("reads"),
                names_to = "source",
-               values_to = "count") %>%
+               values_to = "count") 
+p = tmp %>%
+  ggplot(aes(x = as.factor(bin), y = count, color = source)) + 
+  geom_boxplot() + 
+  scale_y_log10() +
+  labs(x = "Bin (by preandmrna length)") + 
+  theme_bw() +
+  theme(legend.position = "top")
+print(p)
+saveRDS(p, here("./mouse_cortex/plots/preandmrna_length_bias.rds"))
+
+p = tmp %>%
   ggplot(aes(x = as.factor(bin_transcript), y = count, color = source)) + 
   geom_boxplot() + 
   scale_y_log10() +
   labs(x = "Bin (by transcript length)") + 
   theme_bw() +
   theme(legend.position = "top")
+print(p)
+saveRDS(p, here("./mouse_cortex/plots/transcript_length_bias.rds"))
+```
+
+
+```{r} 
+# Gene rowsum across the 3 intronic pipelines
+tmp = genes_rowsums_tb %>%
+  pivot_longer(cols = c("transcripts", "preandmrna", "introncollapse", "intronseparate"),
+               names_to = "pipeline",
+               values_to = "count") %>%
+  mutate(pipeline = fct_relevel(pipeline, c("transcripts", "preandmrna", "introncollapse", "intronseparate"))) %>%
+  filter(pipeline != "transcripts")
+
+p = tmp %>%
+  ggplot(aes(x = as.factor(bin), y = count, color = pipeline)) + 
+  geom_boxplot() + 
+  scale_y_log10() + 
+  labs(x = "Bin (by preandmrna length)") + 
+  theme_bw() +
+  theme(legend.position = "top")
+print(p)
+saveRDS(p, here("./mouse_cortex/plots/preandmrna_length_bias_pipelines.rds"))
+
+p = tmp %>%
+  ggplot(aes(x = as.factor(bin_transcript), y = count, color = pipeline)) + 
+  geom_boxplot() + 
+  scale_y_log10() + 
+  labs(x = "Bin (by transcript length)") + 
+  theme_bw() +
+  theme(legend.position = "top")
+print(p)
+saveRDS(p, here("./mouse_cortex/plots/transcripts_length_bias_pipelines.rds"))
 
 # Gene length by bin
-genes_rowsums_tb %>%
+p = genes_rowsums_tb %>%
   ggplot(aes(x = as.factor(bin), y = length)) +
   scale_y_log10() +
   geom_boxplot() +
+  labs(x = "Bin",
+       y = "Preandmrna length") + 
   theme_bw()
-genes_rowsums_tb %>%
-  ggplot(aes(x = as.factor(bin), y = transcript_length)) +
+print(p)
+saveRDS(p, here("./mouse_cortex/plots/preandmrna_gene_length_bin.rds"))
+
+p = genes_rowsums_tb %>%
+  ggplot(aes(x = as.factor(bin_transcript), y = transcript_length)) +
   scale_y_log10() +
   geom_boxplot() +
+  labs(x = "Bin",
+       y = "Transcript length") + 
   theme_bw()
+print(p)
+saveRDS(p, here("./mouse_cortex/plots/transcript_gene_length_bin.rds"))
 ```
 
 Correct gene length bias in preandmrna pipeline to transcripts pipeline.
@@ -2036,7 +2080,7 @@ source(here("./mouse_cortex/code/distribution-plots-helpers.R"))
 sce = sce_ls[["preandmrna"]]
 
 # Subset to cell type
-cell_type = "Inhibitory neuron"
+cell_type = "Astrocyte"
 sce_sub = sce[, colData(sce)$ding_labels == cell_type & !is.na(colData(sce)$ding_labels)]
 dim(sce_sub)
 
@@ -2124,11 +2168,13 @@ terciles
 summary(colSums(counts_sub_cluster))
 # counts_sub_cluster = counts_sub_cluster[, (colSums(counts_sub_cluster) > terciles[2])]
 
+
 # Downsample matrix
-tic()
-set.seed(1)
-counts_sub_cluster_scaled = Down_Sample_Matrix(round(counts_sub_cluster))
-toc()
+# tic()
+# set.seed(1)
+# counts_sub_cluster_scaled = Down_Sample_Matrix(round(counts_sub_cluster))
+# toc()
+counts_sub_cluster_scaled = counts_sub_cluster
 # counts_sub_cluster_scaled = counts_sub_cluster_scaled[rowSums(counts_sub_cluster_scaled) != 0, ]
 summary(colSums(counts_sub_cluster_scaled))
 
@@ -2338,7 +2384,7 @@ p = plot_dt %>%
   # guides(color = FALSE) +
   theme_bw()
 print(p)
-# saveRDS(p, here("./mouse_cortex/plots/qq_plot_poisson_astrocyte_cortex_1.rds"))
+saveRDS(p, here(paste0("./mouse_cortex/plots/qq_plot_poisson_preandmrna_", snakecase::to_snake_case(cell_type), "_cortex_1.rds")))
 ```
 
 ```{r}
