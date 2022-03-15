@@ -958,6 +958,7 @@ saveRDS(p, here("./mouse_cortex/plots/nA8_transcript_length_bias.rds"))
 ```
 
 ```{r}
+# Calculate correlations
 tmp = genes_rowsums_nA_tb %>%
   filter(preandmrna > 0)
 cor(log10(tmp$preandmrna), log10(tmp$length))
