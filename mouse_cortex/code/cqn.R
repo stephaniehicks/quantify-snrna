@@ -21,10 +21,10 @@ suppressPackageStartupMessages({
 downsample = F # boolean toggle for downsampling step
 cqn = F        # boolean toggle for cqn step
 
-abb = "ea"
+abb = "ie"
 cell_type_1 = "Neurons" # Neurons, Astrocytes, Endothelial cells
-cell_type_2 = "Astrocytes"
-cell_type_labels = c("Excitatory neuron", "Astrocyte") # Inhibitory neuron, Excitatory neuron, Astrocyte, Endothelial
+cell_type_2 = "Endothelial cells"
+cell_type_labels = c("Inhibitory neuron", "Endothelial") # Inhibitory neuron, Excitatory neuron, Astrocyte, Endothelial
 
 # Read in SingleCellExperiment objects
 run_number = "all" # give run_number or "all" for all of them together
