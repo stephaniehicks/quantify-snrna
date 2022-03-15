@@ -899,7 +899,7 @@ print(p)
 Calculate number of A's with `count-a.R`. 
 
 ```{r}
-n_string = "nA6"
+n_string = "nA8"
 transcripts_nA = readRDS(here("mouse_cortex", "salmon_files", paste0("transcripts_", n_string, ".rds")))
 transcripts_nA = transcripts_nA %>%
   group_by(gene_id) %>%
@@ -931,27 +931,37 @@ genes_rowsums_nA_tb = genes_rowsums_tb %>%
 
 ```{r}
 # Number of A strings versus count
-genes_rowsums_nA_tb %>%
+p = genes_rowsums_nA_tb %>%
   filter(preandmrna > 0) %>%
   ggplot(aes(x = length, y = preandmrna, color = preandmrna_max_nA == 0)) +
   geom_point(alpha = 0.01) +
-  geom_smooth() + 
+  geom_smooth(method = "loess") +
   scale_x_log10() +
-  scale_y_log10() +
+  scale_y_log10(limits = c(0.1, 1*10^6)) +
   labs(color = paste0(n_string, " == 0")) +
-  # scale_y_continuous(limits = c(0, 10)) +
   theme_bw()
+print(p)
+saveRDS(p, here("./mouse_cortex/plots/nA8_preandmrna_length_bias.rds"))
 
-genes_rowsums_nA_tb %>%
-  filter(transcripts > 0) %>%
-  ggplot(aes(x = transcript_length, y = transcripts, color = preandmrna_max_nA == 0)) +
+p = genes_rowsums_nA_tb %>%
+  filter(preandmrna > 0) %>%
+  ggplot(aes(x = transcript_length, y = preandmrna, color = preandmrna_max_nA == 0)) +
   geom_point(alpha = 0.01) +
-  geom_smooth() + 
+  geom_smooth(method = "loess") + 
   scale_x_log10() +
-  scale_y_log10() +
+  scale_y_log10(limits = c(0.1, 1*10^6)) +
   labs(color = paste0(n_string, " == 0")) +
   # scale_y_continuous(limits = c(0, 10)) +
   theme_bw()
+print(p)
+saveRDS(p, here("./mouse_cortex/plots/nA8_transcript_length_bias.rds"))
+```
+
+```{r}
+tmp = genes_rowsums_nA_tb %>%
+  filter(preandmrna > 0)
+cor(log10(tmp$preandmrna), log10(tmp$length))
+cor(log10(tmp$preandmrna), log10(tmp$transcript_length))
 ```
 
 

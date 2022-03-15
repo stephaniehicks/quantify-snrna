@@ -366,7 +366,45 @@ p = plot_grid(plot_grid(a2, b2,
               rel_heights = c(0.9, 0.1))
 print(p)
 
-# ggsave(here("./publication/figures/figure_7.png"), plot = p, width = 8, height = 4)
+ggsave(here("./publication/figures/figure_7.png"), plot = p, width = 8, height = 4)
+```
+
+
+# Figure 8 (Length bias by internal poly-A sequence)
+
+```{r}
+# Warning: loess curve takes a few minutes to plot
+a = readRDS(here("./mouse_cortex/plots/nA8_preandmrna_length_bias.rds"))
+b = readRDS(here("./mouse_cortex/plots/nA8_transcript_length_bias.rds"))
+
+a2 = a +
+  labs(y = "Count",
+       x = "Preandmrna length") +
+  theme(legend.position = "none")
+
+b2 = b + 
+  labs(y = "Count",
+       x = "Transcript length") +
+  theme(legend.position = "none")
+
+# Extract legend
+legend <- get_legend(
+  a + 
+    scale_color_manual(name = "Contains internal poly-A 8-mers",
+                       labels = c("Yes", "No"),
+                       values = c("#F8766D", "#00BFC4")) +
+    theme(legend.position = "bottom")
+)
+
+p = plot_grid(plot_grid(a2, b2,
+                        nrow = 1,
+                        labels = c("a", "b")),
+              legend,
+              nrow = 2,
+              rel_heights = c(0.9, 0.1))
+print(p)
+
+ggsave(here("./publication/figures/figure_8.png"), plot = p, width = 8, height = 4)
 ```
 
 
