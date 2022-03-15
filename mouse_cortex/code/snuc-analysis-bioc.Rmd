@@ -305,24 +305,22 @@ genes_rowsums_tb %>%
 
 ```{r} 
 # Make plots for Figure
-# Length bias of intronic reads (preandmrna - transcripts) versus exonic reads (transcripts)
+# Length bias of preandmrna vs transcripts pipeline
 tmp = genes_rowsums_tb %>%
-  mutate(intronic_reads = preandmrna - transcripts,
-         exonic_reads = transcripts) %>%
-  select(intronic_reads, exonic_reads, bin, bin_transcript) %>%
-  pivot_longer(cols = ends_with("reads"),
-               names_to = "source",
+  select(transcripts, preandmrna, bin, bin_transcript) %>%
+  pivot_longer(cols = c("transcripts", "preandmrna"),
+               names_to = "pipeline",
                values_to = "count") 
 
 # Plot lines with ribbon
-tmp %>%
-  group_by(bin, source) %>%
+p = tmp %>%
+  group_by(bin, pipeline) %>%
   filter(count > 0) %>%
   summarize(boxplot = list(setNames(boxplot.stats(count)$stats,
                                     c('lower_whisker','lower_hinge','median','upper_hinge','upper_whisker')))) %>%
   unnest_wider(boxplot) %>%
   ungroup() %>%
-  ggplot(aes(x = bin, y = median, color = source, fill = source)) + 
+  ggplot(aes(x = bin, y = median, color = pipeline, fill = pipeline)) + 
   geom_ribbon(aes(ymin = lower_hinge, ymax = upper_hinge), alpha = 0.1, linetype = "dashed") +
   geom_point() +
   geom_line() + 
@@ -332,15 +330,16 @@ tmp %>%
        y = "count") +
   theme_bw() +
   theme(legend.position = "top")
+saveRDS(p, here("./mouse_cortex/plots/preandmrna_length_bias.rds"))
 
-tmp %>%
-  group_by(bin_transcript, source) %>%
+p = tmp %>%
+  group_by(bin_transcript, pipeline) %>%
   filter(count > 0) %>%
   summarize(boxplot = list(setNames(boxplot.stats(count)$stats,
                                     c('lower_whisker','lower_hinge','median','upper_hinge','upper_whisker')))) %>%
   unnest_wider(boxplot) %>%
   ungroup() %>%
-  ggplot(aes(x = bin_transcript, y = median, color = source, fill = source)) + 
+  ggplot(aes(x = bin_transcript, y = median, color = pipeline, fill = pipeline)) + 
   geom_ribbon(aes(ymin = lower_hinge, ymax = upper_hinge), alpha = 0.1, linetype = "dashed") +
   geom_point() +
   geom_line() + 
@@ -350,10 +349,11 @@ tmp %>%
        y = "count") +
   theme_bw() +
   theme(legend.position = "top")
+saveRDS(p, here("./mouse_cortex/plots/transcript_length_bias.rds"))
 
 # Plot boxplots
 p = tmp %>%
-  ggplot(aes(x = as.factor(bin), y = count, color = source)) + 
+  ggplot(aes(x = as.factor(bin), y = count, color = pipeline)) + 
   geom_boxplot(outlier.shape = NA) + 
   coord_cartesian(ylim = c(0.01, 1*10^5)) +
   scale_y_log10() +
@@ -361,10 +361,9 @@ p = tmp %>%
   theme_bw() +
   theme(legend.position = "top")
 print(p)
-# saveRDS(p, here("./mouse_cortex/plots/preandmrna_length_bias.rds"))
 
 p = tmp %>%
-  ggplot(aes(x = as.factor(bin_transcript), y = count, color = source)) + 
+  ggplot(aes(x = as.factor(bin_transcript), y = count, color = pipeline)) + 
   geom_boxplot(outlier.shape = NA) + 
   coord_cartesian(ylim = c(0.01, 1*10^5)) +
   scale_y_log10() +
@@ -372,7 +371,6 @@ p = tmp %>%
   theme_bw() +
   theme(legend.position = "top")
 print(p)
-# saveRDS(p, here("./mouse_cortex/plots/transcript_length_bias.rds"))
 ```
 
 
@@ -901,7 +899,7 @@ print(p)
 Calculate number of A's with `count-a.R`. 
 
 ```{r}
-n_string = "nA12"
+n_string = "nA6"
 transcripts_nA = readRDS(here("mouse_cortex", "salmon_files", paste0("transcripts_", n_string, ".rds")))
 transcripts_nA = transcripts_nA %>%
   group_by(gene_id) %>%
@@ -2208,7 +2206,8 @@ source(here("./mouse_cortex/code/distribution-plots-helpers.R"))
 
 
 ```{r}
-sce = sce_ls[["preandmrna"]]
+pipeline = "intronseparate"
+sce = sce_ls[[pipeline]]
 
 # Subset to cell type
 cell_type = "Astrocyte"
@@ -2294,9 +2293,9 @@ i = 4
 counts_sub_cluster = counts(sce_sub)
 # counts_sub_cluster = counts(sce_sub)[, colData(sce_sub)$labels_kmeans == i] # Subset to k-means cluster
 # group into 3 groups by colSums
-terciles = quantile(colSums(counts_sub_cluster), c(1/3, 2/3))
-terciles
-summary(colSums(counts_sub_cluster))
+# terciles = quantile(colSums(counts_sub_cluster), c(1/3, 2/3))
+# terciles
+# summary(colSums(counts_sub_cluster))
 # counts_sub_cluster = counts_sub_cluster[, (colSums(counts_sub_cluster) > terciles[2])]
 
 
@@ -2499,7 +2498,7 @@ plot_dt = tibble(chi_obs = chi_obs_pois[[1]]) %>%
   mutate(chi_quantile = qchisq(p = (1:length(chi_obs))/length(chi_obs), df = chi_obs_pois[[2]] - 1),
          percentile_color = case_when(chi_obs > quantile(chi_obs, 0.995) ~ "> 99.5",
                                       chi_obs > quantile(chi_obs, 0.95) ~ "> 95",
-                                      chi_obs > quantile(chi_obs, 0.90) ~ "> 90",
+                                      #chi_obs > quantile(chi_obs, 0.90) ~ "> 90",
                                       T ~ "rest"),
          i = i)
 
@@ -2515,7 +2514,7 @@ p = plot_dt %>%
   # guides(color = FALSE) +
   theme_bw()
 print(p)
-saveRDS(p, here(paste0("./mouse_cortex/plots/qq_plot_poisson_preandmrna_", snakecase::to_snake_case(cell_type), "_cortex_1.rds")))
+saveRDS(p, here(paste0("./mouse_cortex/plots/qq_plot_poisson_", pipeline, "_", snakecase::to_snake_case(cell_type), "_cortex_1.rds")))
 ```
 
 ```{r}
