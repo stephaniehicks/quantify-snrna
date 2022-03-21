@@ -268,17 +268,17 @@ genes_rowsums_tb %>%
   scale_x_log10() + 
   scale_y_continuous(labels = scales::percent) +
   scale_y_log10() +
-  labs(x = "Gene length",
+  labs(x = "Preandmrna length",
        y = "Intronic region (%)") +
   theme_bw()
+
+genes_rowsums_tb = genes_rowsums_tb %>%
+  mutate(intron_prop = 1 - transcript_length/length)
 
 genes_rowsums_tb %>%
   ggplot(aes(x = intron_prop)) + 
   geom_histogram() + 
   theme_bw()
-
-genes_rowsums_tb = genes_rowsums_tb %>%
-  mutate(intron_prop = 1 - transcript_length/length)
 
 genes_rowsums_tb %>%
   ggplot(aes(x = intron_prop, y = preandmrna)) + 
@@ -406,16 +406,17 @@ print(p)
 saveRDS(p, here("./mouse_cortex/plots/transcripts_length_bias_pipelines.rds"))
 
 # Transcript length vs gene length
-genes_rowsums_tb %>%
-  ggplot(aes(x = length, y = transcript_length, color = 1-transcript_length/length)) + 
+p = genes_rowsums_tb %>%
+  ggplot(aes(x = length, y = transcript_length)) + 
   geom_point(alpha = 0.05) + 
   scale_x_log10() + 
   scale_y_log10() +
   labs(x = "preandmrna length",
-       y = "transcript length",
-       color = "% Intronic Region") +
+       y = "transcript length") +
   theme_bw() +
   theme(legend.position = "top")
+print(p)
+saveRDS(p, here("./mouse_cortex/plots/transcript_vs_preandmrna_length.rds"))
 
 # Gene length by bin
 # p = genes_rowsums_tb %>%
@@ -958,11 +959,43 @@ saveRDS(p, here("./mouse_cortex/plots/nA8_transcript_length_bias.rds"))
 ```
 
 ```{r}
+# Number of A strings versus count (transcripts pipeline)
+p = genes_rowsums_nA_tb %>%
+  filter(transcripts > 0) %>%
+  ggplot(aes(x = length, y = transcripts, color = transcripts_max_nA == 0)) +
+  geom_point(alpha = 0.01) +
+  geom_smooth(method = "loess") +
+  scale_x_log10() +
+  scale_y_log10(limits = c(0.1, 1*10^6)) +
+  labs(color = paste0(n_string, " == 0")) +
+  theme_bw()
+print(p)
+
+p = genes_rowsums_nA_tb %>%
+  filter(transcripts > 0) %>%
+  ggplot(aes(x = transcript_length, y = transcripts, color = transcripts_max_nA == 0)) +
+  geom_point(alpha = 0.01) +
+  geom_smooth(method = "loess") + 
+  scale_x_log10() +
+  scale_y_log10(limits = c(0.1, 1*10^6)) +
+  labs(color = paste0(n_string, " == 0")) +
+  # scale_y_continuous(limits = c(0, 10)) +
+  theme_bw()
+print(p)
+```
+
+
+```{r}
 # Calculate correlations
 tmp = genes_rowsums_nA_tb %>%
   filter(preandmrna > 0)
 cor(log10(tmp$preandmrna), log10(tmp$length))
 cor(log10(tmp$preandmrna), log10(tmp$transcript_length))
+
+tmp = genes_rowsums_nA_tb %>%
+  filter(transcripts > 0)
+cor(log10(tmp$transcripts), log10(tmp$length))
+cor(log10(tmp$transcripts), log10(tmp$transcript_length))
 ```
 
 

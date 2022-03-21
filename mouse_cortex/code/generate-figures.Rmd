@@ -101,7 +101,7 @@ legend <- get_legend(
 legend_qq <- get_legend(
   l + 
     scale_color_manual(name = "Percentile",
-                       labels = c("<95th", ">95th", ">99.5th"),
+                       labels = c("<95", ">95", ">99.5"),
                        values = c("#619cff", "#f8766d", "#00ba38")) +
     guides(color = guide_legend(nrow = 1, override.aes = list(size = 2))) +
     theme(legend.position = "bottom", 
@@ -123,8 +123,7 @@ j2 = apply_fig1_aesthetics(j, title = "Astrocyte", y = "Fraction of zero droplet
 k2 = apply_fig1_aesthetics_bic(k) + labs(title = "Astrocyte")
 l2 = apply_fig1_aesthetics_qq(l, title = "Astrocyte")
 
-p = plot_grid(plot_grid(legend, NULL, legend_qq, rel_widths = c(0.5, 0.1, 0.4), nrow = 1),
-              plot_grid(a2, NULL, b2, NULL, c2, NULL, d2,
+p = plot_grid(plot_grid(a2, NULL, b2, NULL, c2, NULL, d2,
                         e2, NULL, f2, NULL, g2, NULL, h2,
                         i2, NULL, j2, NULL, k2, NULL, l2, 
                         nrow = 3, labels = c("a", "", "b", "", "c", "", "d",
@@ -133,7 +132,8 @@ p = plot_grid(plot_grid(legend, NULL, legend_qq, rel_widths = c(0.5, 0.1, 0.4), 
                         label_size = 20, rel_widths = c(1, 0.02, 1, 0.02, 1, 0.02, 1,
                                                         1, 0.02, 1, 0.02, 1, 0.02, 1,
                                                         1, 0.02, 1, 0.02, 1, 0.02, 1)),
-              ncol = 1, rel_heights = c(.2, 3))
+              plot_grid(legend, NULL, legend_qq, rel_widths = c(0.5, 0.2, 0.3), nrow = 1),
+              ncol = 1, rel_heights = c(3, .2))
 print(p)
 ggsave(here("./publication/figures/figure_1_raw.png"), plot = p, width = 16, height = 12)
 ```
@@ -358,9 +358,7 @@ legend <- get_legend(
                        values = c("#F8766D", "#00BFC4"))
 )
 
-p = plot_grid(plot_grid(a2, b2,
-                        nrow = 1,
-                        labels = c("a", "b")),
+p = plot_grid(plot_grid(a2, nrow = 1),
               legend,
               nrow = 2,
               rel_heights = c(0.9, 0.1))
@@ -587,16 +585,16 @@ ggsave(here(paste0("./publication/figures/sfigure_5.png")), plot = p, width = 15
 # Supplementary Figure 6 (gene length bias across pipeline and distribution of lengths within each bin)
 
 ```{r}
-a = readRDS(here("./mouse_cortex/plots/preandmrna_gene_length_bin.rds"))
-b = readRDS(here("./mouse_cortex/plots/transcript_gene_length_bin.rds"))
-c = readRDS(here("./mouse_cortex/plots/preandmrna_length_bias_pipelines.rds"))
-d = readRDS(here("./mouse_cortex/plots/transcripts_length_bias_pipelines.rds"))
+a = readRDS(here("./mouse_cortex/plots/transcript_vs_preandmrna_length.rds"))
+b = readRDS(here("./mouse_cortex/plots/preandmrna_length_bias_pipelines.rds"))
+c = readRDS(here("./mouse_cortex/plots/transcripts_length_bias_pipelines.rds"))
 
-p = plot_grid(a, b, c, d,
-              labels = "auto",
+p = plot_grid(a, 
+              plot_grid(b, c, ncol = 2, labels = c("b", "c")),
+              labels = c("a", ""),
               nrow = 2)
 print(p)
-ggsave(here(paste0("./publication/figures/sfigure_6.png")), plot = p, width = 12, height = 8)
+ggsave(here(paste0("./publication/figures/sfigure_6.png")), plot = p, width = 10, height = 6)
 ```
 
 
