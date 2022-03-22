@@ -372,8 +372,8 @@ ggsave(here("./publication/figures/figure_7.png"), plot = p, width = 8, height =
 
 ```{r}
 # Warning: loess curve takes a few minutes to plot
-a = readRDS(here("./mouse_cortex/plots/nA8_preandmrna_length_bias.rds"))
-b = readRDS(here("./mouse_cortex/plots/nA8_transcript_length_bias.rds"))
+a = readRDS(here("./mouse_cortex/plots/nA8_preandmrna_length_bias_preandmrna.rds"))
+b = readRDS(here("./mouse_cortex/plots/nA8_transcript_length_bias_preandmrna.rds"))
 
 a2 = a +
   labs(y = "Count",
@@ -582,7 +582,7 @@ print(p)
 ggsave(here(paste0("./publication/figures/sfigure_5.png")), plot = p, width = 15, height = 9)
 ```
 
-# Supplementary Figure 6 (gene length bias across pipeline and distribution of lengths within each bin)
+# Supplementary Figure 6 (gene length bias across pipelines and correlation between transcript and preandmrna length)
 
 ```{r}
 a = readRDS(here("./mouse_cortex/plots/transcript_vs_preandmrna_length.rds"))
@@ -596,6 +596,78 @@ p = plot_grid(a,
 print(p)
 ggsave(here(paste0("./publication/figures/sfigure_6.png")), plot = p, width = 10, height = 6)
 ```
+
+# Supplementary Figure 7 (Internal poly-A sequences across pipelines)
+
+```{r}
+apply_figs7_aesthetics = function(plt){
+  plt = plt +
+    labs(y = "Count",
+         x = "Preandmrna length") +
+    theme(legend.position = "none")
+  return(plt)
+}
+```
+
+```{r}
+a = readRDS(here("./mouse_cortex/plots/nA6_preandmrna_length_bias_transcripts.rds"))
+b = readRDS(here("./mouse_cortex/plots/nA8_preandmrna_length_bias_transcripts.rds"))
+c = readRDS(here("./mouse_cortex/plots/nA10_preandmrna_length_bias_transcripts.rds"))
+d = readRDS(here("./mouse_cortex/plots/nA12_preandmrna_length_bias_transcripts.rds"))
+e = readRDS(here("./mouse_cortex/plots/nA6_preandmrna_length_bias_preandmrna.rds"))
+f = readRDS(here("./mouse_cortex/plots/nA8_preandmrna_length_bias_preandmrna.rds"))
+g = readRDS(here("./mouse_cortex/plots/nA10_preandmrna_length_bias_preandmrna.rds"))
+h = readRDS(here("./mouse_cortex/plots/nA12_preandmrna_length_bias_preandmrna.rds"))
+i = readRDS(here("./mouse_cortex/plots/nA6_preandmrna_length_bias_introncollapse.rds"))
+j = readRDS(here("./mouse_cortex/plots/nA8_preandmrna_length_bias_introncollapse.rds"))
+k = readRDS(here("./mouse_cortex/plots/nA10_preandmrna_length_bias_introncollapse.rds"))
+l = readRDS(here("./mouse_cortex/plots/nA12_preandmrna_length_bias_introncollapse.rds"))
+m = readRDS(here("./mouse_cortex/plots/nA6_preandmrna_length_bias_intronseparate.rds"))
+n = readRDS(here("./mouse_cortex/plots/nA8_preandmrna_length_bias_intronseparate.rds"))
+o = readRDS(here("./mouse_cortex/plots/nA10_preandmrna_length_bias_intronseparate.rds"))
+p = readRDS(here("./mouse_cortex/plots/nA12_preandmrna_length_bias_intronseparate.rds"))
+
+a2 = apply_figs7_aesthetics(a)
+b2 = apply_figs7_aesthetics(b)
+c2 = apply_figs7_aesthetics(c)
+d2 = apply_figs7_aesthetics(d)
+e2 = apply_figs7_aesthetics(e)
+f2 = apply_figs7_aesthetics(f)
+g2 = apply_figs7_aesthetics(g)
+h2 = apply_figs7_aesthetics(h)
+i2 = apply_figs7_aesthetics(i)
+j2 = apply_figs7_aesthetics(j)
+k2 = apply_figs7_aesthetics(k)
+l2 = apply_figs7_aesthetics(l)
+m2 = apply_figs7_aesthetics(m)
+n2 = apply_figs7_aesthetics(n)
+o2 = apply_figs7_aesthetics(o)
+p2 = apply_figs7_aesthetics(p)
+                          
+# Extract legend
+legend <- get_legend(
+  a + 
+    scale_color_manual(name = "Contains internal poly-A n-mers",
+                       labels = c("Yes", "No"),
+                       values = c("#F8766D", "#00BFC4")) +
+    theme(legend.position = "bottom")
+)
+
+# Takes a while to draw loess curves
+p = plot_grid(plot_grid(a2, b2, c2, d2,
+                        e2, f2, g2, h2,
+                        i2, j2, k2, l2,
+                        m2, n2, o2, p2,
+                        nrow = 4,
+                        labels = "auto"),
+              legend,
+              nrow = 2,
+              rel_heights = c(0.9, 0.1))
+print(p)
+
+ggsave(here(paste0("./publication/figures/sfigure_7.png")), plot = p, width = 12, height = 10)
+```
+
 
 
 # Supplementary Table (BIC values)

@@ -900,7 +900,7 @@ print(p)
 Calculate number of A's with `count-a.R`. 
 
 ```{r}
-n_string = "nA8"
+n_string = "nA12"
 transcripts_nA = readRDS(here("mouse_cortex", "salmon_files", paste0("transcripts_", n_string, ".rds")))
 transcripts_nA = transcripts_nA %>%
   group_by(gene_id) %>%
@@ -942,7 +942,7 @@ p = genes_rowsums_nA_tb %>%
   labs(color = paste0(n_string, " == 0")) +
   theme_bw()
 print(p)
-saveRDS(p, here("./mouse_cortex/plots/nA8_preandmrna_length_bias.rds"))
+saveRDS(p, here("./mouse_cortex/plots/nA8_preandmrna_length_bias_preandmrna.rds"))
 
 p = genes_rowsums_nA_tb %>%
   filter(preandmrna > 0) %>%
@@ -955,14 +955,14 @@ p = genes_rowsums_nA_tb %>%
   # scale_y_continuous(limits = c(0, 10)) +
   theme_bw()
 print(p)
-saveRDS(p, here("./mouse_cortex/plots/nA8_transcript_length_bias.rds"))
+saveRDS(p, here("./mouse_cortex/plots/nA8_transcript_length_bias_preandmrna.rds"))
 ```
 
 ```{r}
 # Number of A strings versus count (transcripts pipeline)
 p = genes_rowsums_nA_tb %>%
-  filter(transcripts > 0) %>%
-  ggplot(aes(x = length, y = transcripts, color = transcripts_max_nA == 0)) +
+  # filter(introncollapse > 0) %>%
+  ggplot(aes(x = length, y = transcripts, color = preandmrna_max_nA == 0)) +
   geom_point(alpha = 0.01) +
   geom_smooth(method = "loess") +
   scale_x_log10() +
@@ -970,18 +970,19 @@ p = genes_rowsums_nA_tb %>%
   labs(color = paste0(n_string, " == 0")) +
   theme_bw()
 print(p)
+# saveRDS(p, here("./mouse_cortex/plots/nA12_preandmrna_length_bias_transcripts.rds"))
 
-p = genes_rowsums_nA_tb %>%
-  filter(transcripts > 0) %>%
-  ggplot(aes(x = transcript_length, y = transcripts, color = transcripts_max_nA == 0)) +
-  geom_point(alpha = 0.01) +
-  geom_smooth(method = "loess") + 
-  scale_x_log10() +
-  scale_y_log10(limits = c(0.1, 1*10^6)) +
-  labs(color = paste0(n_string, " == 0")) +
-  # scale_y_continuous(limits = c(0, 10)) +
-  theme_bw()
-print(p)
+# p = genes_rowsums_nA_tb %>%
+#   filter(transcripts > 0) %>%
+#   ggplot(aes(x = transcript_length, y = transcripts, color = transcripts_max_nA == 0)) +
+#   geom_point(alpha = 0.01) +
+#   geom_smooth(method = "loess") + 
+#   scale_x_log10() +
+#   scale_y_log10(limits = c(0.1, 1*10^6)) +
+#   labs(color = paste0(n_string, " == 0")) +
+#   # scale_y_continuous(limits = c(0, 10)) +
+#   theme_bw()
+# print(p)
 ```
 
 
