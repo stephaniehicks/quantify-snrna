@@ -2251,11 +2251,11 @@ source(here("./mouse_cortex/code/distribution-plots-helpers.R"))
 
 
 ```{r}
-pipeline = "intronseparate"
+pipeline = "preandmrna"
 sce = sce_ls[[pipeline]]
 
 # Subset to cell type
-cell_type = "Astrocyte"
+cell_type = "Inhibitory neuron"
 sce_sub = sce[, colData(sce)$ding_labels == cell_type & !is.na(colData(sce)$ding_labels)]
 dim(sce_sub)
 
@@ -2302,7 +2302,7 @@ plot(sse)
 clust.kmeans <- kmeans(reducedDim(sce_sub, "PCA"), centers = 4)
 colData(sce_sub)$labels_kmeans <- factor(clust.kmeans$cluster)
 p = plotReducedDim(sce_sub, "PCA", colour_by = "labels_kmeans", ncomponents = c(1, 2))
-# saveRDS(p, here("./mouse_cortex/plots/pca_kmeans_preandmnra_inhibitory_neuron_cortex_1.rds"))
+saveRDS(p, here("./mouse_cortex/plots/pca_kmeans_preandmnra_inhibitory_neuron_cortex_1.rds"))
 ```
 
 ```{r eval = F}
@@ -2336,7 +2336,7 @@ First, I make all the column sums comparable by downsampling (this is a stochast
 # Subset to cluster
 i = 4
 counts_sub_cluster = counts(sce_sub)
-# counts_sub_cluster = counts(sce_sub)[, colData(sce_sub)$labels_kmeans == i] # Subset to k-means cluster
+counts_sub_cluster = counts(sce_sub)[, colData(sce_sub)$labels_kmeans == i] # Subset to k-means cluster
 # group into 3 groups by colSums
 # terciles = quantile(colSums(counts_sub_cluster), c(1/3, 2/3))
 # terciles
@@ -2345,12 +2345,12 @@ counts_sub_cluster = counts(sce_sub)
 
 
 # Downsample matrix
-# tic()
-# set.seed(1)
-# counts_sub_cluster_scaled = Down_Sample_Matrix(round(counts_sub_cluster))
-# toc()
-counts_sub_cluster_scaled = counts_sub_cluster
-# counts_sub_cluster_scaled = counts_sub_cluster_scaled[rowSums(counts_sub_cluster_scaled) != 0, ]
+tic()
+set.seed(1)
+counts_sub_cluster_scaled = Down_Sample_Matrix(round(counts_sub_cluster))
+toc()
+# counts_sub_cluster_scaled = counts_sub_cluster
+counts_sub_cluster_scaled = counts_sub_cluster_scaled[rowSums(counts_sub_cluster_scaled) != 0, ]
 summary(colSums(counts_sub_cluster_scaled))
 
 # Save mean and size factor ratios to generate a Poisson sim
@@ -2385,7 +2385,7 @@ prob_out = plot_prob(counts_sub_cluster_scaled)
 p = prob_out$plot +
   labs(title = paste(cell_type, i, sep = " - "))
 print(p)
-# saveRDS(p, file = here(paste0("./mouse_cortex/plots/prob0_plot_preandmrna_inhibitory_neuron_cortex_1_cluster_", i, ".rds")))
+saveRDS(p, file = here(paste0("./mouse_cortex/plots/prob0_plot_preandmrna_inhibitory_neuron_cortex_1_cluster_", i, ".rds")))
 ```
 
 #### Mean-variance plots
