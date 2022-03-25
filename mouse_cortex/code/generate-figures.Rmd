@@ -383,7 +383,7 @@ These were manually generated from `snuc-analysis-bioc.Rmd`. See gene length bia
 ```{r}
 # Warning: loess curve takes a few minutes to plot
 a = readRDS(here("./mouse_cortex/plots/nA8_preandmrna_length_bias_preandmrna.rds"))
-b = readRDS(here("./mouse_cortex/plots/nA8_transcript_length_bias_preandmrna.rds"))
+b = readRDS(here("./mouse_cortex/plots/nA8_preandmrna_length_bias_transcripts.rds"))
 
 a2 = a +
   labs(y = "Count",
