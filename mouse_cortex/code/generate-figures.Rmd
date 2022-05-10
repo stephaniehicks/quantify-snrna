@@ -1,7 +1,7 @@
 ---
 title: "Generate figures"
 author: "Albert Kuo"
-date: "3/23/2022"
+date: "5/10/2022"
 output: html_document
 ---
 
@@ -150,16 +150,19 @@ b = readRDS(here("./mouse_cortex/plots/lib_size_protein_coding_comparison.rds"))
 c = readRDS(here("./mouse_cortex/plots/lib_size_processed_pseudogene_comparison.rds"))
 
 a = a +
-  labs(title = "Library sizes") +
+  labs(title = "Library sizes",
+       x = "Reference transcriptome") +
   theme(text = element_text(size = 14),
         axis.text = element_text(size = 10))
 b = b +
   labs(title = "Protein coding genes",
+       x = "Reference transcriptome",
        y = "# of reads") +
   theme(text = element_text(size = 14),
         axis.text = element_text(size = 10))
 c = c +
   labs(title = "Processed pseudogenes",
+       x = "Reference transcriptome",
        y = "# of reads") +
   theme(text = element_text(size = 14),
         axis.text = element_text(size = 10))
@@ -181,6 +184,7 @@ a = a +
   guides(fill = guide_legend(title.position = "top", nrow = 5)) +
   scale_fill_manual(values = c("#598335", "#ced566", "#59b84b", "#b95bc1", "#98a958", "#cf4284", "#61c391", "#d67756", "#43c0cc", "#36845f", "#c8585a",
                                "#c1719c", "#d89c49", "#4c97d0", "#8c6f33", "#817dc5"), na.value = "gray") + # Colors chosen by https://medialab.github.io/iwanthue/ and adjusted with https://www.color-hex.com/
+  labs(x = "Reference transcriptome") +
   theme(text = element_text(size = 18),
         axis.text = element_text(size = 12),
         legend.text = element_text(size = 12),
@@ -194,6 +198,7 @@ a = a +
 b = readRDS(here("./mouse_cortex/plots/astrocytemgratios_plot.rds"))
 b = b +
   labs(title = str_wrap("Ratio of reads mapping to astrocyte marker genes versus qNSC marker genes", 40),
+       x = "Reference transcriptome",
        y = "Ratio of reads") +
   theme(text = element_text(size = 15),
         axis.text = element_text(size = 12),
@@ -358,10 +363,10 @@ b2 = b +
 # Extract legend
 legend <- get_legend(
   a + 
-    scale_color_manual(name = "Pipeline",
+    scale_color_manual(name = "Reference transcriptome",
                        labels = c("preandmrna", "transcripts"),
                        values = c("#F8766D", "#00BFC4")) +
-    scale_fill_manual(name = "Pipeline",
+    scale_fill_manual(name = "Reference transcriptome",
                        labels = c("preandmrna", "transcripts"),
                        values = c("#F8766D", "#00BFC4"))
 )
@@ -386,13 +391,13 @@ a = readRDS(here("./mouse_cortex/plots/nA8_preandmrna_length_bias_preandmrna.rds
 b = readRDS(here("./mouse_cortex/plots/nA8_preandmrna_length_bias_transcripts.rds"))
 
 a2 = a +
-  labs(y = "Count",
+  labs(y = "Count (preandmrna)",
        x = "Preandmrna length") +
   theme(legend.position = "none")
 
 b2 = b + 
-  labs(y = "Count",
-       x = "Transcript length") +
+  labs(y = "Count (transcripts)",
+       x = "Preandmrna length") +
   theme(legend.position = "none")
 
 # Extract legend
@@ -428,18 +433,22 @@ d = readRDS(here("./mouse_cortex/plots/lib_size_processed_pseudogene_comparison.
 
 a = a +
   labs(title = "Protein coding",
+       x = "Reference transcriptome",
        y = "Total reads")
 
 b = b +
   labs(title = "Long non-coding RNA",
+       x = "Reference transcriptome",
        y = "Total reads")
 
 c = c +
   labs(title = "Antisense",
+       x = "Reference transcriptome",
        y = "Total reads")
 
 d = d +
   labs(title = "Processed pseudogene",
+       x = "Reference transcriptome",
        y = "Total reads")
 
 p = plot_grid(a, b, c, d, nrow = 2, labels = "auto")
@@ -546,8 +555,7 @@ for(pipeline in c("transcripts", "introncollapse", "intronseparate")){
   k2 = apply_fig1_aesthetics_bic(k) + labs(title = "Astrocyte")
   l2 = apply_fig1_aesthetics_qq(l, title = "Astrocyte")
   
-  p = plot_grid(plot_grid(legend, NULL, legend_qq, rel_widths = c(0.5, 0.1, 0.4), nrow = 1),
-                plot_grid(a2, NULL, b2, NULL, c2, NULL, d2,
+  p = plot_grid(plot_grid(a2, NULL, b2, NULL, c2, NULL, d2,
                           e2, NULL, f2, NULL, g2, NULL, h2,
                           i2, NULL, j2, NULL, k2, NULL, l2, 
                           nrow = 3, labels = c("a", "", "b", "", "c", "", "d",
@@ -556,7 +564,8 @@ for(pipeline in c("transcripts", "introncollapse", "intronseparate")){
                           label_size = 20, rel_widths = c(1, 0.02, 1, 0.02, 1, 0.02, 1,
                                                           1, 0.02, 1, 0.02, 1, 0.02, 1,
                                                           1, 0.02, 1, 0.02, 1, 0.02, 1)),
-                ncol = 1, rel_heights = c(.2, 3))
+                plot_grid(legend, NULL, legend_qq, rel_widths = c(0.5, 0.1, 0.4), nrow = 1),
+                ncol = 1, rel_heights = c(3, .2))
   print(p)
   ggsave(here(paste0("./publication/figures/sfigure_4_", pipeline, ".png")), plot = p, width = 16, height = 12)
 }
@@ -691,6 +700,49 @@ print(p)
 
 ggsave(here(paste0("./publication/figures/sfigure_7.png")), plot = p, width = 12, height = 10)
 ```
+
+# Supplementary Figure 8 (Simulated Poisson QQ plots)
+
+These were manually generated from `scrna-distributions.Rmd`. See Goodness of fit tests - By Sample section. 
+
+```{r}
+# Warning: loess curve takes a few minutes to plot
+a = readRDS(here("./mouse_cortex/plots/sim_poisson_qq_plot_ungrouped.rds"))
+b = readRDS(here("./mouse_cortex/plots/sim_poisson_qq_plot_grouped.rds"))
+
+a2 = a +
+  labs(x = "Chi-squared quantiles",
+       y = "Goodness of fit statistic") +
+  theme(legend.position = "none")
+
+b2 = b + 
+  labs(x = "Chi-squared quantiles",
+       y = "Goodness of fit statistic") +
+  theme(legend.position = "none")
+
+# Extract legend
+legend <- get_legend(
+  a + 
+    scale_color_manual(name = "Percentile",
+                       labels = c("<95", ">95", ">99.5"),
+                       values = c("#619cff", "#f8766d", "#00ba38")) +
+    guides(color = guide_legend(nrow = 1, override.aes = list(size = 2))) +
+    theme(legend.position = "bottom")
+)
+
+
+p = plot_grid(plot_grid(a2, b2,
+                        nrow = 2,
+                        labels = c("a", "b")),
+              legend,
+              nrow = 2,
+              rel_heights = c(0.9, 0.1))
+print(p)
+
+ggsave(here("./publication/figures/sfigure_8.png"), plot = p, width = 12, height = 6)
+```
+
+
 
 
 # Supplementary Table (BIC values)
