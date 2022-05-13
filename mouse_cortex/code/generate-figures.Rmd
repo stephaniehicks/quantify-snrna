@@ -743,6 +743,43 @@ ggsave(here("./publication/figures/sfigure_8.png"), plot = p, width = 12, height
 ```
 
 
+# Supplementary Figure 9 (Correlation between length and counts)
+
+These were manually generated from `snuc-analysis-bioc.Rmd`. See gene length bias - sequences of As - overall length bias section. 
+
+```{r}
+a = readRDS(here("./mouse_cortex/plots/preandmrna_length_corr_preandmrna.rds"))
+b = readRDS(here("./mouse_cortex/plots/transcript_length_corr_preandmrna.rds"))
+c = readRDS(here("./mouse_cortex/plots/preandmrna_length_corr_transcripts.rds"))
+d = readRDS(here("./mouse_cortex/plots/transcript_length_corr_transcripts.rds"))
+
+a2 = a +
+  labs(y = "Count (preandmrna)",
+       x = "Preandmrna length") +
+  theme(legend.position = "none")
+
+b2 = b + 
+  labs(y = "Count (preandmrna)",
+       x = "Transcript length") +
+  theme(legend.position = "none")
+
+c2 = c +
+  labs(y = "Count (transcripts)",
+       x = "Preandmrna length") +
+  theme(legend.position = "none")
+
+d2 = d + 
+  labs(y = "Count (transcripts)",
+       x = "Transcript length") +
+  theme(legend.position = "none")
+
+p = plot_grid(a2, b2, c2, d2,
+              nrow = 2,
+              labels = "auto")
+print(p)
+
+ggsave(here("./publication/figures/sfigure_9.png"), plot = p, width = 8, height = 8)
+```
 
 
 # Supplementary Table (BIC values)

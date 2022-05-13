@@ -900,7 +900,7 @@ print(p)
 Calculate number of A's with `count-a.R`. 
 
 ```{r}
-n_string = "nA12"
+n_string = "nA8"
 transcripts_nA = readRDS(here("mouse_cortex", "salmon_files", paste0("transcripts_", n_string, ".rds")))
 transcripts_nA = transcripts_nA %>%
   group_by(gene_id) %>%
@@ -997,6 +997,49 @@ tmp = genes_rowsums_nA_tb %>%
   filter(transcripts > 0)
 cor(log10(tmp$transcripts), log10(tmp$length))
 cor(log10(tmp$transcripts), log10(tmp$transcript_length))
+```
+
+```{r}
+# Plots for correlations
+p = genes_rowsums_nA_tb %>%
+  filter(preandmrna > 0) %>%
+  ggplot(aes(x = length, y = preandmrna)) +
+  geom_point(alpha = 0.01) +
+  scale_x_log10() +
+  scale_y_log10(limits = c(0.1, 1*10^6)) +
+  theme_bw()
+print(p)
+saveRDS(p, here("./mouse_cortex/plots/preandmrna_length_corr_preandmrna.rds"))
+
+p = genes_rowsums_nA_tb %>%
+  filter(preandmrna > 0) %>%
+  ggplot(aes(x = transcript_length, y = preandmrna)) +
+  geom_point(alpha = 0.01) +
+  scale_x_log10() +
+  scale_y_log10(limits = c(0.1, 1*10^6)) +
+  theme_bw()
+print(p)
+saveRDS(p, here("./mouse_cortex/plots/transcript_length_corr_preandmrna.rds"))
+
+p = genes_rowsums_nA_tb %>%
+  filter(transcripts > 0) %>%
+  ggplot(aes(x = length, y = transcripts)) +
+  geom_point(alpha = 0.01) +
+  scale_x_log10() +
+  scale_y_log10(limits = c(0.1, 1*10^6)) +
+  theme_bw()
+print(p)
+saveRDS(p, here("./mouse_cortex/plots/preandmrna_length_corr_transcripts.rds"))
+
+p = genes_rowsums_nA_tb %>%
+  filter(transcripts > 0) %>%
+  ggplot(aes(x = transcript_length, y = transcripts)) +
+  geom_point(alpha = 0.01) +
+  scale_x_log10() +
+  scale_y_log10(limits = c(0.1, 1*10^6)) +
+  theme_bw()
+print(p)
+saveRDS(p, here("./mouse_cortex/plots/transcript_length_corr_transcripts.rds"))
 ```
 
 
