@@ -2298,7 +2298,7 @@ pipeline = "preandmrna"
 sce = sce_ls[[pipeline]]
 
 # Subset to cell type
-cell_type = "Inhibitory neuron"
+cell_type = "Excitatory neuron"
 sce_sub = sce[, colData(sce)$ding_labels == cell_type & !is.na(colData(sce)$ding_labels)]
 dim(sce_sub)
 
@@ -2379,7 +2379,7 @@ First, I make all the column sums comparable by downsampling (this is a stochast
 # Subset to cluster
 i = 4
 counts_sub_cluster = counts(sce_sub)
-counts_sub_cluster = counts(sce_sub)[, colData(sce_sub)$labels_kmeans == i] # Subset to k-means cluster
+# counts_sub_cluster = counts(sce_sub)[, colData(sce_sub)$labels_kmeans == i] # Subset to k-means cluster
 # group into 3 groups by colSums
 # terciles = quantile(colSums(counts_sub_cluster), c(1/3, 2/3))
 # terciles
@@ -2390,7 +2390,7 @@ counts_sub_cluster = counts(sce_sub)[, colData(sce_sub)$labels_kmeans == i] # Su
 # Downsample matrix
 tic()
 set.seed(1)
-counts_sub_cluster_scaled = Down_Sample_Matrix(round(counts_sub_cluster))
+counts_sub_cluster_scaled = Down_Sample_Matrix(ceiling(counts_sub_cluster))
 toc()
 # counts_sub_cluster_scaled = counts_sub_cluster
 counts_sub_cluster_scaled = counts_sub_cluster_scaled[rowSums(counts_sub_cluster_scaled) != 0, ]
@@ -2768,6 +2768,36 @@ plot_dt %>%
 #### BIC log-likelihood
 
 Source: https://github.com/willtownes/scrna2019/blob/028363f04139a58b19143f3058ca8fa4a3533b63/util/functions.R
+
+```{r}
+m = counts_sub_cluster_scaled
+m = ceiling(m)
+summary(colSums(m))
+summary(rowSums(m))
+m = m[rowSums(m) != 0, ]
+dim(m)
+
+mbic = mult_bic(m)
+pbic = poi_bic(m)
+nbbic1 = nb_bic_1(m)
+nbbic2 = nb_bic_2(m)
+```
+
+
+```{r}
+bic_tb = tibble(id = 1:nrow(m),
+                multinomial = unlist(mbic),
+                poisson = unlist(pbic),
+                negative_binomial = unlist(nbbic1),
+                negative_binomial_gs = unlist(nbbic2))
+
+bic_tb %>%
+  pivot_longer(-id) %>%
+  ggplot(aes(x = name, y = -value)) + 
+  geom_boxplot() + 
+  # scale_y_log10() +
+  labs(y = "Negative LL") 
+```
 
 
 ```{r eval = F}
