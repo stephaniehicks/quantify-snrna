@@ -114,12 +114,13 @@ mult_bic<-function(m){
   #multinomial model
   n<-colSums(m)
   p<-rowSums(m)/sum(n)
-  tmp = vector(mode = "list", length = nrow(m))
-  ncolm = ncol(m)
-  for(i in 1:nrow(m)){
-    tmp[[i]] = dmultinom(m[i, ], prob = rep(p[i], ncolm), log = TRUE)
-  }
-  return(tmp)
+  # Return individual components
+  # tmp = vector(mode = "list", length = nrow(m))
+  # ncolm = ncol(m)
+  # for(i in 1:nrow(m)){
+  #   tmp[[i]] = dmultinom(m[i, ], prob = rep(p[i], ncolm), log = TRUE)
+  # }
+  # return(tmp)
   ll<-sum(apply(m,2,dmultinom,prob=p,log=TRUE))
   df<-nrow(m)-1
   print(paste0("Loglikelihood is ", ll, " df is ", df))
@@ -169,7 +170,8 @@ poi_bic<-function(m,X=NULL,prefit=NULL,maxit=100){
   if(is.null(prefit)){
     prefit<-poi_fit(m,X,maxit=maxit)
   }
-  return(prefit$ll)
+  # Return individual components
+  # return(prefit$ll)
   ll<-sum(prefit$ll) # Sum the sums of loglikelihoods across genes
   #compute BIC: -2*loglik+df*log(n_obs)
   print(paste0("Loglikelihood is ", ll, " df is ", df))
@@ -191,7 +193,8 @@ nb_bic_1 = function(m){
   
   # get ll
   ll = matrix(dnbinom(m, size = phi, mu = mu, log = TRUE), nrow = nrow(m)) # get likelihood for every cell x gene
-  return(rowSums(ll))
+  # Return individual components
+  # return(rowSums(ll))
   ll = sum(ll) # sum likelihood
   df = nrow(m) + 1
   print(paste0("Loglikelihood is ", ll, " df is ", df))
@@ -228,7 +231,8 @@ nb_bic_2<-function(m,X=NULL,prefit=NULL){
   } else {
     stopifnot(nrow(m)==nrow(prefit))
   }
-  return(prefit$ll)
+  # Return individual components
+  # return(prefit$ll)
   ll<-sum(prefit$ll)
   k<-if(is.null(X)){ 2 } else { ncol(X)+1 }
   df = k*nrow(m)

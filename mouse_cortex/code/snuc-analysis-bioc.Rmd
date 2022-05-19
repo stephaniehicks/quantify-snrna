@@ -2298,7 +2298,7 @@ pipeline = "preandmrna"
 sce = sce_ls[[pipeline]]
 
 # Subset to cell type
-cell_type = "Excitatory neuron"
+cell_type = "Inhibitory neuron"
 sce_sub = sce[, colData(sce)$ding_labels == cell_type & !is.na(colData(sce)$ding_labels)]
 dim(sce_sub)
 
@@ -2769,36 +2769,6 @@ plot_dt %>%
 
 Source: https://github.com/willtownes/scrna2019/blob/028363f04139a58b19143f3058ca8fa4a3533b63/util/functions.R
 
-```{r}
-m = counts_sub_cluster_scaled
-m = ceiling(m)
-summary(colSums(m))
-summary(rowSums(m))
-m = m[rowSums(m) != 0, ]
-dim(m)
-
-mbic = mult_bic(m)
-pbic = poi_bic(m)
-nbbic1 = nb_bic_1(m)
-nbbic2 = nb_bic_2(m)
-```
-
-
-```{r}
-bic_tb = tibble(id = 1:nrow(m),
-                multinomial = unlist(mbic),
-                poisson = unlist(pbic),
-                negative_binomial = unlist(nbbic1),
-                negative_binomial_gs = unlist(nbbic2))
-
-bic_tb %>%
-  pivot_longer(-id) %>%
-  ggplot(aes(x = name, y = -value)) + 
-  geom_boxplot() + 
-  # scale_y_log10() +
-  labs(y = "Negative LL") 
-```
-
 
 ```{r eval = F}
 m = counts_sub_cluster_scaled
@@ -2826,3 +2796,34 @@ bic_tb %>%
   theme_bw()
 ```
 
+```{r}
+# Look at individual likelihood components (each component = 1 gene)
+m = counts_sub_cluster_scaled
+m = ceiling(m)
+summary(colSums(m))
+summary(rowSums(m))
+m = m[rowSums(m) != 0, ]
+dim(m)
+
+mbic = mult_bic(m)
+pbic = poi_bic(m)
+nbbic1 = nb_bic_1(m)
+# nbbic2 = nb_bic_2(m)
+```
+
+
+```{r}
+# Look at individual likelihood components (each component = 1 gene)
+bic_tb = tibble(id = 1:nrow(m),
+                multinomial = unlist(mbic),
+                poisson = unlist(pbic),
+                negative_binomial = unlist(nbbic1))
+                # negative_binomial_gs = unlist(nbbic2))
+
+bic_tb %>%
+  pivot_longer(-id) %>%
+  ggplot(aes(x = name, y = -value)) + 
+  geom_boxplot() + 
+  # scale_y_log10() +
+  labs(y = "Negative LL") 
+```
