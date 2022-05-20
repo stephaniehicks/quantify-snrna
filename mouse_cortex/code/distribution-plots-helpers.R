@@ -1,7 +1,7 @@
 # distribution-plots-helpers.R
 # -----------------------------------------------------------------------------
 # Author:             Albert Kuo
-# Date last modified: Dec 14, 2021
+# Date last modified: May 20, 2022
 #
 # Helper functions for distribution-plots.R
 
@@ -115,14 +115,14 @@ mult_bic<-function(m){
   n<-colSums(m)
   p<-rowSums(m)/sum(n)
   # Return individual components
-  tmp = matrix(numeric(nrow(m)*ncol(m)), nrow = nrow(m), ncol = ncol(m))
-  ncolm = ncol(m)
-  for(i in 1:nrow(m)){
-    for(j in 1:ncol(m)){
-      tmp[i,j] = dbinom(m[i, j], prob = p[i], size = n[j], log = TRUE)
-    }
-  }
-  return(rowSums(tmp))
+  # tmp = matrix(numeric(nrow(m)*ncol(m)), nrow = nrow(m), ncol = ncol(m))
+  # ncolm = ncol(m)
+  # for(i in 1:nrow(m)){
+  #   for(j in 1:ncol(m)){
+  #     tmp[i,j] = dbinom(m[i, j], prob = p[i], size = n[j], log = TRUE)
+  #   }
+  # }
+  # return(rowSums(tmp))
   ll<-sum(apply(m,2,dmultinom,prob=p,log=TRUE))
   df<-nrow(m)-1
   print(paste0("Loglikelihood is ", ll, " df is ", df))
@@ -173,7 +173,7 @@ poi_bic<-function(m,X=NULL,prefit=NULL,maxit=100){
     prefit<-poi_fit(m,X,maxit=maxit)
   }
   # Return individual components
-  return(prefit$ll)
+  # return(prefit$ll)
   ll<-sum(prefit$ll) # Sum the sums of loglikelihoods across genes
   #compute BIC: -2*loglik+df*log(n_obs)
   print(paste0("Loglikelihood is ", ll, " df is ", df))
@@ -196,7 +196,7 @@ nb_bic_1 = function(m){
   # get ll
   ll = matrix(dnbinom(m, size = phi, mu = mu, log = TRUE), nrow = nrow(m)) # get likelihood for every cell x gene
   # Return individual components
-  return(rowSums(ll))
+  # return(rowSums(ll))
   ll = sum(ll) # sum likelihood
   df = nrow(m) + 1
   print(paste0("Loglikelihood is ", ll, " df is ", df))
@@ -234,7 +234,7 @@ nb_bic_2<-function(m,X=NULL,prefit=NULL){
     stopifnot(nrow(m)==nrow(prefit))
   }
   # Return individual components
-  return(prefit$ll)
+  # return(prefit$ll)
   ll<-sum(prefit$ll)
   k<-if(is.null(X)){ 2 } else { ncol(X)+1 }
   df = k*nrow(m)
