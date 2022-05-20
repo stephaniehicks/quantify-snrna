@@ -2808,22 +2808,24 @@ dim(m)
 mbic = mult_bic(m)
 pbic = poi_bic(m)
 nbbic1 = nb_bic_1(m)
-# nbbic2 = nb_bic_2(m)
+nbbic2 = nb_bic_2(m)
 ```
 
 
 ```{r}
 # Look at individual likelihood components (each component = 1 gene)
 bic_tb = tibble(id = 1:nrow(m),
-                multinomial = unlist(mbic),
+                binomial = unlist(mbic),
                 poisson = unlist(pbic),
-                negative_binomial = unlist(nbbic1))
-                # negative_binomial_gs = unlist(nbbic2))
+                negative_binomial = unlist(nbbic1),
+                negative_binomial_gs = unlist(nbbic2))
 
 bic_tb %>%
   pivot_longer(-id) %>%
   ggplot(aes(x = name, y = -value)) + 
   geom_boxplot() + 
-  # scale_y_log10() +
+  scale_y_log10() +
   labs(y = "Negative LL") 
+
+saveRDS(bic_tb, here("./mouse_cortex/plots/bic_individual_tb.rds"))
 ```
