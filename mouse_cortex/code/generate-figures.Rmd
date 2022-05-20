@@ -781,6 +781,58 @@ print(p)
 ggsave(here("./publication/figures/sfigure_9.png"), plot = p, width = 8, height = 8)
 ```
 
+# Supplementary Figure 10 (BIC distribution over genes)
+
+These were manually generated from `snuc-analysis-bioc.Rmd`. See Distributions - BIC log-likelihood.
+
+```{r}
+bic_tb = readRDS(here("./mouse_cortex/plots/bic_individual_tb.rds"))
+
+# Box plots
+a = bic_tb %>%
+  pivot_longer(-id) %>%
+  ggplot(aes(x = fct_relevel(name, c("binomial", "poisson", "negative_binomial",
+                                     "negative_binomial_gs")), y = -value)) + 
+  geom_boxplot() + 
+  scale_y_sqrt() +
+  scale_x_discrete(breaks = c("negative_binomial", "binomial", "poisson", "negative_binomial_gs"),
+                   labels = c("Negative binomial", "Binomial", "Poisson", "G-S negative binomial")) +
+  labs(y = "Negative LL",
+       x = "Distribution") +
+  theme_bw()
+
+# Scatter plots
+b = bic_tb %>%
+  ggplot(aes(x = -negative_binomial, y = -binomial)) + 
+  geom_point() + 
+  geom_abline(slope = 1, intercept = 0) + 
+  labs(x = "Negative binomial",
+       y = "Binomial") +
+  theme_bw()
+
+c = bic_tb %>%
+  ggplot(aes(x = -negative_binomial, y = -poisson)) + 
+  geom_point() + 
+  geom_abline(slope = 1, intercept = 0) + 
+  labs(x = "Negative binomial",
+       y = "Poisson") +
+  theme_bw()
+
+d = bic_tb %>%
+  ggplot(aes(x = -negative_binomial, y = -negative_binomial_gs)) + 
+  geom_point() + 
+  geom_abline(slope = 1, intercept = 0) + 
+  labs(x = "Negative binomial",
+       y = "G-S negative binomial") +
+  theme_bw()
+
+p = plot_grid(a,
+              plot_grid(b, c, d, ncol = 3, labels = c("b", "c", "d")),
+              nrow = 2,
+              labels = c("a", ""))
+print(p)
+ggsave(here("./publication/figures/sfigure_10.png"), plot = p, width = 13, height = 6)
+```
 
 # Supplementary Table (BIC values)
 
