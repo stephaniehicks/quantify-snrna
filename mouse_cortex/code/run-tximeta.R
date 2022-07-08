@@ -9,7 +9,11 @@ library(here)
 suppressPackageStartupMessages({
   library(here)
   library(tximeta)
-  library(fishpond)
+  if (packageVersion("tximeta") >= "1.15.1") {
+    library(eds)
+  } else {
+    library(fishpond)
+  }
   library(SummarizedExperiment)
 })
 
