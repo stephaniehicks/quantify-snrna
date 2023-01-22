@@ -170,7 +170,7 @@ c = c +
 p = plot_grid(a, b, c, nrow = 3,
               labels = "auto", label_size = 15)
 print(p)
-ggsave(here("./publication/figures/figure_2.png"), plot = p, width = 9, height = 10)
+ggsave(here("./publication/figures/figure_2.eps"), plot = p, width = 9, height = 10)
 ```
 
 
@@ -207,7 +207,7 @@ b = b +
 p = plot_grid(a, NULL, b, nrow = 1, rel_widths = c(0.6, 0.02, 0.4), 
               labels = c("a", "", "b"), label_size = 25)
 print(p)
-ggsave(here("./publication/figures/figure_3.png"), plot = p, width = 14, height = 7)
+ggsave(here("./publication/figures/figure_3.eps"), plot = p, width = 14, height = 7)
 ```
 
 # Figure 4 (combination of S2/S3)
@@ -269,7 +269,7 @@ p = plot_grid(plot_grid(legend_a, legend_b, ncol = 2),
               labels = "auto"), ncol = 1,
               rel_heights = c(0.15, 1))
 print(p)
-ggsave(here("./publication/figures/figure_4.png"), plot = p, width = 8, height = 10)
+ggsave(here("./publication/figures/figure_4.png"), plot = p, width = 8, height = 10) # saving as eps doesn't render points, need to convert manually with Inkscape
 ```
 
 # Figure 5 (QQ plots) -- no longer included in paper
@@ -377,7 +377,7 @@ p = plot_grid(plot_grid(a2, nrow = 1),
               rel_heights = c(0.9, 0.1))
 print(p)
 
-ggsave(here("./publication/figures/figure_7.png"), plot = p, width = 8, height = 4)
+ggsave(here("./publication/figures/figure_7.eps"), plot = p, width = 8, height = 4)
 ```
 
 
@@ -417,7 +417,7 @@ p = plot_grid(plot_grid(a2, b2,
               rel_heights = c(0.9, 0.1))
 print(p)
 
-ggsave(here("./publication/figures/figure_8.png"), plot = p, width = 8, height = 4)
+ggsave(here("./publication/figures/figure_8.png"), plot = p, width = 8, height = 4) #eps doesn't render points, convert manually using Inkscape
 ```
 
 
@@ -453,7 +453,7 @@ d = d +
 
 p = plot_grid(a, b, c, d, nrow = 2, labels = "auto")
 print(p)
-ggsave(here("./publication/figures/sfigure_1.png"), plot = p, width = 16, height = 12)
+ggsave(here("./publication/figures/sfigure_1.eps"), plot = p, width = 16, height = 12)
 ```
 
 
@@ -567,7 +567,7 @@ for(pipeline in c("transcripts", "introncollapse", "intronseparate")){
                 plot_grid(legend, NULL, legend_qq, rel_widths = c(0.5, 0.1, 0.4), nrow = 1),
                 ncol = 1, rel_heights = c(3, .2))
   print(p)
-  ggsave(here(paste0("./publication/figures/sfigure_4_", pipeline, ".png")), plot = p, width = 16, height = 12)
+  ggsave(here(paste0("./publication/figures/sfigure_4_", pipeline, ".png")), plot = p, width = 16, height = 12) #eps doesn't render points, convert manually using Inkscape
 }
 ```
 
@@ -625,7 +625,7 @@ p = plot_grid(a,
               labels = c("a", ""),
               nrow = 2)
 print(p)
-ggsave(here(paste0("./publication/figures/sfigure_6.png")), plot = p, width = 10, height = 6)
+ggsave(here(paste0("./publication/figures/sfigure_6.png")), plot = p, width = 10, height = 6) #eps doesn't render points, convert manually using Inkscape
 ```
 
 # Supplementary Figure 7 (Internal poly-A sequences across pipelines)
@@ -698,7 +698,7 @@ p = plot_grid(plot_grid(a2, b2, c2, d2,
               rel_heights = c(0.9, 0.1))
 print(p)
 
-ggsave(here(paste0("./publication/figures/sfigure_7.png")), plot = p, width = 12, height = 10)
+ggsave(here(paste0("./publication/figures/sfigure_7.png")), plot = p, width = 12, height = 10) #eps doesn't render points, convert manually using Inkscape
 ```
 
 # Supplementary Figure 8 (Simulated Poisson QQ plots)
@@ -739,7 +739,7 @@ p = plot_grid(plot_grid(a2, b2,
               rel_heights = c(0.9, 0.1))
 print(p)
 
-ggsave(here("./publication/figures/sfigure_8.png"), plot = p, width = 12, height = 6)
+ggsave(here("./publication/figures/sfigure_8.eps"), plot = p, width = 12, height = 6)
 ```
 
 
@@ -778,7 +778,7 @@ p = plot_grid(a2, b2, c2, d2,
               labels = "auto")
 print(p)
 
-ggsave(here("./publication/figures/sfigure_9.png"), plot = p, width = 8, height = 8)
+ggsave(here("./publication/figures/sfigure_9.png"), plot = p, width = 8, height = 8)#eps doesn't render points, convert manually using Inkscape
 ```
 
 # Supplementary Figure 10 (BIC distribution over genes)
@@ -831,7 +831,7 @@ p = plot_grid(a,
               nrow = 2,
               labels = c("a", ""))
 print(p)
-ggsave(here("./publication/figures/sfigure_10.png"), plot = p, width = 13, height = 6)
+ggsave(here("./publication/figures/sfigure_10.eps"), plot = p, width = 13, height = 6)
 ```
 
 # Supplementary Table (BIC values)
