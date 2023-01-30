@@ -846,7 +846,7 @@ a = readRDS(here(paste0("./mouse_cortex/plots/meanvar_plot_", source_name_1, ".r
 b = readRDS(here(paste0("./mouse_cortex/plots/prob0_plot_", source_name_1, ".rds")))
 c = readRDS(here(paste0("./mouse_cortex/plots/bic_plot_", source_name_1, ".rds")))
 d = readRDS(here(paste0("./mouse_cortex/plots/qq_plot_poisson_", source_name_1, ".rds")))
-ef = readRDS(here(paste0("./mouse_cortex/plots/meanvar_plot_", source_name_2, ".rds")))
+e = readRDS(here(paste0("./mouse_cortex/plots/meanvar_plot_", source_name_2, ".rds")))
 f = readRDS(here(paste0("./mouse_cortex/plots/prob0_plot_", source_name_2, ".rds")))
 g = readRDS(here(paste0("./mouse_cortex/plots/bic_plot_", source_name_2, ".rds")))
 h = readRDS(here(paste0("./mouse_cortex/plots/qq_plot_poisson_", source_name_2, ".rds")))
@@ -864,7 +864,7 @@ legend <- get_legend(
 )
 
 legend_qq <- get_legend(
-l + 
+d + 
   scale_color_manual(name = "Percentile",
                      labels = c("<95th", ">95th", ">99.5th"),
                      values = c("#619cff", "#f8766d", "#00ba38")) +
@@ -875,14 +875,14 @@ l +
 )
 
 # Edit titles and labels
-a2 = apply_fig1_aesthetics(a, title = "Excitatory neuron") 
-b2 = apply_fig1_aesthetics(b, title = "Excitatory neuron", y = "Fraction of zero droplets")
-c2 = apply_fig1_aesthetics_bic(c) + labs(title = "Excitatory neuron")
-d2 = apply_fig1_aesthetics_qq(d, title = "Excitatory neuron")
-e2 = apply_fig1_aesthetics(e, title = "Inhibitory neuron")
-f2 = apply_fig1_aesthetics(f, title = "Inhibitory neuron", y = "Fraction of zero droplets")
-g2 = apply_fig1_aesthetics_bic(g) + labs(title = "Inhibitory neuron")
-h2 = apply_fig1_aesthetics_qq(h, title = "Inhibitory neuron")
+a2 = apply_fig1_aesthetics(a, title = "10x Chromium") 
+b2 = apply_fig1_aesthetics(b, title = "10x Chromium", y = "Fraction of zero droplets")
+c2 = apply_fig1_aesthetics_bic(c) + labs(title = "10x Chromium")
+d2 = apply_fig1_aesthetics_qq(d, title = "10x Chromium")
+e2 = apply_fig1_aesthetics(e, title = "sNuc-DropSeq")
+f2 = apply_fig1_aesthetics(f, title = "sNuc-DropSeq", y = "Fraction of zero droplets")
+g2 = apply_fig1_aesthetics_bic(g) + labs(title = "sNuc-DropSeq")
+h2 = apply_fig1_aesthetics_qq(h, title = "sNuc-DropSeq")
 
 
 p = plot_grid(plot_grid(a2, NULL, b2, NULL, c2, NULL, d2,
