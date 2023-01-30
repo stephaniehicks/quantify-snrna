@@ -23,8 +23,7 @@ source(here("./mouse_cortex/code/distribution-plots-helpers.R"))
 ##############
 # Read data #
 ##############
-
-data_source = 1
+data_source = 2
 
 if(data_source == 1){
   # 10x adult mouse brain nuclei (dataset provided by 10x Genomics)
@@ -138,7 +137,6 @@ p = bic_tb %>%
   ggplot(aes(x = reorder(name, value), y = value)) +
   geom_point(size = 3) +
   labs(title = source_name,
-       subtitle = paste(cell_type, cortex, sep = " - "),
        x = "Distribution",
        y = "BIC") +
   theme_bw()
@@ -165,8 +163,7 @@ plot_dt = tibble(chi_obs = chi_obs_pois[[1]]) %>%
          percentile_color = case_when(chi_obs > quantile(chi_obs, 0.995) ~ "> 99.5",
                                       chi_obs > quantile(chi_obs, 0.95) ~ "> 95",
                                       #chi_obs > quantile(chi_obs, 0.90) ~ "> 90",
-                                      T ~ "rest"),
-         i = i)
+                                      T ~ "rest"))
 
 
 p = plot_dt %>%
