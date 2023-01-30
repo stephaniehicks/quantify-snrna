@@ -16,7 +16,6 @@ suppressPackageStartupMessages({
   library(BiocSingular)
   library(SingleCellExperiment)
   library(snakecase)
-  library(archive)
 })
 source(here("./mouse_cortex/code/distribution-plots-helpers.R"))
 
