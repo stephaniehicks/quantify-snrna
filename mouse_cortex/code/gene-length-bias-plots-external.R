@@ -22,7 +22,7 @@ suppressPackageStartupMessages({
 ##############
 # Read data #
 ##############
-data_source = 3
+data_source = 2
 
 if(data_source == 1){
   # 10x adult mouse brain nuclei (dataset provided by 10x Genomics)
@@ -48,8 +48,10 @@ if(data_source == 1){
                  filters = "mgi_symbol",
                  values = gene_names,
                  mart = mart)
-  
-  rownames(sce) = g_list$ensembl_gene_id
+  g_list = distinct(g_list, mgi_symbol, .keep_all = TRUE)
+  gene_match_tb = tibble(mgi_symbol = gene_names)
+  gene_match_tb = gene_match_tb %>% left_join(g_list, by = "mgi_symbol")
+  rownames(sce) = gene_match_tb$ensembl_gene_id
 } else if(data_source == 3){
   # Combined (sNuc-DropSeq, DroNc-seq and 10X Chromium) mouse kidney (dataset from Wu 2019)
   library(data.table)
@@ -68,8 +70,10 @@ if(data_source == 1){
                  filters = "mgi_symbol",
                  values = gene_names,
                  mart = mart)
-  
-  rownames(sce) = g_list$ensembl_gene_id
+  g_list = distinct(g_list, mgi_symbol, .keep_all = TRUE)
+  gene_match_tb = tibble(mgi_symbol = gene_names)
+  gene_match_tb = gene_match_tb %>% left_join(g_list, by = "mgi_symbol")
+  rownames(sce) = gene_match_tb$ensembl_gene_id
 }
 
 # Get counts
