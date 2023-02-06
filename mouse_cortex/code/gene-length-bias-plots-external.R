@@ -116,7 +116,7 @@ p = genes_rowsums_tb %>%
   geom_line() + 
   scale_y_log10() +
   scale_x_continuous(breaks = 1:10) +
-  labs(x = "Bin (by transcript length)",
+  labs(x = "Bin (by gene length)",
        y = "count",
        title = source_name) +
   theme_bw() +
