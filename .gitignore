@@ -1,8 +1,0 @@
-.Rproj.user
-.Rhistory
-.RData
-.Ruserdata
-.DS_Store
-sample_data/*
-salmon_files/*
-salmon_quants/*

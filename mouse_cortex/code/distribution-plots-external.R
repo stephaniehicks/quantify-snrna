@@ -1,4 +1,4 @@
-# distribution-plots.R
+# distribution-plots-external.R
 # -----------------------------------------------------------------------------
 # Author:             Albert Kuo
 # Date last modified: Jan 29, 2023
@@ -37,7 +37,7 @@ if(data_source == 1){
   matrix_dir = here("./mouse_cortex/data/Healthy.combined.dge.txt.gz")
   counts = fread(matrix_dir)
   gene_names = counts$V1
-  counts_sub = counts %>% dplyr::select(starts_with("sCellDropseq"))
+  counts_sub = counts %>% dplyr::select(starts_with("sNucDropseq"))
   sce = SingleCellExperiment(list(counts = counts_sub))
   rownames(sce) = gene_names
 }
