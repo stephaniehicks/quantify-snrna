@@ -380,7 +380,7 @@ for(i in 5:9){
 plot_dt_pois_ls = list()
 plot_dt_nb_1_ls = list()
 plot_dt_nb_2_ls = list()
-for(i in 11:14){
+for(i in 11:30){
   # plot_dt_pois_ls[[i]] = readRDS(here(paste0("./scrna/output/plot_dt_pois_grouped_ls_", i, ".rds")))
   plot_dt_nb_1_ls[[i]] = readRDS(here(paste0("./scrna/output/plot_dt_nb_1_grouped_ls_", i, ".rds")))
   plot_dt_nb_2_ls[[i]] = readRDS(here(paste0("./scrna/output/plot_dt_nb_2_grouped_ls_", i, ".rds")))
@@ -499,12 +499,12 @@ plot_dt_pois %>%
   theme_bw()
 ```
 
-```{r fig.width = 6, fig.height = 2}
+```{r fig.width = 6, fig.height = 6}
 # Negative binomial plots (single overdispersion parameter)
 plot_dt_nb_1 = bind_rows(plot_dt_nb_1_ls)
 
-plot_dt_nb_1 %>%
-  filter(i %in% 27:30) %>%
+p = plot_dt_nb_1 %>%
+  filter(i %in% 11:30) %>%
   # filter(expression > 50) %>%
     ggplot(aes(x = chi_quantile,
              y = chi_obs,
@@ -514,6 +514,8 @@ plot_dt_nb_1 %>%
   geom_abline(slope = 1, intercept = 0) +
   # coord_cartesian(ylim = c(250, 1000)) +
   theme_bw()
+print(p)
+ggsave(here("./publication/figures/figure_reviewer_nb.png"), plot = p, width = 6, height = 6)
 ```
 
 ```{r}
