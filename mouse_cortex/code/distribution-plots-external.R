@@ -22,6 +22,7 @@ source(here("./mouse_cortex/code/distribution-plots-helpers.R"))
 ##############
 # Read data #
 ##############
+tic()
 data_source = 2
 
 if(data_source == 1){
@@ -177,4 +178,5 @@ p = plot_dt %>%
   # guides(color = FALSE) +
   theme_bw()
 print(p)
+toc()
 saveRDS(p, here(paste0("./mouse_cortex/plots/qq_plot_poisson_", source_name, ".rds")))
