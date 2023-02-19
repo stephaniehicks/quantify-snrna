@@ -1,7 +1,7 @@
 # distribution-plots-external.R
 # -----------------------------------------------------------------------------
 # Author:             Albert Kuo
-# Date last modified: Jan 29, 2023
+# Date last modified: Feb 19, 2023
 #
 # Make all distribution-related plots for data coming from external sources
 # Should be identical to distribution-plots.R other than the data source
@@ -22,7 +22,7 @@ source(here("./mouse_cortex/code/distribution-plots-helpers.R"))
 ##############
 # Read data #
 ##############
-tic()
+tic("entire process")
 data_source = 2
 
 if(data_source == 1){
@@ -44,12 +44,19 @@ if(data_source == 1){
 }
 
 # Subset (may need to subset by cell type if available?)
-counts_sub = counts(sce)
+# Use quickcluster (hierarchical clustering) to get clusters approximating cell types
+set.seed(1)
+tic("quickcluster")
+clust = quickCluster(sce)
+toc()
+
+# Take first cluster
+counts_sub = counts(sce[, which(clust == 1)])
 print(dim(counts_sub))
 summary(colSums(counts_sub))
 
 # Downsample cell counts
-counts_sub_scaled = Down_Sample_Matrix(ceiling(counts_sub[1:dim(sce)[1], 1:100]))
+counts_sub_scaled = Down_Sample_Matrix(counts_sub)
 counts_sub_scaled = counts_sub_scaled[rowSums(counts_sub_scaled) != 0, ]
 summary(colSums(counts_sub_scaled))
 
@@ -77,8 +84,7 @@ emp_props = rowSums(counts_sub_scaled)/sum(colSums(counts_sub_scaled))
 var_binom = n*emp_props*(1-emp_props)
 
 # Poisson
-fit_pois = glmGamPoi::glm_gp(counts_sub_scaled, design = ~ 1, size_factors = FALSE, 
-                             overdispersion = FALSE)
+# fit_pois = glmGamPoi::glm_gp(counts_sub_scaled, design = ~ 1, size_factors = FALSE, overdispersion = FALSE)
 # Negative binomial
 # Estimate overall size/dispersion parameter
 model = lm(var_emp ~ 1*mean_emp + I(mean_emp^2) + 0, tibble(mean_emp, var_emp))
