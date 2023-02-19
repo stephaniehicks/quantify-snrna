@@ -89,18 +89,31 @@ genes_rowsums = rowSums(counts_sub)
 genes_rowsums_tb = tibble(gene = rownames(sce),
                           count = genes_rowsums)
 
-# Get length
-gc_content = readRDS(here("./mouse_cortex/output/gc_content.rds"))
-gc_content = gc_content %>% 
-  as_tibble(rownames = "gene") %>% 
-  dplyr::rename(length_biomart = length)
+# Get length from salmon alevin
+run_number = "all" # give run_number or "all" for all of them together
+sce_ls = list()
+sce_ls[["transcripts"]] = readRDS(here("mouse_cortex", "salmon_quants", "transcripts_pipeline", paste0("sce_", run_number, ".rds")))
+genes_length_tb = rowData(sce_ls[["transcripts"]]) %>%
+  as_tibble() %>%
+  select(start, end, transcript_length) %>%
+  mutate(length = end - start,
+         gene = rownames(rowData(sce_ls[["transcripts"]])),
+         gene_noversion = gsub("\\..*", "", gene)) %>%
+  select(gene_noversion, length, transcript_length) %>%
+  dplyr::rename(gene = gene_noversion)
+
+# Get length from biomart
+# gc_content = readRDS(here("./mouse_cortex/output/gc_content.rds"))
+# gc_content = gc_content %>% 
+#   as_tibble(rownames = "gene") %>% 
+#   dplyr::rename(length_biomart = length)
 
 # Bin by length
 genes_rowsums_tb = genes_rowsums_tb %>%
-  left_join(gc_content, by = "gene")
+  left_join(genes_length_tb, by = "gene")
 
 genes_rowsums_tb = genes_rowsums_tb %>%
-  mutate(bin = ntile(length_biomart, 10))
+  mutate(bin = ntile(length, 10))
 
 # Plot lines with ribbon
 p = genes_rowsums_tb %>%
@@ -121,4 +134,5 @@ p = genes_rowsums_tb %>%
        title = source_name) +
   theme_bw() +
   theme(legend.position = "top")
-saveRDS(p, here(paste0("./mouse_cortex/plots/", source_name, "_transcript_length_bias.rds")))
+print(p)
+saveRDS(p, here(paste0("./mouse_cortex/plots/", source_name, "_preandmrna_length_bias.rds")))
